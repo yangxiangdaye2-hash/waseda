@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ワセダノート - 早稲田生の情報共有掲示板</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --crimson: #8B0000; --crimson-light: #A50000; --crimson-pale: #f9f0f0;
+    --gold: #C8A951; --gold-light: #e8c96a;
+    --dark: #1a1a1a; --gray: #6b6b6b; --white: #ffffff; --border: #e8e0e0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Noto Sans JP', sans-serif; background: #faf8f8; color: var(--dark); min-height: 100vh; }
+
+  header { background: var(--crimson); padding: 0 2rem; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 20px rgba(139,0,0,0.3); }
+  .header-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 60px; }
+  .logo { display: flex; align-items: baseline; gap: 8px; text-decoration: none; }
+  .logo-jp { font-size: 1.4rem; font-weight: 900; color: var(--white); letter-spacing: 0.05em; }
+  .logo-en { font-family: 'Playfair Display', serif; font-size: 0.75rem; color: var(--gold-light); letter-spacing: 0.15em; }
+  .header-right { display: flex; align-items: center; gap: 0.8rem; }
+  .nickname-badge { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 5px 14px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; }
+  .btn-post { background: var(--gold); color: var(--dark); border: none; padding: 7px 18px; border-radius: 6px; font-weight: 700; font-size: 0.85rem; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; }
+  .btn-post:hover { background: var(--gold-light); }
+
+  .hero { background: linear-gradient(135deg, var(--crimson) 0%, #5a0000 100%); padding: 2.5rem 2rem 2rem; text-align: center; }
+  .hero h1 { font-size: 1.1rem; color: var(--gold-light); letter-spacing: 0.2em; margin-bottom: 0.4rem; font-weight: 500; }
+  .hero p { color: rgba(255,255,255,0.7); font-size: 0.85rem; margin-bottom: 1.4rem; }
+  .search-bar { max-width: 600px; margin: 0 auto; display: flex; gap: 8px; }
+  .search-input { flex: 1; border: none; border-radius: 8px; padding: 0.7rem 1.1rem; font-size: 0.9rem; font-family: 'Noto Sans JP', sans-serif; outline: none; }
+  .search-btn { background: var(--gold); border: none; border-radius: 8px; padding: 0 1.2rem; font-size: 1.1rem; cursor: pointer; }
+
+  .faculty-bar { background: white; border-bottom: 1px solid var(--border); padding: 0.7rem 2rem; overflow-x: auto; }
+  .faculty-bar-inner { max-width: 1100px; margin: 0 auto; display: flex; gap: 8px; white-space: nowrap; align-items: center; }
+  .faculty-label { font-size: 0.75rem; color: var(--gray); font-weight: 700; margin-right: 4px; flex-shrink: 0; }
+  .faculty-chip { padding: 4px 14px; border-radius: 20px; font-size: 0.78rem; font-weight: 500; cursor: pointer; border: 1.5px solid var(--border); background: white; color: var(--gray); transition: all 0.15s; white-space: nowrap; font-family: 'Noto Sans JP', sans-serif; }
+  .faculty-chip:hover { border-color: var(--crimson); color: var(--crimson); }
+  .faculty-chip.active { background: var(--crimson); color: white; border-color: var(--crimson); }
+
+  .tabs { background: white; border-bottom: 2px solid var(--border); padding: 0 2rem; position: sticky; top: 60px; z-index: 90; }
+  .tabs-inner { max-width: 1100px; margin: 0 auto; display: flex; }
+  .tab { padding: 0.9rem 1.2rem; font-size: 0.85rem; font-weight: 500; color: var(--gray); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.2s; }
+  .tab:hover { color: var(--crimson); }
+  .tab.active { color: var(--crimson); border-bottom-color: var(--crimson); font-weight: 700; }
+
+  .main { max-width: 1100px; margin: 0 auto; padding: 2rem; display: grid; grid-template-columns: 1fr 290px; gap: 2rem; }
+
+  .search-banner { background: var(--crimson-pale); border: 1px solid #f0d8d8; border-radius: 8px; padding: 0.7rem 1rem; margin-bottom: 1rem; font-size: 0.85rem; color: var(--crimson); display: none; align-items: center; justify-content: space-between; }
+  .search-banner.show { display: flex; }
+  .clear-search { cursor: pointer; font-weight: 700; font-size: 0.8rem; }
+
+  .posts-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; }
+  .posts-header h2 { font-size: 1.1rem; font-weight: 700; }
+  .sort-select { border: 1px solid var(--border); padding: 5px 10px; border-radius: 6px; font-size: 0.8rem; color: var(--gray); background: white; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; }
+
+  .post-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem 1.4rem; margin-bottom: 1rem; transition: box-shadow 0.2s, transform 0.2s; cursor: pointer; }
+  .post-card:hover { box-shadow: 0 4px 20px rgba(139,0,0,0.1); transform: translateY(-1px); }
+  .post-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 0.6rem; flex-wrap: wrap; }
+  .category-tag { font-size: 0.7rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+  .faculty-tag { font-size: 0.7rem; padding: 3px 10px; border-radius: 20px; background: var(--crimson-pale); color: var(--crimson); font-weight: 600; }
+  .cat-lecture { background: #fff3e0; color: #e65100; }
+  .cat-circle { background: #e8f5e9; color: #2e7d32; }
+  .cat-campus { background: #e3f2fd; color: #1565c0; }
+  .cat-qa { background: #f3e5f5; color: #6a1b9a; }
+  .author { font-size: 0.8rem; color: var(--gray); font-weight: 500; }
+  .post-time { font-size: 0.75rem; color: #aaa; margin-left: auto; }
+  .post-title { font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; line-height: 1.4; }
+  .post-body { font-size: 0.85rem; color: var(--gray); line-height: 1.7; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .post-footer { display: flex; gap: 1rem; margin-top: 0.9rem; padding-top: 0.9rem; border-top: 1px solid #f0f0f0; }
+  .post-action { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; color: #aaa; cursor: pointer; transition: color 0.2s; }
+  .post-action:hover { color: var(--crimson); }
+  .post-action.liked { color: var(--crimson); }
+  .stars { color: var(--gold); font-size: 0.85rem; }
+
+  .qa-card { background: white; border: 1.5px solid #e8d5f5; border-radius: 12px; padding: 1.2rem 1.4rem; margin-bottom: 1rem; cursor: pointer; transition: box-shadow 0.2s, transform 0.2s; }
+  .qa-card:hover { box-shadow: 0 4px 20px rgba(106,27,154,0.1); transform: translateY(-1px); }
+  .qa-status { font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+  .qa-status.answered { background: #e8f5e9; color: #2e7d32; }
+  .qa-status.open { background: #fff3e0; color: #e65100; }
+
+  .empty-tab { text-align: center; padding: 4rem 2rem; color: var(--gray); }
+  .empty-tab .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+
+  .sidebar { display: flex; flex-direction: column; gap: 1.5rem; }
+  .sidebar-card { background: white; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .sidebar-card-header { background: var(--crimson); padding: 0.8rem 1.2rem; color: white; font-size: 0.85rem; font-weight: 700; }
+  .sidebar-card-body { padding: 1rem 1.2rem; }
+  .trend-item { display: flex; align-items: flex-start; gap: 10px; padding: 0.55rem 0; border-bottom: 1px solid #f5f5f5; cursor: pointer; }
+  .trend-item:last-child { border-bottom: none; }
+  .trend-num { font-size: 1.1rem; font-weight: 900; color: var(--crimson); min-width: 22px; font-family: 'Playfair Display', serif; }
+  .trend-text { font-size: 0.82rem; color: var(--dark); line-height: 1.4; }
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+  .stat-box { text-align: center; padding: 0.8rem; background: var(--crimson-pale); border-radius: 8px; }
+  .stat-num { font-size: 1.4rem; font-weight: 900; color: var(--crimson); font-family: 'Playfair Display', serif; }
+  .stat-label { font-size: 0.7rem; color: var(--gray); margin-top: 2px; }
+
+  .login-screen { position: fixed; inset: 0; background: linear-gradient(135deg, var(--crimson) 0%, #5a0000 100%); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+  .login-screen.hidden { display: none; }
+  .login-box { background: white; border-radius: 16px; width: 100%; max-width: 400px; padding: 2rem; box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center; }
+  .login-box h2 { color: var(--crimson); font-size: 1.3rem; margin-bottom: 0.3rem; }
+  .login-box .subtitle { color: var(--gray); font-size: 0.85rem; margin-bottom: 1.5rem; }
+  .login-box .form-group { margin-bottom: 1.2rem; text-align: left; }
+  .login-box .form-input { width: 100%; padding: 0.8rem 1rem; border: 1.5px solid var(--border); border-radius: 8px; font-size: 0.95rem; }
+  .login-box .btn-submit { width: 100%; padding: 0.9rem; font-size: 1rem; margin-top: 0.5rem; cursor: pointer; }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: white; border-radius: 16px; width: 100%; max-width: 560px; overflow: hidden; animation: slideUp 0.3s ease; max-height: 90vh; overflow-y: auto; }
+  .modal-wide { max-width: 620px; }
+  @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .modal-header { background: var(--crimson); padding: 1.2rem 1.5rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1; }
+  .modal-header h3 { color: white; font-size: 1rem; font-weight: 700; }
+  .modal-close { color: white; background: none; border: none; font-size: 1.4rem; cursor: pointer; line-height: 1; }
+  .modal-body { padding: 1.5rem; }
+  .form-group { margin-bottom: 1.1rem; }
+  .form-label { display: block; font-size: 0.82rem; font-weight: 700; color: var(--dark); margin-bottom: 0.4rem; }
+  .form-input, .form-select, .form-textarea { width: 100%; border: 1.5px solid var(--border); border-radius: 8px; padding: 0.6rem 0.9rem; font-size: 0.9rem; font-family: 'Noto Sans JP', sans-serif; color: var(--dark); outline: none; background: white; }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--crimson); }
+  .form-textarea { resize: vertical; min-height: 90px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .btn-submit { width: 100%; background: var(--crimson); color: white; border: none; padding: 0.9rem; border-radius: 8px; font-size: 0.95rem; font-weight: 700; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; margin-top: 0.5rem; }
+  .btn-submit:hover { background: var(--crimson-light); }
+
+  .qa-detail { padding: 1.5rem; }
+  .qa-question-box { background: #f8f3ff; border-left: 4px solid #7b1fa2; border-radius: 0 8px 8px 0; padding: 1rem 1.2rem; margin-bottom: 1.5rem; }
+  .qa-question-box .q-label { font-size: 0.75rem; font-weight: 700; color: #7b1fa2; margin-bottom: 0.5rem; }
+  .qa-question-box .q-text { font-size: 0.95rem; font-weight: 700; }
+  .answers-section h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 1rem; color: var(--gray); }
+  .answer-item { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 1rem; margin-bottom: 0.8rem; }
+  .answer-meta { display: flex; gap: 8px; margin-bottom: 0.5rem; align-items: center; }
+  .answer-author { font-size: 0.8rem; font-weight: 700; }
+  .answer-time { font-size: 0.75rem; color: #aaa; }
+  .best-badge { font-size: 0.7rem; background: #e8f5e9; color: #2e7d32; padding: 2px 8px; border-radius: 10px; font-weight: 700; }
+  .answer-text { font-size: 0.87rem; color: var(--gray); line-height: 1.7; }
+  .answer-input-area { margin-top: 1.2rem; border-top: 1px solid var(--border); padding-top: 1.2rem; }
+  .answer-input-area h4 { font-size: 0.88rem; font-weight: 700; margin-bottom: 0.6rem; }
+
+  @media (max-width: 768px) {
+    .main { grid-template-columns: 1fr; padding: 1rem; }
+    .sidebar { display: none; }
+    .tab { padding: 0.7rem 0.8rem; font-size: 0.78rem; }
+    .form-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ログイン画面 -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-box">
+    <h2>ワセダノート</h2>
+    <p class="subtitle">早稲田生のための情報共有掲示板</p>
+    <form onsubmit="doLogin(event)">
+      <div class="form-group">
+        <label class="form-label">ニックネーム</label>
+        <input class="form-input" type="text" id="loginNickname" placeholder="例：waseda_taro" maxlength="20" required>
+      </div>
+      <button type="submit" class="btn-submit">ログインして始める</button>
+    </form>
+  </div>
+</div>
+
+<header>
+  <div class="header-inner">
+    <a class="logo" href="#"><span class="logo-jp">ワセダノート</span><span class="logo-en">WASEDA NOTE</span></a>
+    <div class="header-right">
+      <div class="nickname-badge" id="nicknameBadge">👤 waseda_taro</div>
+      <button class="btn-post" onclick="openPostModal()">＋ 投稿する</button>
+    </div>
+  </div>
+</header>
+
+<div class="hero">
+  <h1>早稲田生のための、早稲田生による情報共有</h1>
+  <p>授業の口コミ・サークル・キャンパスライフをみんなでシェアしよう</p>
+  <div class="search-bar">
+    <input class="search-input" type="text" id="searchInput" placeholder="🔍 授業名・キーワードで検索..." onkeydown="if(event.key==='Enter')doSearch()">
+    <button class="search-btn" onclick="doSearch()">検索</button>
+  </div>
+</div>
+
+<div class="faculty-bar">
+  <div class="faculty-bar-inner">
+    <span class="faculty-label">学部：</span>
+    <button class="faculty-chip active" onclick="selectFaculty('all',this)">すべて</button>
+    <button class="faculty-chip" onclick="selectFaculty('seikei',this)">政治経済</button>
+    <button class="faculty-chip" onclick="selectFaculty('ho',this)">法</button>
+    <button class="faculty-chip" onclick="selectFaculty('shogaku',this)">商</button>
+    <button class="faculty-chip" onclick="selectFaculty('kyoiku',this)">教育</button>
+    <button class="faculty-chip" onclick="selectFaculty('bun',this)">文</button>
+    <button class="faculty-chip" onclick="selectFaculty('bunkagaku',this)">文化構想</button>
+    <button class="faculty-chip" onclick="selectFaculty('kiso',this)">基幹理工</button>
+    <button class="faculty-chip" onclick="selectFaculty('sozo',this)">創造理工</button>
+    <button class="faculty-chip" onclick="selectFaculty('sentan',this)">先進理工</button>
+    <button class="faculty-chip" onclick="selectFaculty('ningen',this)">人間科学</button>
+    <button class="faculty-chip" onclick="selectFaculty('sports',this)">スポーツ科学</button>
+    <button class="faculty-chip" onclick="selectFaculty('kokusai',this)">国際教養</button>
+    <button class="faculty-chip" onclick="selectFaculty('shakou',this)">社会科学</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tabs-inner">
+    <div class="tab active" onclick="switchTab('all',this)">📋 すべて</div>
+    <div class="tab" onclick="switchTab('lecture',this)">📚 授業口コミ</div>
+    <div class="tab" onclick="switchTab('circle',this)">🎯 サークル</div>
+    <div class="tab" onclick="switchTab('campus',this)">🏫 キャンパスライフ</div>
+    <div class="tab" onclick="switchTab('qa',this)">❓ Q&amp;A</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="posts-section">
+    <div id="search-banner" class="search-banner">
+      <span id="search-banner-text"></span>
+      <span class="clear-search" onclick="clearSearch()">✕ クリア</span>
+    </div>
+    <div class="posts-header">
+      <h2 id="section-title">新着投稿</h2>
+      <select class="sort-select"><option>新着順</option><option>人気順</option><option>回答多い順</option></select>
+    </div>
+    <div id="posts-container"></div>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-card">
+      <div class="sidebar-card-header">🔥 トレンド</div>
+      <div class="sidebar-card-body">
+        <div class="trend-item"><span class="trend-num">1</span><span class="trend-text">春学期の楽単授業まとめ</span></div>
+        <div class="trend-item"><span class="trend-num">2</span><span class="trend-text">早稲田祭サークル出展情報</span></div>
+        <div class="trend-item"><span class="trend-num">3</span><span class="trend-text">3号館コンビニリニューアル</span></div>
+        <div class="trend-item"><span class="trend-num">4</span><span class="trend-text">インターン報告スレッド</span></div>
+        <div class="trend-item"><span class="trend-num">5</span><span class="trend-text">政経の必修変更について</span></div>
+      </div>
+    </div>
+    <div class="sidebar-card">
+      <div class="sidebar-card-header">📊 統計</div>
+      <div class="sidebar-card-body">
+        <div class="stats-grid">
+          <div class="stat-box"><div class="stat-num">1,284</div><div class="stat-label">投稿数</div></div>
+          <div class="stat-box"><div class="stat-num">847</div><div class="stat-label">ユーザー数</div></div>
+          <div class="stat-box"><div class="stat-num">312</div><div class="stat-label">授業口コミ</div></div>
+          <div class="stat-box"><div class="stat-num">94</div><div class="stat-label">Q&amp;A解決済</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="sidebar-card">
+      <div class="sidebar-card-header">❓ 未回答のQ&amp;A</div>
+      <div class="sidebar-card-body">
+        <div class="trend-item"><span class="trend-num" style="font-size:0.8rem">Q</span><span class="trend-text">政経1年の必修登録の仕方は？</span></div>
+        <div class="trend-item"><span class="trend-num" style="font-size:0.8rem">Q</span><span class="trend-text">所沢へのバスは何番出口？</span></div>
+        <div class="trend-item"><span class="trend-num" style="font-size:0.8rem">Q</span><span class="trend-text">学生証の再発行はどこで？</span></div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- POST MODAL -->
+<div class="modal-overlay" id="postModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>✏️ 新規投稿</h3>
+      <button class="modal-close" onclick="closePostModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">カテゴリ</label>
+          <select class="form-select" id="postCategory" onchange="onCategoryChange(this)">
+            <option value="lecture">📚 授業口コミ</option>
+            <option value="circle">🎯 サークル情報</option>
+            <option value="campus">🏫 キャンパスライフ</option>
+            <option value="qa">❓ Q&amp;A（質問）</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">学部</label>
+          <select class="form-select" id="postFaculty">
+            <option value="">学部を選択（任意）</option>
+            <option value="seikei">政治経済学部</option>
+            <option value="ho">法学部</option>
+            <option value="shogaku">商学部</option>
+            <option value="kyoiku">教育学部</option>
+            <option value="bun">文学部</option>
+            <option value="bunkagaku">文化構想学部</option>
+            <option value="kiso">基幹理工学部</option>
+            <option value="sozo">創造理工学部</option>
+            <option value="sentan">先進理工学部</option>
+            <option value="ningen">人間科学部</option>
+            <option value="sports">スポーツ科学部</option>
+            <option value="kokusai">国際教養学部</option>
+            <option value="shakou">社会科学部</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" id="title-label">タイトル</label>
+        <input class="form-input" type="text" id="postTitle" placeholder="例：政治経済学の授業について">
+      </div>
+      <div class="form-group">
+        <label class="form-label" id="body-label">内容</label>
+        <textarea class="form-textarea" id="postBody" placeholder="詳しい内容を書いてください..."></textarea>
+      </div>
+      <div class="form-group" id="lectureExtra" style="display:none;">
+        <label class="form-label">授業評価</label>
+        <select class="form-select" id="postStars">
+          <option value="5">⭐⭐⭐⭐⭐ とても良い</option>
+          <option value="4">⭐⭐⭐⭐ 良い</option>
+          <option value="3">⭐⭐⭐ 普通</option>
+          <option value="2">⭐⭐ 微妙</option>
+          <option value="1">⭐ 良くない</option>
+        </select>
+      </div>
+      <button class="btn-submit" onclick="submitPost()">投稿する</button>
+    </div>
+  </div>
+</div>
+
+<!-- QA DETAIL MODAL -->
+<div class="modal-overlay" id="qaModal">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <h3>❓ Q&amp;A スレッド</h3>
+      <button class="modal-close" onclick="closeQaModal()">×</button>
+    </div>
+    <div id="qa-detail-content"></div>
+  </div>
+</div>
+
+<script>
+const FACULTIES = {
+  seikei:'政治経済学部', ho:'法学部', shogaku:'商学部', kyoiku:'教育学部',
+  bun:'文学部', bunkagaku:'文化構想学部', kiso:'基幹理工学部', sozo:'創造理工学部',
+  sentan:'先進理工学部', ningen:'人間科学部', sports:'スポーツ科学部',
+  kokusai:'国際教養学部', shakou:'社会科学部'
+};
+
+let posts = [
+  { id:1, category:'lecture', faculty:'seikei', author:'waseda_hanako', time:'2時間前',
+    title:'【政治経済学部】マクロ経済学Ⅱ の口コミ',
+    body:'田中先生のマクロ経済学は板書が丁寧でわかりやすいです。期末試験は過去問から多く出題されるので、早めに入手しておくと良いと思います。出席は毎回取ります。',
+    likes:24, comments:8, stars:4 },
+  { id:2, category:'circle', faculty:'', author:'wase_circle_fan', time:'5時間前',
+    title:'【サークル紹介】写真部 WPS の新歓情報🎥',
+    body:'今年の新歓は4月8日〜15日の期間で行います！カメラ初心者大歓迎。早稲田祭での写真展や合宿など活動盛んです。',
+    likes:41, comments:15, stars:null },
+  { id:3, category:'campus', faculty:'', author:'wase_life_22', time:'昨日',
+    title:'7号館地下の食堂リニューアルしてた！',
+    body:'先週から7号館のカフェがリニューアルオープン。メニューが増えてランチがおいしくなってます。日替わり定食が550円でコスパ最高。',
+    likes:67, comments:22, stars:null },
+  { id:4, category:'lecture', faculty:'ho', author:'law_student_w', time:'2日前',
+    title:'【法学部】民法総則 — テスト傾向と対策',
+    body:'昨年度受講しました。中間は論述式2問、期末は論述式4問の構成です。山本先生は講義中に重要箇所をアナウンスしてくれるのでノートを丁寧に。',
+    likes:35, comments:11, stars:5 },
+  { id:5, category:'campus', faculty:'', author:'waseda_freshman', time:'3日前',
+    title:'1年生へ：大隈講堂前で昼寝するの最高すぎる件',
+    body:'天気の良い日はレジャーシート持って大隈庭園へGO。昼寝してたら先輩に声かけてもらってサークル入ったのも良い思い出。',
+    likes:89, comments:30, stars:null },
+  { id:6, category:'qa', faculty:'seikei', author:'seikei_1nen', time:'1時間前',
+    title:'政経1年生の必修科目の履修登録の仕方を教えてください',
+    body:'4月から入学する政経の者です。履修登録のやり方がよくわからなくて困っています。優先登録と一般登録の違いも教えてほしいです。',
+    likes:5, comments:1, stars:null,
+    answers:[{ id:1, author:'seikei_3nen', time:'30分前', text:'政経の場合はWasedaNetから登録します。優先登録（抽選）は4月第1週、一般登録は第2週です。必修科目は自動登録なので自分で登録する必要はないですよ！', best:true }],
+    solved:true },
+  { id:7, category:'qa', faculty:'kiso', author:'kiso_sophomore', time:'3時間前',
+    title:'基幹理工の情報理工学科と情報通信学科どっちがおすすめ？',
+    body:'基幹理工に進学予定で進学先を迷っています。プログラミングやAIが好きなのですが、どちらの学科が向いているか先輩の意見が聞きたいです。',
+    likes:12, comments:0, stars:null, answers:[], solved:false },
+];
+
+function loadPosts() {
+  try {
+    const stored = localStorage.getItem('waseda_posts_v1');
+    if (!stored) return;
+    const parsed = JSON.parse(stored);
+    if (Array.isArray(parsed)) {
+      posts = parsed;
+    }
+  } catch (e) {
+    console.warn('投稿の読み込みに失敗しました', e);
+  }
+}
+
+function savePosts() {
+  try {
+    localStorage.setItem('waseda_posts_v1', JSON.stringify(posts));
+  } catch (e) {
+    console.warn('投稿の保存に失敗しました', e);
+  }
+}
+
+let currentTab = 'all';
+let currentFaculty = 'all';
+let searchQuery = '';
+let likedPosts = new Set();
+let currentUser = localStorage.getItem('waseda_nickname') || '';
+
+function doLogin(e) {
+  e.preventDefault();
+  const nick = document.getElementById('loginNickname').value.trim();
+  if (!nick) return;
+  currentUser = nick;
+  localStorage.setItem('waseda_nickname', nick);
+  document.getElementById('loginScreen').classList.add('hidden');
+  updateNicknameBadge();
+}
+
+function updateNicknameBadge() {
+  const el = document.querySelector('.nickname-badge');
+  if (el) el.textContent = '\uD83D\uDC64 ' + (currentUser || 'waseda_taro');
+}
+
+function checkLogin() {
+  if (currentUser) {
+    document.getElementById('loginScreen').classList.add('hidden');
+    updateNicknameBadge();
+  } else {
+    updateNicknameBadge();
+  }
+}
+
+function getFiltered() {
+  let r = posts;
+  if (currentTab !== 'all') r = r.filter(p => p.category === currentTab);
+  if (currentFaculty !== 'all') r = r.filter(p => p.faculty === currentFaculty);
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    r = r.filter(p => p.title.toLowerCase().includes(q) || p.body.toLowerCase().includes(q));
+  }
+  return r;
+}
+
+function renderPosts() {
+  const container = document.getElementById('posts-container');
+  const filtered = getFiltered();
+  if (!filtered.length) {
+    container.innerHTML = '<div class="empty-tab"><div class="empty-icon">📭</div><p>投稿が見つかりませんでした。</p></div>';
+    return;
+  }
+  const catMap = { lecture:['cat-lecture','📚 授業口コミ'], circle:['cat-circle','🎯 サークル'], campus:['cat-campus','🏫 キャンパスライフ'], qa:['cat-qa','❓ Q&A'] };
+
+  container.innerHTML = filtered.map(p => {
+    const liked = likedPosts.has(p.id);
+    const fTag = p.faculty ? `<span class="faculty-tag">${FACULTIES[p.faculty]}</span>` : '';
+    if (p.category === 'qa') {
+      const sc = p.solved ? 'answered' : 'open';
+      const sl = p.solved ? '✅ 解決済み' : '🔓 回答募集中';
+      return `<div class="qa-card" onclick="openQaDetail(${p.id})">
+        <div class="post-meta"><span class="category-tag cat-qa">❓ Q&amp;A</span><span class="qa-status ${sc}">${sl}</span>${fTag}<span class="post-time">${p.time}</span></div>
+        <div class="post-title">${p.title}</div>
+        <div class="post-body">${p.body}</div>
+        <div class="post-footer">
+          <span class="post-action">💬 回答 ${(p.answers||[]).length}件</span>
+          <span class="post-action ${liked?'liked':''}" onclick="event.stopPropagation();toggleLike(${p.id},this)">${liked?'❤️':'🤍'} <span class="like-count">${p.likes+(liked?1:0)}</span></span>
+          <span class="post-action">@${p.author}</span>
+        </div></div>`;
+    }
+    const [cls] = catMap[p.category];
+    const [,label] = catMap[p.category];
+    const stars = p.stars ? '⭐'.repeat(p.stars) : '';
+    return `<div class="post-card">
+      <div class="post-meta"><span class="category-tag ${cls}">${label}</span>${fTag}<span class="author">@${p.author}</span>${stars?`<span class="stars">${stars}</span>`:''}<span class="post-time">${p.time}</span></div>
+      <div class="post-title">${p.title}</div>
+      <div class="post-body">${p.body}</div>
+      <div class="post-footer">
+        <span class="post-action ${liked?'liked':''}" onclick="toggleLike(${p.id},this)">${liked?'❤️':'🤍'} <span class="like-count">${p.likes+(liked?1:0)}</span></span>
+        <span class="post-action">💬 ${p.comments}</span>
+        <span class="post-action">🔗 シェア</span>
+      </div></div>`;
+  }).join('');
+}
+
+function toggleLike(id, el) {
+  const countEl = el.querySelector('.like-count');
+  const cur = parseInt(countEl.textContent);
+  if (likedPosts.has(id)) { likedPosts.delete(id); el.classList.remove('liked'); el.innerHTML = `🤍 <span class="like-count">${cur-1}</span>`; }
+  else { likedPosts.add(id); el.classList.add('liked'); el.innerHTML = `❤️ <span class="like-count">${cur+1}</span>`; }
+}
+
+function switchTab(tab, el) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  const titles = { all:'新着投稿', lecture:'授業口コミ', circle:'サークル情報', campus:'キャンパスライフ', qa:'Q&A' };
+  document.getElementById('section-title').textContent = titles[tab];
+  renderPosts();
+}
+
+function selectFaculty(f, el) {
+  currentFaculty = f;
+  document.querySelectorAll('.faculty-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderPosts();
+}
+
+function doSearch() {
+  searchQuery = document.getElementById('searchInput').value.trim();
+  const banner = document.getElementById('search-banner');
+  if (searchQuery) { banner.classList.add('show'); document.getElementById('search-banner-text').textContent = `「${searchQuery}」の検索結果`; }
+  else { banner.classList.remove('show'); }
+  renderPosts();
+}
+
+function clearSearch() {
+  searchQuery = ''; document.getElementById('searchInput').value = '';
+  document.getElementById('search-banner').classList.remove('show');
+  renderPosts();
+}
+
+function openPostModal() { document.getElementById('postModal').classList.add('open'); }
+function closePostModal() { document.getElementById('postModal').classList.remove('open'); }
+
+function onCategoryChange(sel) {
+  const isL = sel.value === 'lecture', isQ = sel.value === 'qa';
+  document.getElementById('lectureExtra').style.display = isL ? 'block' : 'none';
+  document.getElementById('title-label').textContent = isQ ? '質問タイトル' : 'タイトル';
+  document.getElementById('body-label').textContent = isQ ? '質問の詳細' : '内容';
+  document.getElementById('postTitle').placeholder = isQ ? '例：政経の必修登録の方法は？' : '例：マクロ経済学の口コミ';
+}
+
+function submitPost() {
+  const title = document.getElementById('postTitle').value.trim();
+  const body = document.getElementById('postBody').value.trim();
+  const category = document.getElementById('postCategory').value;
+  const faculty = document.getElementById('postFaculty').value;
+  if (!title || !body) { alert('タイトルと内容を入力してください'); return; }
+  const stars = category === 'lecture' ? parseInt(document.getElementById('postStars').value) : null;
+  posts.unshift({ id:Date.now(), category, faculty, author:currentUser||'waseda_taro', time:'たった今', title, body, likes:0, comments:0, stars, ...(category==='qa'?{answers:[],solved:false}:{}) });
+  savePosts();
+  closePostModal();
+  document.getElementById('postTitle').value = '';
+  document.getElementById('postBody').value = '';
+  if (currentTab !== 'all' && currentTab !== category) { document.querySelector('.tab').click(); }
+  else { renderPosts(); }
+}
+
+function openQaDetail(id) {
+  const post = posts.find(p => p.id === id);
+  if (!post) return;
+  const answers = post.answers || [];
+  const ansHtml = !answers.length
+    ? '<p style="color:#aaa;font-size:0.85rem;text-align:center;padding:1rem 0;">まだ回答がありません。最初に回答しよう！</p>'
+    : answers.map(a => `<div class="answer-item"><div class="answer-meta"><span class="answer-author">@${a.author}</span>${a.best?'<span class="best-badge">✅ ベストアンサー</span>':''}<span class="answer-time">${a.time}</span></div><div class="answer-text">${a.text}</div></div>`).join('');
+
+  document.getElementById('qa-detail-content').innerHTML = `
+    <div class="qa-detail">
+      <div class="qa-question-box">
+        <div class="q-label">❓ 質問</div>
+        <div class="q-text">${post.title}</div>
+        <div style="font-size:0.85rem;color:var(--gray);margin-top:0.6rem;line-height:1.7">${post.body}</div>
+        <div style="font-size:0.75rem;color:#aaa;margin-top:0.5rem">@${post.author} · ${post.time}${post.faculty?' · '+FACULTIES[post.faculty]:''}</div>
+      </div>
+      <div class="answers-section"><h4>💬 回答 ${answers.length}件</h4>${ansHtml}</div>
+      <div class="answer-input-area">
+        <h4>✏️ 回答する</h4>
+        <textarea class="form-textarea" id="answerInput-${id}" placeholder="あなたの知識や経験をシェアしてください..." style="margin-bottom:0.7rem"></textarea>
+        <button class="btn-submit" style="margin-top:0" onclick="submitAnswer(${id})">回答を投稿</button>
+      </div>
+    </div>`;
+  document.getElementById('qaModal').classList.add('open');
+}
+
+function closeQaModal() { document.getElementById('qaModal').classList.remove('open'); }
+
+function submitAnswer(postId) {
+  const input = document.getElementById('answerInput-' + postId);
+  const text = input.value.trim();
+  if (!text) { alert('回答を入力してください'); return; }
+  const post = posts.find(p => p.id === postId);
+  if (!post) return;
+  post.answers.push({ id:Date.now(), author:currentUser||'waseda_taro', time:'たった今', text, best:false });
+  post.solved = true;
+  savePosts();
+  input.value = '';
+  openQaDetail(postId);
+  renderPosts();
+}
+
+document.getElementById('postModal').addEventListener('click', e => { if (e.target===document.getElementById('postModal')) closePostModal(); });
+document.getElementById('qaModal').addEventListener('click', e => { if (e.target===document.getElementById('qaModal')) closeQaModal(); });
+
+loadPosts();
+checkLogin();
+renderPosts();
+</script>
+</body>
+</html>
+
