@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ワセダノート - 早稲田生の情報共有掲示板</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
     --crimson: #8B0000; --crimson-light: #A50000; --crimson-pale: #f9f0f0;
@@ -79,6 +80,7 @@
   .qa-status.answered { background: #e8f5e9; color: #2e7d32; }
   .qa-status.open { background: #fff3e0; color: #e65100; }
 
+  .loading { text-align: center; padding: 3rem; color: var(--gray); font-size: 0.9rem; }
   .empty-tab { text-align: center; padding: 4rem 2rem; color: var(--gray); }
   .empty-tab .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
 
@@ -94,15 +96,6 @@
   .stat-box { text-align: center; padding: 0.8rem; background: var(--crimson-pale); border-radius: 8px; }
   .stat-num { font-size: 1.4rem; font-weight: 900; color: var(--crimson); font-family: 'Playfair Display', serif; }
   .stat-label { font-size: 0.7rem; color: var(--gray); margin-top: 2px; }
-
-  .login-screen { position: fixed; inset: 0; background: linear-gradient(135deg, var(--crimson) 0%, #5a0000 100%); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 1rem; }
-  .login-screen.hidden { display: none; }
-  .login-box { background: white; border-radius: 16px; width: 100%; max-width: 400px; padding: 2rem; box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center; }
-  .login-box h2 { color: var(--crimson); font-size: 1.3rem; margin-bottom: 0.3rem; }
-  .login-box .subtitle { color: var(--gray); font-size: 0.85rem; margin-bottom: 1.5rem; }
-  .login-box .form-group { margin-bottom: 1.2rem; text-align: left; }
-  .login-box .form-input { width: 100%; padding: 0.8rem 1rem; border: 1.5px solid var(--border); border-radius: 8px; font-size: 0.95rem; }
-  .login-box .btn-submit { width: 100%; padding: 0.9rem; font-size: 1rem; margin-top: 0.5rem; cursor: pointer; }
 
   .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
   .modal-overlay.open { display: flex; }
@@ -121,6 +114,7 @@
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
   .btn-submit { width: 100%; background: var(--crimson); color: white; border: none; padding: 0.9rem; border-radius: 8px; font-size: 0.95rem; font-weight: 700; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; margin-top: 0.5rem; }
   .btn-submit:hover { background: var(--crimson-light); }
+  .btn-submit:disabled { background: #ccc; cursor: not-allowed; }
 
   .qa-detail { padding: 1.5rem; }
   .qa-question-box { background: #f8f3ff; border-left: 4px solid #7b1fa2; border-radius: 0 8px 8px 0; padding: 1rem 1.2rem; margin-bottom: 1.5rem; }
@@ -136,6 +130,9 @@
   .answer-input-area { margin-top: 1.2rem; border-top: 1px solid var(--border); padding-top: 1.2rem; }
   .answer-input-area h4 { font-size: 0.88rem; font-weight: 700; margin-bottom: 0.6rem; }
 
+  /* ニックネーム設定モーダル */
+  .nickname-modal { max-width: 400px; }
+
   @media (max-width: 768px) {
     .main { grid-template-columns: 1fr; padding: 1rem; }
     .sidebar { display: none; }
@@ -146,26 +143,11 @@
 </head>
 <body>
 
-<!-- ログイン画面 -->
-<div id="loginScreen" class="login-screen">
-  <div class="login-box">
-    <h2>ワセダノート</h2>
-    <p class="subtitle">早稲田生のための情報共有掲示板</p>
-    <form onsubmit="doLogin(event)">
-      <div class="form-group">
-        <label class="form-label">ニックネーム</label>
-        <input class="form-input" type="text" id="loginNickname" placeholder="例：waseda_taro" maxlength="20" required>
-      </div>
-      <button type="submit" class="btn-submit">ログインして始める</button>
-    </form>
-  </div>
-</div>
-
 <header>
   <div class="header-inner">
     <a class="logo" href="#"><span class="logo-jp">ワセダノート</span><span class="logo-en">WASEDA NOTE</span></a>
     <div class="header-right">
-      <div class="nickname-badge" id="nicknameBadge">👤 waseda_taro</div>
+      <div class="nickname-badge" id="nicknameBadge" onclick="openNicknameModal()">👤 設定中...</div>
       <button class="btn-post" onclick="openPostModal()">＋ 投稿する</button>
     </div>
   </div>
@@ -218,9 +200,9 @@
     </div>
     <div class="posts-header">
       <h2 id="section-title">新着投稿</h2>
-      <select class="sort-select"><option>新着順</option><option>人気順</option><option>回答多い順</option></select>
+      <select class="sort-select"><option>新着順</option></select>
     </div>
-    <div id="posts-container"></div>
+    <div id="posts-container"><div class="loading">読み込み中...</div></div>
   </div>
 
   <aside class="sidebar">
@@ -238,25 +220,15 @@
       <div class="sidebar-card-header">📊 統計</div>
       <div class="sidebar-card-body">
         <div class="stats-grid">
-          <div class="stat-box"><div class="stat-num">1,284</div><div class="stat-label">投稿数</div></div>
-          <div class="stat-box"><div class="stat-num">847</div><div class="stat-label">ユーザー数</div></div>
-          <div class="stat-box"><div class="stat-num">312</div><div class="stat-label">授業口コミ</div></div>
-          <div class="stat-box"><div class="stat-num">94</div><div class="stat-label">Q&amp;A解決済</div></div>
+          <div class="stat-box"><div class="stat-num" id="stat-posts">-</div><div class="stat-label">投稿数</div></div>
+          <div class="stat-box"><div class="stat-num" id="stat-qa">-</div><div class="stat-label">Q&amp;A数</div></div>
         </div>
-      </div>
-    </div>
-    <div class="sidebar-card">
-      <div class="sidebar-card-header">❓ 未回答のQ&amp;A</div>
-      <div class="sidebar-card-body">
-        <div class="trend-item"><span class="trend-num" style="font-size:0.8rem">Q</span><span class="trend-text">政経1年の必修登録の仕方は？</span></div>
-        <div class="trend-item"><span class="trend-num" style="font-size:0.8rem">Q</span><span class="trend-text">所沢へのバスは何番出口？</span></div>
-        <div class="trend-item"><span class="trend-num" style="font-size:0.8rem">Q</span><span class="trend-text">学生証の再発行はどこで？</span></div>
       </div>
     </div>
   </aside>
 </div>
 
-<!-- POST MODAL -->
+<!-- 投稿モーダル -->
 <div class="modal-overlay" id="postModal">
   <div class="modal">
     <div class="modal-header">
@@ -312,12 +284,12 @@
           <option value="1">⭐ 良くない</option>
         </select>
       </div>
-      <button class="btn-submit" onclick="submitPost()">投稿する</button>
+      <button class="btn-submit" id="submitBtn" onclick="submitPost()">投稿する</button>
     </div>
   </div>
 </div>
 
-<!-- QA DETAIL MODAL -->
+<!-- Q&Aモーダル -->
 <div class="modal-overlay" id="qaModal">
   <div class="modal modal-wide">
     <div class="modal-header">
@@ -328,7 +300,30 @@
   </div>
 </div>
 
+<!-- ニックネームモーダル -->
+<div class="modal-overlay" id="nicknameModal">
+  <div class="modal nickname-modal">
+    <div class="modal-header">
+      <h3>👤 ニックネーム設定</h3>
+      <button class="modal-close" onclick="closeNicknameModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">ニックネーム</label>
+        <input class="form-input" type="text" id="nicknameInput" placeholder="例：waseda_taro" maxlength="20">
+      </div>
+      <button class="btn-submit" onclick="saveNickname()">保存する</button>
+    </div>
+  </div>
+</div>
+
 <script>
+// Supabase初期化
+const SUPABASE_URL = 'https://hazntivymzywhowtdtcc.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_Mr1wt5ZOoLtmYqPEoIKeUw_cM4ZPSbN';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 const FACULTIES = {
   seikei:'政治経済学部', ho:'法学部', shogaku:'商学部', kyoiku:'教育学部',
   bun:'文学部', bunkagaku:'文化構想学部', kiso:'基幹理工学部', sozo:'創造理工学部',
@@ -336,157 +331,162 @@ const FACULTIES = {
   kokusai:'国際教養学部', shakou:'社会科学部'
 };
 
-let posts = [
-  { id:1, category:'lecture', faculty:'seikei', author:'waseda_hanako', time:'2時間前',
-    title:'【政治経済学部】マクロ経済学Ⅱ の口コミ',
-    body:'田中先生のマクロ経済学は板書が丁寧でわかりやすいです。期末試験は過去問から多く出題されるので、早めに入手しておくと良いと思います。出席は毎回取ります。',
-    likes:24, comments:8, stars:4 },
-  { id:2, category:'circle', faculty:'', author:'wase_circle_fan', time:'5時間前',
-    title:'【サークル紹介】写真部 WPS の新歓情報🎥',
-    body:'今年の新歓は4月8日〜15日の期間で行います！カメラ初心者大歓迎。早稲田祭での写真展や合宿など活動盛んです。',
-    likes:41, comments:15, stars:null },
-  { id:3, category:'campus', faculty:'', author:'wase_life_22', time:'昨日',
-    title:'7号館地下の食堂リニューアルしてた！',
-    body:'先週から7号館のカフェがリニューアルオープン。メニューが増えてランチがおいしくなってます。日替わり定食が550円でコスパ最高。',
-    likes:67, comments:22, stars:null },
-  { id:4, category:'lecture', faculty:'ho', author:'law_student_w', time:'2日前',
-    title:'【法学部】民法総則 — テスト傾向と対策',
-    body:'昨年度受講しました。中間は論述式2問、期末は論述式4問の構成です。山本先生は講義中に重要箇所をアナウンスしてくれるのでノートを丁寧に。',
-    likes:35, comments:11, stars:5 },
-  { id:5, category:'campus', faculty:'', author:'waseda_freshman', time:'3日前',
-    title:'1年生へ：大隈講堂前で昼寝するの最高すぎる件',
-    body:'天気の良い日はレジャーシート持って大隈庭園へGO。昼寝してたら先輩に声かけてもらってサークル入ったのも良い思い出。',
-    likes:89, comments:30, stars:null },
-  { id:6, category:'qa', faculty:'seikei', author:'seikei_1nen', time:'1時間前',
-    title:'政経1年生の必修科目の履修登録の仕方を教えてください',
-    body:'4月から入学する政経の者です。履修登録のやり方がよくわからなくて困っています。優先登録と一般登録の違いも教えてほしいです。',
-    likes:5, comments:1, stars:null,
-    answers:[{ id:1, author:'seikei_3nen', time:'30分前', text:'政経の場合はWasedaNetから登録します。優先登録（抽選）は4月第1週、一般登録は第2週です。必修科目は自動登録なので自分で登録する必要はないですよ！', best:true }],
-    solved:true },
-  { id:7, category:'qa', faculty:'kiso', author:'kiso_sophomore', time:'3時間前',
-    title:'基幹理工の情報理工学科と情報通信学科どっちがおすすめ？',
-    body:'基幹理工に進学予定で進学先を迷っています。プログラミングやAIが好きなのですが、どちらの学科が向いているか先輩の意見が聞きたいです。',
-    likes:12, comments:0, stars:null, answers:[], solved:false },
-];
-
 let currentTab = 'all';
 let currentFaculty = 'all';
 let searchQuery = '';
-let likedPosts = new Set();
-let currentUser = localStorage.getItem('waseda_nickname') || '';
+let currentUser = localStorage.getItem('waseda_nickname') || 'ゲスト';
+let allPosts = [];
 
-function doLogin(e) {
-  e.preventDefault();
-  const nick = document.getElementById('loginNickname').value.trim();
-  if (!nick) return;
-  currentUser = nick;
-  localStorage.setItem('waseda_nickname', nick);
-  document.getElementById('loginScreen').classList.add('hidden');
-  updateNicknameBadge();
-}
-
+// ニックネーム
 function updateNicknameBadge() {
-  const el = document.querySelector('.nickname-badge');
-  if (el) el.textContent = '\uD83D\uDC64 ' + (currentUser || 'waseda_taro');
+  document.getElementById('nicknameBadge').textContent = '👤 ' + currentUser;
 }
 
-function checkLogin() {
-  if (currentUser) {
-    document.getElementById('loginScreen').classList.add('hidden');
-    updateNicknameBadge();
-  } else {
-    updateNicknameBadge();
+function openNicknameModal() {
+  document.getElementById('nicknameInput').value = currentUser;
+  document.getElementById('nicknameModal').classList.add('open');
+}
+
+function closeNicknameModal() {
+  document.getElementById('nicknameModal').classList.remove('open');
+}
+
+function saveNickname() {
+  const val = document.getElementById('nicknameInput').value.trim();
+  if (!val) { alert('ニックネームを入力してください'); return; }
+  currentUser = val;
+  localStorage.setItem('waseda_nickname', val);
+  updateNicknameBadge();
+  closeNicknameModal();
+}
+
+// 投稿取得
+async function loadPosts() {
+  document.getElementById('posts-container').innerHTML = '<div class="loading">読み込み中...</div>';
+  try {
+    let query = db.from('posts').select('*').order('created_at', { ascending: false });
+    if (currentTab !== 'all') query = query.eq('category', currentTab);
+    if (currentFaculty !== 'all') query = query.eq('faculty', currentFaculty);
+    if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,body.ilike.%${searchQuery}%`);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    allPosts = data || [];
+    renderPosts(allPosts);
+    updateStats();
+  } catch (err) {
+    console.error(err);
+    document.getElementById('posts-container').innerHTML = '<div class="empty-tab"><div class="empty-icon">⚠️</div><p>データの取得に失敗しました</p></div>';
   }
 }
 
-function getFiltered() {
-  let r = posts;
-  if (currentTab !== 'all') r = r.filter(p => p.category === currentTab);
-  if (currentFaculty !== 'all') r = r.filter(p => p.faculty === currentFaculty);
-  if (searchQuery) {
-    const q = searchQuery.toLowerCase();
-    r = r.filter(p => p.title.toLowerCase().includes(q) || p.body.toLowerCase().includes(q));
-  }
-  return r;
+function updateStats() {
+  const total = allPosts.length;
+  const qa = allPosts.filter(p => p.category === 'qa').length;
+  document.getElementById('stat-posts').textContent = total.toLocaleString();
+  document.getElementById('stat-qa').textContent = qa.toLocaleString();
 }
 
-function renderPosts() {
+function formatTime(ts) {
+  const diff = Math.floor((Date.now() - new Date(ts)) / 1000);
+  if (diff < 60) return 'たった今';
+  if (diff < 3600) return Math.floor(diff/60) + '分前';
+  if (diff < 86400) return Math.floor(diff/3600) + '時間前';
+  return Math.floor(diff/86400) + '日前';
+}
+
+function renderPosts(posts) {
   const container = document.getElementById('posts-container');
-  const filtered = getFiltered();
-  if (!filtered.length) {
-    container.innerHTML = '<div class="empty-tab"><div class="empty-icon">📭</div><p>投稿が見つかりませんでした。</p></div>';
+  if (!posts.length) {
+    container.innerHTML = '<div class="empty-tab"><div class="empty-icon">📭</div><p>投稿がありません。最初の投稿者になろう！</p></div>';
     return;
   }
-  const catMap = { lecture:['cat-lecture','📚 授業口コミ'], circle:['cat-circle','🎯 サークル'], campus:['cat-campus','🏫 キャンパスライフ'], qa:['cat-qa','❓ Q&A'] };
+  const catMap = {
+    lecture:['cat-lecture','📚 授業口コミ'],
+    circle:['cat-circle','🎯 サークル'],
+    campus:['cat-campus','🏫 キャンパスライフ'],
+    qa:['cat-qa','❓ Q&A']
+  };
 
-  container.innerHTML = filtered.map(p => {
-    const liked = likedPosts.has(p.id);
-    const fTag = p.faculty ? `<span class="faculty-tag">${FACULTIES[p.faculty]}</span>` : '';
+  container.innerHTML = posts.map(p => {
+    const [cls, label] = catMap[p.category] || ['cat-campus','その他'];
+    const fTag = p.faculty ? `<span class="faculty-tag">${FACULTIES[p.faculty]||p.faculty}</span>` : '';
+    const timeStr = formatTime(p.created_at);
+
     if (p.category === 'qa') {
+      const answers = Array.isArray(p.answers) ? p.answers : [];
       const sc = p.solved ? 'answered' : 'open';
       const sl = p.solved ? '✅ 解決済み' : '🔓 回答募集中';
       return `<div class="qa-card" onclick="openQaDetail(${p.id})">
-        <div class="post-meta"><span class="category-tag cat-qa">❓ Q&amp;A</span><span class="qa-status ${sc}">${sl}</span>${fTag}<span class="post-time">${p.time}</span></div>
-        <div class="post-title">${p.title}</div>
-        <div class="post-body">${p.body}</div>
+        <div class="post-meta"><span class="category-tag cat-qa">❓ Q&amp;A</span><span class="qa-status ${sc}">${sl}</span>${fTag}<span class="post-time">${timeStr}</span></div>
+        <div class="post-title">${escHtml(p.title)}</div>
+        <div class="post-body">${escHtml(p.body)}</div>
         <div class="post-footer">
-          <span class="post-action">💬 回答 ${(p.answers||[]).length}件</span>
-          <span class="post-action ${liked?'liked':''}" onclick="event.stopPropagation();toggleLike(${p.id},this)">${liked?'❤️':'🤍'} <span class="like-count">${p.likes+(liked?1:0)}</span></span>
-          <span class="post-action">@${p.author}</span>
+          <span class="post-action">💬 回答 ${answers.length}件</span>
+          <span class="post-action">❤️ ${p.likes||0}</span>
+          <span class="post-action">@${escHtml(p.author)}</span>
         </div></div>`;
     }
-    const [cls] = catMap[p.category];
-    const [,label] = catMap[p.category];
+
     const stars = p.stars ? '⭐'.repeat(p.stars) : '';
     return `<div class="post-card">
-      <div class="post-meta"><span class="category-tag ${cls}">${label}</span>${fTag}<span class="author">@${p.author}</span>${stars?`<span class="stars">${stars}</span>`:''}<span class="post-time">${p.time}</span></div>
-      <div class="post-title">${p.title}</div>
-      <div class="post-body">${p.body}</div>
+      <div class="post-meta"><span class="category-tag ${cls}">${label}</span>${fTag}<span class="author">@${escHtml(p.author)}</span>${stars?`<span class="stars">${stars}</span>`:''}<span class="post-time">${timeStr}</span></div>
+      <div class="post-title">${escHtml(p.title)}</div>
+      <div class="post-body">${escHtml(p.body)}</div>
       <div class="post-footer">
-        <span class="post-action ${liked?'liked':''}" onclick="toggleLike(${p.id},this)">${liked?'❤️':'🤍'} <span class="like-count">${p.likes+(liked?1:0)}</span></span>
-        <span class="post-action">💬 ${p.comments}</span>
-        <span class="post-action">🔗 シェア</span>
+        <span class="post-action" onclick="likePost(${p.id}, this)">❤️ <span class="like-count">${p.likes||0}</span></span>
+        <span class="post-action">💬 ${p.comments||0}</span>
       </div></div>`;
   }).join('');
 }
 
-function toggleLike(id, el) {
-  const countEl = el.querySelector('.like-count');
-  const cur = parseInt(countEl.textContent);
-  if (likedPosts.has(id)) { likedPosts.delete(id); el.classList.remove('liked'); el.innerHTML = `🤍 <span class="like-count">${cur-1}</span>`; }
-  else { likedPosts.add(id); el.classList.add('liked'); el.innerHTML = `❤️ <span class="like-count">${cur+1}</span>`; }
+function escHtml(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// いいね
+async function likePost(id, el) {
+  const countEl = el.querySelector('.like-count');
+  const cur = parseInt(countEl.textContent);
+  const newCount = cur + 1;
+  countEl.textContent = newCount;
+  await db.from('posts').update({ likes: newCount }).eq('id', id);
+}
+
+// 検索
+function doSearch() {
+  searchQuery = document.getElementById('searchInput').value.trim();
+  const banner = document.getElementById('search-banner');
+  if (searchQuery) { banner.classList.add('show'); document.getElementById('search-banner-text').textContent = `「${searchQuery}」の検索結果`; }
+  else { banner.classList.remove('show'); }
+  loadPosts();
+}
+
+function clearSearch() {
+  searchQuery = '';
+  document.getElementById('searchInput').value = '';
+  document.getElementById('search-banner').classList.remove('show');
+  loadPosts();
+}
+
+// タブ・学部切替
 function switchTab(tab, el) {
   currentTab = tab;
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
   const titles = { all:'新着投稿', lecture:'授業口コミ', circle:'サークル情報', campus:'キャンパスライフ', qa:'Q&A' };
   document.getElementById('section-title').textContent = titles[tab];
-  renderPosts();
+  loadPosts();
 }
 
 function selectFaculty(f, el) {
   currentFaculty = f;
   document.querySelectorAll('.faculty-chip').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
-  renderPosts();
+  loadPosts();
 }
 
-function doSearch() {
-  searchQuery = document.getElementById('searchInput').value.trim();
-  const banner = document.getElementById('search-banner');
-  if (searchQuery) { banner.classList.add('show'); document.getElementById('search-banner-text').textContent = `「${searchQuery}」の検索結果`; }
-  else { banner.classList.remove('show'); }
-  renderPosts();
-}
-
-function clearSearch() {
-  searchQuery = ''; document.getElementById('searchInput').value = '';
-  document.getElementById('search-banner').classList.remove('show');
-  renderPosts();
-}
-
+// 投稿モーダル
 function openPostModal() { document.getElementById('postModal').classList.add('open'); }
 function closePostModal() { document.getElementById('postModal').classList.remove('open'); }
 
@@ -498,36 +498,54 @@ function onCategoryChange(sel) {
   document.getElementById('postTitle').placeholder = isQ ? '例：政経の必修登録の方法は？' : '例：マクロ経済学の口コミ';
 }
 
-function submitPost() {
+// 投稿送信
+async function submitPost() {
   const title = document.getElementById('postTitle').value.trim();
   const body = document.getElementById('postBody').value.trim();
   const category = document.getElementById('postCategory').value;
   const faculty = document.getElementById('postFaculty').value;
   if (!title || !body) { alert('タイトルと内容を入力してください'); return; }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = '投稿中...';
+
   const stars = category === 'lecture' ? parseInt(document.getElementById('postStars').value) : null;
-  posts.unshift({ id:Date.now(), category, faculty, author:currentUser||'waseda_taro', time:'たった今', title, body, likes:0, comments:0, stars, ...(category==='qa'?{answers:[],solved:false}:{}) });
+  const newPost = {
+    category, faculty: faculty || null, author: currentUser,
+    title, body, likes: 0, comments: 0,
+    stars, answers: [], solved: false
+  };
+
+  const { error } = await db.from('posts').insert([newPost]);
+  btn.disabled = false;
+  btn.textContent = '投稿する';
+
+  if (error) { alert('投稿に失敗しました: ' + error.message); return; }
+
   closePostModal();
   document.getElementById('postTitle').value = '';
   document.getElementById('postBody').value = '';
-  if (currentTab !== 'all' && currentTab !== category) { document.querySelector('.tab').click(); }
-  else { renderPosts(); }
+  loadPosts();
 }
 
-function openQaDetail(id) {
-  const post = posts.find(p => p.id === id);
-  if (!post) return;
-  const answers = post.answers || [];
+// Q&A詳細
+async function openQaDetail(id) {
+  const { data: post, error } = await db.from('posts').select('*').eq('id', id).single();
+  if (error || !post) return;
+
+  const answers = Array.isArray(post.answers) ? post.answers : [];
   const ansHtml = !answers.length
     ? '<p style="color:#aaa;font-size:0.85rem;text-align:center;padding:1rem 0;">まだ回答がありません。最初に回答しよう！</p>'
-    : answers.map(a => `<div class="answer-item"><div class="answer-meta"><span class="answer-author">@${a.author}</span>${a.best?'<span class="best-badge">✅ ベストアンサー</span>':''}<span class="answer-time">${a.time}</span></div><div class="answer-text">${a.text}</div></div>`).join('');
+    : answers.map(a => `<div class="answer-item"><div class="answer-meta"><span class="answer-author">@${escHtml(a.author)}</span>${a.best?'<span class="best-badge">✅ ベストアンサー</span>':''}<span class="answer-time">${a.time}</span></div><div class="answer-text">${escHtml(a.text)}</div></div>`).join('');
 
   document.getElementById('qa-detail-content').innerHTML = `
     <div class="qa-detail">
       <div class="qa-question-box">
         <div class="q-label">❓ 質問</div>
-        <div class="q-text">${post.title}</div>
-        <div style="font-size:0.85rem;color:var(--gray);margin-top:0.6rem;line-height:1.7">${post.body}</div>
-        <div style="font-size:0.75rem;color:#aaa;margin-top:0.5rem">@${post.author} · ${post.time}${post.faculty?' · '+FACULTIES[post.faculty]:''}</div>
+        <div class="q-text">${escHtml(post.title)}</div>
+        <div style="font-size:0.85rem;color:var(--gray);margin-top:0.6rem;line-height:1.7">${escHtml(post.body)}</div>
+        <div style="font-size:0.75rem;color:#aaa;margin-top:0.5rem">@${escHtml(post.author)} · ${formatTime(post.created_at)}${post.faculty?' · '+FACULTIES[post.faculty]:''}</div>
       </div>
       <div class="answers-section"><h4>💬 回答 ${answers.length}件</h4>${ansHtml}</div>
       <div class="answer-input-area">
@@ -541,25 +559,31 @@ function openQaDetail(id) {
 
 function closeQaModal() { document.getElementById('qaModal').classList.remove('open'); }
 
-function submitAnswer(postId) {
+async function submitAnswer(postId) {
   const input = document.getElementById('answerInput-' + postId);
   const text = input.value.trim();
   if (!text) { alert('回答を入力してください'); return; }
-  const post = posts.find(p => p.id === postId);
-  if (!post) return;
-  post.answers.push({ id:Date.now(), author:currentUser||'waseda_taro', time:'たった今', text, best:false });
-  post.solved = true;
+
+  const { data: post } = await db.from('posts').select('answers').eq('id', postId).single();
+  const answers = Array.isArray(post?.answers) ? post.answers : [];
+  answers.push({ id: Date.now(), author: currentUser, time: 'たった今', text, best: false });
+
+  const { error } = await db.from('posts').update({ answers, solved: true }).eq('id', postId);
+  if (error) { alert('回答の投稿に失敗しました'); return; }
+
   input.value = '';
   openQaDetail(postId);
-  renderPosts();
+  loadPosts();
 }
 
+// モーダル外クリックで閉じる
 document.getElementById('postModal').addEventListener('click', e => { if (e.target===document.getElementById('postModal')) closePostModal(); });
 document.getElementById('qaModal').addEventListener('click', e => { if (e.target===document.getElementById('qaModal')) closeQaModal(); });
+document.getElementById('nicknameModal').addEventListener('click', e => { if (e.target===document.getElementById('nicknameModal')) closeNicknameModal(); });
 
-checkLogin();
-renderPosts();
+// 初期化
+updateNicknameBadge();
+loadPosts();
 </script>
 </body>
 </html>
-

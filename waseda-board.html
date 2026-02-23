@@ -333,7 +333,8 @@
 <script>
 const SUPABASE_URL = 'https://hazntivymzywhowtdtcc.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_Mr1wt5ZOoLtmYqPEoIKeUw_cM4ZPSbN';
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const { createClient } = supabase;
+const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const FACULTIES = {
   seikei:'政治経済学部', ho:'法学部', shogaku:'商学部', kyoiku:'教育学部',
@@ -579,7 +580,7 @@ async function submitPost() {
   const { error } = await supabaseClient.from('posts').insert(newPost);
   if (error) {
     console.error('投稿の保存に失敗しました', error);
-    alert('投稿の保存に失敗しました。時間をおいて再度お試しください。');
+    alert('投稿の保存に失敗しました: ' + (error.message || '不明なエラー'));
     return;
   }
 
@@ -634,7 +635,7 @@ async function submitAnswer(postId) {
 
   if (error) {
     console.error('回答の保存に失敗しました', error);
-    alert('回答の保存に失敗しました。時間をおいて再度お試しください。');
+    alert('回答の保存に失敗しました: ' + (error.message || '不明なエラー'));
   }
 
   await fetchPostsFromSupabase();
@@ -649,4 +650,3 @@ fetchPostsFromSupabase();
 </script>
 </body>
 </html>
-
