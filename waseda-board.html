@@ -328,7 +328,13 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
+const SUPABASE_URL = 'https://hazntivymzywhowtdtcc.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_Mr1wt5ZOoLtmYqPEoIKeUw_cM4ZPSbN';
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 const FACULTIES = {
   seikei:'政治経済学部', ho:'法学部', shogaku:'商学部', kyoiku:'教育学部',
   bun:'文学部', bunkagaku:'文化構想学部', kiso:'基幹理工学部', sozo:'創造理工学部',
@@ -369,24 +375,55 @@ let posts = [
     likes:12, comments:0, stars:null, answers:[], solved:false },
 ];
 
-function loadPosts() {
-  try {
-    const stored = localStorage.getItem('waseda_posts_v1');
-    if (!stored) return;
-    const parsed = JSON.parse(stored);
-    if (Array.isArray(parsed)) {
-      posts = parsed;
-    }
-  } catch (e) {
-    console.warn('投稿の読み込みに失敗しました', e);
-  }
+function formatTimeFromNow(isoString) {
+  if (!isoString) return '';
+  const diffMs = Date.now() - new Date(isoString).getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return 'たった今';
+  if (diffMin < 60) return diffMin + '分前';
+  const diffH = Math.floor(diffMin / 60);
+  if (diffH < 24) return diffH + '時間前';
+  const diffD = Math.floor(diffH / 24);
+  return diffD + '日前';
 }
 
-function savePosts() {
+async function fetchPostsFromSupabase() {
   try {
-    localStorage.setItem('waseda_posts_v1', JSON.stringify(posts));
+    const { data, error } = await supabaseClient
+      .from('posts')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Supabaseからの取得に失敗しました', error);
+      renderPosts();
+      return;
+    }
+
+    if (!data) {
+      renderPosts();
+      return;
+    }
+
+    posts = data.map(row => ({
+      id: row.id,
+      category: row.category,
+      faculty: row.faculty || '',
+      author: row.author || 'unknown',
+      time: formatTimeFromNow(row.created_at),
+      title: row.title,
+      body: row.body,
+      likes: row.likes ?? 0,
+      comments: row.comments ?? 0,
+      stars: row.stars ?? null,
+      answers: row.answers || [],
+      solved: row.solved ?? false,
+    }));
+
+    renderPosts();
   } catch (e) {
-    console.warn('投稿の保存に失敗しました', e);
+    console.error('Supabaseからの取得に失敗しました', e);
+    renderPosts();
   }
 }
 
@@ -519,20 +556,38 @@ function onCategoryChange(sel) {
   document.getElementById('postTitle').placeholder = isQ ? '例：政経の必修登録の方法は？' : '例：マクロ経済学の口コミ';
 }
 
-function submitPost() {
+async function submitPost() {
   const title = document.getElementById('postTitle').value.trim();
   const body = document.getElementById('postBody').value.trim();
   const category = document.getElementById('postCategory').value;
   const faculty = document.getElementById('postFaculty').value;
   if (!title || !body) { alert('タイトルと内容を入力してください'); return; }
   const stars = category === 'lecture' ? parseInt(document.getElementById('postStars').value) : null;
-  posts.unshift({ id:Date.now(), category, faculty, author:currentUser||'waseda_taro', time:'たった今', title, body, likes:0, comments:0, stars, ...(category==='qa'?{answers:[],solved:false}:{}) });
-  savePosts();
+  const newPost = {
+    category,
+    faculty: faculty || null,
+    author: currentUser || 'waseda_taro',
+    title,
+    body,
+    likes: 0,
+    comments: 0,
+    stars,
+    answers: category === 'qa' ? [] : null,
+    solved: category === 'qa' ? false : null,
+  };
+
+  const { error } = await supabaseClient.from('posts').insert(newPost);
+  if (error) {
+    console.error('投稿の保存に失敗しました', error);
+    alert('投稿の保存に失敗しました。時間をおいて再度お試しください。');
+    return;
+  }
+
   closePostModal();
   document.getElementById('postTitle').value = '';
   document.getElementById('postBody').value = '';
   if (currentTab !== 'all' && currentTab !== category) { document.querySelector('.tab').click(); }
-  else { renderPosts(); }
+  await fetchPostsFromSupabase();
 }
 
 function openQaDetail(id) {
@@ -563,7 +618,7 @@ function openQaDetail(id) {
 
 function closeQaModal() { document.getElementById('qaModal').classList.remove('open'); }
 
-function submitAnswer(postId) {
+async function submitAnswer(postId) {
   const input = document.getElementById('answerInput-' + postId);
   const text = input.value.trim();
   if (!text) { alert('回答を入力してください'); return; }
@@ -571,18 +626,26 @@ function submitAnswer(postId) {
   if (!post) return;
   post.answers.push({ id:Date.now(), author:currentUser||'waseda_taro', time:'たった今', text, best:false });
   post.solved = true;
-  savePosts();
   input.value = '';
+  const { error } = await supabaseClient
+    .from('posts')
+    .update({ answers: post.answers, solved: post.solved })
+    .eq('id', postId);
+
+  if (error) {
+    console.error('回答の保存に失敗しました', error);
+    alert('回答の保存に失敗しました。時間をおいて再度お試しください。');
+  }
+
+  await fetchPostsFromSupabase();
   openQaDetail(postId);
-  renderPosts();
 }
 
 document.getElementById('postModal').addEventListener('click', e => { if (e.target===document.getElementById('postModal')) closePostModal(); });
 document.getElementById('qaModal').addEventListener('click', e => { if (e.target===document.getElementById('qaModal')) closeQaModal(); });
 
-loadPosts();
 checkLogin();
-renderPosts();
+fetchPostsFromSupabase();
 </script>
 </body>
 </html>
