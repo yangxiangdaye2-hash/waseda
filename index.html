@@ -95,6 +95,15 @@
   .stat-num { font-size: 1.4rem; font-weight: 900; color: var(--crimson); font-family: 'Playfair Display', serif; }
   .stat-label { font-size: 0.7rem; color: var(--gray); margin-top: 2px; }
 
+  .login-screen { position: fixed; inset: 0; background: linear-gradient(135deg, var(--crimson) 0%, #5a0000 100%); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+  .login-screen.hidden { display: none; }
+  .login-box { background: white; border-radius: 16px; width: 100%; max-width: 400px; padding: 2rem; box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center; }
+  .login-box h2 { color: var(--crimson); font-size: 1.3rem; margin-bottom: 0.3rem; }
+  .login-box .subtitle { color: var(--gray); font-size: 0.85rem; margin-bottom: 1.5rem; }
+  .login-box .form-group { margin-bottom: 1.2rem; text-align: left; }
+  .login-box .form-input { width: 100%; padding: 0.8rem 1rem; border: 1.5px solid var(--border); border-radius: 8px; font-size: 0.95rem; }
+  .login-box .btn-submit { width: 100%; padding: 0.9rem; font-size: 1rem; margin-top: 0.5rem; cursor: pointer; }
+
   .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
   .modal-overlay.open { display: flex; }
   .modal { background: white; border-radius: 16px; width: 100%; max-width: 560px; overflow: hidden; animation: slideUp 0.3s ease; max-height: 90vh; overflow-y: auto; }
@@ -137,11 +146,26 @@
 </head>
 <body>
 
+<!-- ログイン画面 -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-box">
+    <h2>ワセダノート</h2>
+    <p class="subtitle">早稲田生のための情報共有掲示板</p>
+    <form onsubmit="doLogin(event)">
+      <div class="form-group">
+        <label class="form-label">ニックネーム</label>
+        <input class="form-input" type="text" id="loginNickname" placeholder="例：waseda_taro" maxlength="20" required>
+      </div>
+      <button type="submit" class="btn-submit">ログインして始める</button>
+    </form>
+  </div>
+</div>
+
 <header>
   <div class="header-inner">
     <a class="logo" href="#"><span class="logo-jp">ワセダノート</span><span class="logo-en">WASEDA NOTE</span></a>
     <div class="header-right">
-      <div class="nickname-badge">👤 waseda_taro</div>
+      <div class="nickname-badge" id="nicknameBadge">👤 waseda_taro</div>
       <button class="btn-post" onclick="openPostModal()">＋ 投稿する</button>
     </div>
   </div>
@@ -304,16 +328,7 @@
   </div>
 </div>
 
-<!-- Supabaseクライアントライブラリ -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <script>
-// Supabase初期化
-const SUPABASE_URL = 'https://hazntivymzywhowtdtcc.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_Mr1wt5ZOoLtmYqPEoIKeUw_cM4ZPSbN';
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const supabase = supabaseClient; // エイリアス
-
 const FACULTIES = {
   seikei:'政治経済学部', ho:'法学部', shogaku:'商学部', kyoiku:'教育学部',
   bun:'文学部', bunkagaku:'文化構想学部', kiso:'基幹理工学部', sozo:'創造理工学部',
@@ -321,96 +336,66 @@ const FACULTIES = {
   kokusai:'国際教養学部', shakou:'社会科学部'
 };
 
-let posts = [];
+let posts = [
+  { id:1, category:'lecture', faculty:'seikei', author:'waseda_hanako', time:'2時間前',
+    title:'【政治経済学部】マクロ経済学Ⅱ の口コミ',
+    body:'田中先生のマクロ経済学は板書が丁寧でわかりやすいです。期末試験は過去問から多く出題されるので、早めに入手しておくと良いと思います。出席は毎回取ります。',
+    likes:24, comments:8, stars:4 },
+  { id:2, category:'circle', faculty:'', author:'wase_circle_fan', time:'5時間前',
+    title:'【サークル紹介】写真部 WPS の新歓情報🎥',
+    body:'今年の新歓は4月8日〜15日の期間で行います！カメラ初心者大歓迎。早稲田祭での写真展や合宿など活動盛んです。',
+    likes:41, comments:15, stars:null },
+  { id:3, category:'campus', faculty:'', author:'wase_life_22', time:'昨日',
+    title:'7号館地下の食堂リニューアルしてた！',
+    body:'先週から7号館のカフェがリニューアルオープン。メニューが増えてランチがおいしくなってます。日替わり定食が550円でコスパ最高。',
+    likes:67, comments:22, stars:null },
+  { id:4, category:'lecture', faculty:'ho', author:'law_student_w', time:'2日前',
+    title:'【法学部】民法総則 — テスト傾向と対策',
+    body:'昨年度受講しました。中間は論述式2問、期末は論述式4問の構成です。山本先生は講義中に重要箇所をアナウンスしてくれるのでノートを丁寧に。',
+    likes:35, comments:11, stars:5 },
+  { id:5, category:'campus', faculty:'', author:'waseda_freshman', time:'3日前',
+    title:'1年生へ：大隈講堂前で昼寝するの最高すぎる件',
+    body:'天気の良い日はレジャーシート持って大隈庭園へGO。昼寝してたら先輩に声かけてもらってサークル入ったのも良い思い出。',
+    likes:89, comments:30, stars:null },
+  { id:6, category:'qa', faculty:'seikei', author:'seikei_1nen', time:'1時間前',
+    title:'政経1年生の必修科目の履修登録の仕方を教えてください',
+    body:'4月から入学する政経の者です。履修登録のやり方がよくわからなくて困っています。優先登録と一般登録の違いも教えてほしいです。',
+    likes:5, comments:1, stars:null,
+    answers:[{ id:1, author:'seikei_3nen', time:'30分前', text:'政経の場合はWasedaNetから登録します。優先登録（抽選）は4月第1週、一般登録は第2週です。必修科目は自動登録なので自分で登録する必要はないですよ！', best:true }],
+    solved:true },
+  { id:7, category:'qa', faculty:'kiso', author:'kiso_sophomore', time:'3時間前',
+    title:'基幹理工の情報理工学科と情報通信学科どっちがおすすめ？',
+    body:'基幹理工に進学予定で進学先を迷っています。プログラミングやAIが好きなのですが、どちらの学科が向いているか先輩の意見が聞きたいです。',
+    likes:12, comments:0, stars:null, answers:[], solved:false },
+];
+
 let currentTab = 'all';
 let currentFaculty = 'all';
 let searchQuery = '';
 let likedPosts = new Set();
+let currentUser = localStorage.getItem('waseda_nickname') || '';
 
-// 時間表示のヘルパー関数
-function formatTimeAgo(dateString) {
-  if (!dateString) return '不明';
-  const now = new Date();
-  const date = new Date(dateString);
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-  
-  if (diffMins < 1) return 'たった今';
-  if (diffMins < 60) return `${diffMins}分前`;
-  if (diffHours < 24) return `${diffHours}時間前`;
-  if (diffDays < 7) return `${diffDays}日前`;
-  return date.toLocaleDateString('ja-JP');
+function doLogin(e) {
+  e.preventDefault();
+  const nick = document.getElementById('loginNickname').value.trim();
+  if (!nick) return;
+  currentUser = nick;
+  localStorage.setItem('waseda_nickname', nick);
+  document.getElementById('loginScreen').classList.add('hidden');
+  updateNicknameBadge();
 }
 
-// Supabaseから投稿を取得
-async function loadPosts() {
-  try {
-    const { data, error } = await supabase
-      .from('posts')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    
-    // 各投稿の回答を取得
-    for (let post of data) {
-      if (post.category === 'qa') {
-        const { data: answers, error: answersError } = await supabase
-          .from('answers')
-          .select('*')
-          .eq('post_id', post.id)
-          .order('created_at', { ascending: true });
-        
-        if (!answersError && answers) {
-          post.answers = answers.map(a => ({
-            id: a.id,
-            author: a.author,
-            time: formatTimeAgo(a.created_at),
-            text: a.text,
-            best: a.best
-          }));
-          post.comments = answers.length;
-        } else {
-          post.answers = [];
-          post.comments = 0;
-        }
-      }
-      
-      // 時間表示を追加
-      post.time = formatTimeAgo(post.created_at);
-    }
-    
-    posts = data;
-    renderPosts();
-  } catch (error) {
-    console.error('投稿の取得エラー:', error);
-    alert('投稿の読み込みに失敗しました。');
-  }
+function updateNicknameBadge() {
+  const el = document.querySelector('.nickname-badge');
+  if (el) el.textContent = '\uD83D\uDC64 ' + (currentUser || 'waseda_taro');
 }
 
-// 特定の投稿の回答を取得
-async function loadAnswers(postId) {
-  try {
-    const { data, error } = await supabase
-      .from('answers')
-      .select('*')
-      .eq('post_id', postId)
-      .order('created_at', { ascending: true });
-    
-    if (error) throw error;
-    
-    return data.map(a => ({
-      id: a.id,
-      author: a.author,
-      time: formatTimeAgo(a.created_at),
-      text: a.text,
-      best: a.best
-    }));
-  } catch (error) {
-    console.error('回答の取得エラー:', error);
-    return [];
+function checkLogin() {
+  if (currentUser) {
+    document.getElementById('loginScreen').classList.add('hidden');
+    updateNicknameBadge();
+  } else {
+    updateNicknameBadge();
   }
 }
 
@@ -513,71 +498,25 @@ function onCategoryChange(sel) {
   document.getElementById('postTitle').placeholder = isQ ? '例：政経の必修登録の方法は？' : '例：マクロ経済学の口コミ';
 }
 
-async function submitPost() {
+function submitPost() {
   const title = document.getElementById('postTitle').value.trim();
   const body = document.getElementById('postBody').value.trim();
   const category = document.getElementById('postCategory').value;
   const faculty = document.getElementById('postFaculty').value;
   if (!title || !body) { alert('タイトルと内容を入力してください'); return; }
-  
   const stars = category === 'lecture' ? parseInt(document.getElementById('postStars').value) : null;
-  const postData = {
-    category,
-    faculty: faculty || null,
-    author: 'waseda_taro',
-    title,
-    body,
-    likes: 0,
-    comments: 0,
-    stars: stars || null,
-    solved: category === 'qa' ? false : null
-  };
-  
-  try {
-    const { data, error } = await supabase
-      .from('posts')
-      .insert([postData])
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    // 新規投稿を配列の先頭に追加
-    data.time = 'たった今';
-    if (category === 'qa') {
-      data.answers = [];
-    }
-    posts.unshift(data);
-    
-    closePostModal();
-    document.getElementById('postTitle').value = '';
-    document.getElementById('postBody').value = '';
-    
-    if (currentTab !== 'all' && currentTab !== category) {
-      // 該当タブに切り替え
-      const tabs = document.querySelectorAll('.tab');
-      const tabMap = { lecture: 1, circle: 2, campus: 3, qa: 4 };
-      if (tabMap[category]) {
-        tabs[tabMap[category]].click();
-      }
-    } else {
-      renderPosts();
-    }
-  } catch (error) {
-    console.error('投稿の保存エラー:', error);
-    alert('投稿の保存に失敗しました。');
-  }
+  posts.unshift({ id:Date.now(), category, faculty, author:currentUser||'waseda_taro', time:'たった今', title, body, likes:0, comments:0, stars, ...(category==='qa'?{answers:[],solved:false}:{}) });
+  closePostModal();
+  document.getElementById('postTitle').value = '';
+  document.getElementById('postBody').value = '';
+  if (currentTab !== 'all' && currentTab !== category) { document.querySelector('.tab').click(); }
+  else { renderPosts(); }
 }
 
-async function openQaDetail(id) {
+function openQaDetail(id) {
   const post = posts.find(p => p.id === id);
   if (!post) return;
-  
-  // 最新の回答を取得
-  const answers = await loadAnswers(id);
-  post.answers = answers;
-  post.comments = answers.length;
-  
+  const answers = post.answers || [];
   const ansHtml = !answers.length
     ? '<p style="color:#aaa;font-size:0.85rem;text-align:center;padding:1rem 0;">まだ回答がありません。最初に回答しよう！</p>'
     : answers.map(a => `<div class="answer-item"><div class="answer-meta"><span class="answer-author">@${a.author}</span>${a.best?'<span class="best-badge">✅ ベストアンサー</span>':''}<span class="answer-time">${a.time}</span></div><div class="answer-text">${a.text}</div></div>`).join('');
@@ -602,52 +541,25 @@ async function openQaDetail(id) {
 
 function closeQaModal() { document.getElementById('qaModal').classList.remove('open'); }
 
-async function submitAnswer(postId) {
+function submitAnswer(postId) {
   const input = document.getElementById('answerInput-' + postId);
   const text = input.value.trim();
   if (!text) { alert('回答を入力してください'); return; }
-  
-  try {
-    const { data, error } = await supabase
-      .from('answers')
-      .insert([{
-        post_id: postId,
-        author: 'waseda_taro',
-        text: text,
-        best: false
-      }])
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    // 投稿のsolved状態を更新
-    await supabase
-      .from('posts')
-      .update({ solved: true })
-      .eq('id', postId);
-    
-    // ローカルの投稿データを更新
-    const post = posts.find(p => p.id === postId);
-    if (post) {
-      post.solved = true;
-      post.comments = (post.comments || 0) + 1;
-    }
-    
-    input.value = '';
-    await openQaDetail(postId);
-    renderPosts();
-  } catch (error) {
-    console.error('回答の保存エラー:', error);
-    alert('回答の保存に失敗しました。');
-  }
+  const post = posts.find(p => p.id === postId);
+  if (!post) return;
+  post.answers.push({ id:Date.now(), author:currentUser||'waseda_taro', time:'たった今', text, best:false });
+  post.solved = true;
+  input.value = '';
+  openQaDetail(postId);
+  renderPosts();
 }
 
 document.getElementById('postModal').addEventListener('click', e => { if (e.target===document.getElementById('postModal')) closePostModal(); });
 document.getElementById('qaModal').addEventListener('click', e => { if (e.target===document.getElementById('qaModal')) closeQaModal(); });
 
-// ページ読み込み時に投稿を取得
-loadPosts();
+checkLogin();
+renderPosts();
 </script>
 </body>
 </html>
+
