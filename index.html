@@ -514,13 +514,21 @@
   async function loadTrendingPosts() {
     try {
       if (!db) throw new Error('Supabase client not initialized');
-      const { data, error } = await db.from('posts').select('*').neq('category', 'qa').order('likes', { ascending: false }).limit(5);
-      if (error) throw error;
+      
+      // First try: get top 5 posts by likes (exclude Q&A)
+      let { data: postsData, error: err1 } = await db.from('posts').select('*').neq('category', 'qa').gt('likes', 0).order('likes', { ascending: false }).limit(5);
+      
+      // If that returned nothing, get most recent posts (exclude Q&A)
+      if (err1 || !postsData || postsData.length === 0) {
+        const { data: recentData, error: err2 } = await db.from('posts').select('*').neq('category', 'qa').order('created_at', { ascending: false }).limit(5);
+        if (err2) throw err2;
+        postsData = recentData || [];
+      }
 
-      const posts = Array.isArray(data) ? data : [];
+      const posts = Array.isArray(postsData) ? postsData : [];
       const container = document.getElementById('trendContainer');
 
-      if (!posts.length) {
+      if (!posts || posts.length === 0) {
         container.innerHTML = '<div style="color: var(--gray); font-size: 0.9rem; text-align: center; padding: 1rem;">投稿がまだありません</div>';
         return;
       }
@@ -537,7 +545,10 @@
       }).join('');
     } catch (e) {
       console.error('loadTrendingPosts error:', e);
-      document.getElementById('trendContainer').innerHTML = '<div style="color: var(--gray); font-size: 0.9rem; text-align: center; padding: 1rem;">読み込みエラー</div>';
+      const container = document.getElementById('trendContainer');
+      if (container) {
+        container.innerHTML = '<div style="color: var(--gray); font-size: 0.9rem; text-align: center; padding: 1rem;">データを読み込み中...</div>';
+      }
     }
   }
 
