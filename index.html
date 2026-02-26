@@ -526,21 +526,21 @@
       const now = new Date();
       const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
 
-      // First try: get top 3 posts within 24h in the given category
+      // First try: get top 5 posts within 24h in the given category
       let { data: postsData, error: err1 } = await db.from('posts')
         .select('*')
         .eq('category', category)
         .gte('created_at', twentyFourHoursAgo)
         .order('likes', { ascending: false })
-        .limit(3);
+        .limit(5);
 
-      // Fallback: most recent 3 posts in that category
+      // Fallback: most recent 5 posts in that category
       if (err1 || !postsData || postsData.length === 0) {
         const { data: recentData, error: err2 } = await db.from('posts')
           .select('*')
           .eq('category', category)
           .order('created_at', { ascending: false })
-          .limit(3);
+          .limit(5);
         if (err2) throw err2;
         postsData = recentData || [];
       }
