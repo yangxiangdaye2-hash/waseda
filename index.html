@@ -39,8 +39,11 @@
   .faculty-chip:hover { border-color: var(--crimson); color: var(--crimson); }
   .faculty-chip.active { background: var(--crimson); color: white; border-color: var(--crimson); }
 
-  .tabs { background: white; border-bottom: 2px solid var(--border); padding: 0 2rem; position: sticky; top: 60px; z-index: 90; }
-  .tabs-inner { max-width: 1100px; margin: 0 auto; display: flex; }
+  .tabs { background: white; border-bottom: 2px solid var(--border); padding: 0 2rem; position: sticky; top: 60px; z-index: 90; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .tabs-inner { max-width: 1100px; margin: 0 auto; display: flex; gap: 0; }
+  .tab { padding: 0.9rem 1.3rem; font-size: 0.875rem; font-weight: 600; color: var(--gray); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: color 0.18s, border-color 0.18s, background 0.18s; white-space: nowrap; letter-spacing: 0.01em; user-select: none; }
+  .tab:hover { color: var(--crimson); background: var(--crimson-pale); border-bottom-color: rgba(139,0,0,0.25); }
+  .tab.active { color: var(--crimson); border-bottom-color: var(--crimson); font-weight: 700; }
 
 
     .main { max-width: 1100px; margin: 0 auto; padding: 2rem; display: grid; grid-template-columns: 1fr 290px; gap: 2rem; }
@@ -134,7 +137,7 @@
     @media (max-width: 768px) {
       .main { grid-template-columns: 1fr; padding: 1rem; }
       .sidebar { display: none; }
-      .tab { padding: 0.7rem 0.8rem; font-size: 0.78rem; }
+      .tab { padding: 0.75rem 0.8rem; font-size: 0.78rem; }
       .form-row { grid-template-columns: 1fr; }
     }
   </style>
