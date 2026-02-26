@@ -169,6 +169,24 @@
     .answer-input-area { margin-top: 1.5rem; border-top: 2px solid #f5f5f5; padding-top: 1.5rem; }
     .answer-input-area h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 1rem; }
 
+    .post-detail { padding: 2rem; }
+    .post-detail-header { display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .post-detail-meta { font-size: 0.85rem; font-weight: 600; color: var(--gray); }
+    .post-detail-time { font-size: 0.78rem; color: var(--gray-light); }
+    .post-detail-title { font-size: 1.4rem; font-weight: 700; color: var(--dark); margin-bottom: 1.5rem; line-height: 1.6; }
+    .post-detail-body { font-size: 0.95rem; color: var(--gray); line-height: 1.8; margin-bottom: 1.5rem; }
+    .post-detail-stats { display: flex; gap: 2rem; padding: 1.2rem; background: linear-gradient(135deg, rgba(139,0,0,0.05) 0%, rgba(200,169,81,0.05) 100%); border-radius: 10px; margin-bottom: 2rem; font-weight: 600; }
+    
+    .comments-section h4 { font-size: 1rem; font-weight: 700; margin-bottom: 1.5rem; color: var(--dark); }
+    .comment-item { background: #f9f9f9; border: 1px solid var(--border); border-radius: 10px; padding: 1.2rem; margin-bottom: 1rem; transition: all 0.2s; }
+    .comment-item:hover { background: white; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06); }
+    .comment-meta { display: flex; gap: 8px; margin-bottom: 0.7rem; align-items: center; flex-wrap: wrap; }
+    .comment-author { font-size: 0.82rem; font-weight: 700; color: var(--dark); }
+    .comment-time { font-size: 0.75rem; color: var(--gray-light); }
+    .comment-text { font-size: 0.9rem; color: var(--gray); line-height: 1.6; }
+    .comment-input-area { margin-top: 1.5rem; border-top: 2px solid #f5f5f5; padding-top: 1.5rem; }
+    .comment-input-area h5 { font-size: 0.9rem; font-weight: 700; margin-bottom: 0.8rem; color: var(--dark); }
+
     /* ニックネーム設定モーダル */
     .nickname-modal { max-width: 420px; }
 
@@ -284,7 +302,7 @@
         <h2 id="section-title">新着投稿</h2>
         <div class="posts-header-controls">
           <button class="btn-post" id="categoryPostBtn" style="margin: 0;" onclick="openPostModalWithCategory()">＋ 投稿する</button>
-          <select class="sort-select"><option>新着順</option></select>
+          <select class="sort-select" id="sortSelect" onchange="updateSort()"><option value="newest">新着順</option><option value="popular">人気順（いいね数）</option></select>
         </div>
       </div>
       <div id="posts-container"><div class="loading">読み込み中...</div></div>
@@ -374,6 +392,17 @@
     </div>
   </div>
 
+  <!-- 投稿詳細モーダル（コメント表示用） -->
+  <div class="modal-overlay" id="postDetailModal">
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <h3 id="detailModalTitle">投稿詳細</h3>
+        <button class="modal-close" onclick="closePostDetailModal()">×</button>
+      </div>
+      <div id="post-detail-content"></div>
+    </div>
+  </div>
+
   <!-- Q&Aモーダル -->
   <div class="modal-overlay" id="qaModal">
     <div class="modal modal-wide">
@@ -428,6 +457,7 @@
 
   let currentTab = 'all';
   let currentFaculty = 'all';
+  let currentSort = 'newest';
   let searchQuery = '';
   let currentUser = localStorage.getItem('waseda_nickname') || 'ゲスト';
   let allPosts = [];
@@ -444,10 +474,17 @@
     const container = document.getElementById('posts-container');
     container.innerHTML = '<div class="loading">読み込み中...</div>';
     try {
-      let query = db.from('posts').select('*').order('created_at', { ascending: false });
+      let query = db.from('posts').select('*');
       if (currentTab !== 'all') query = query.eq('category', currentTab);
       if (currentFaculty !== 'all') query = query.eq('faculty', currentFaculty);
       if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,body.ilike.%${searchQuery}%`);
+
+      // ソート処理
+      if (currentSort === 'popular') {
+        query = query.order('likes', { ascending: false });
+      } else {
+        query = query.order('created_at', { ascending: false });
+      }
 
       const { data, error } = await query;
       if (error) throw error;
@@ -501,7 +538,7 @@
       }
 
       const stars = p.stars ? '⭐'.repeat(p.stars) : '';
-      return `<div class="post-card ${p.category}">
+      return `<div class="post-card ${p.category}" onclick='openPostDetail(${JSON.stringify(p.id)})'>
         <div class="post-meta"><span class="category-tag ${cls}">${label}</span>${fTag}<span class="author">@${escHtml(p.author)}</span>${stars?`<span class="stars">${stars}</span>`:''}<span class="post-time">${timeStr}</span></div>
         <div class="post-title">${escHtml(p.title)}</div>
         <div class="post-body">${escHtml(p.body)}</div>
@@ -530,6 +567,9 @@
   // 検索
   function doSearch() { searchQuery = document.getElementById('searchInput').value.trim(); const banner = document.getElementById('search-banner'); if (searchQuery) { banner.classList.add('show'); document.getElementById('search-banner-text').textContent = `「${searchQuery}」の検索結果`; } else { banner.classList.remove('show'); } loadPosts(); }
   function clearSearch() { searchQuery = ''; document.getElementById('searchInput').value = ''; document.getElementById('search-banner').classList.remove('show'); loadPosts(); }
+
+  // ソート更新
+  function updateSort() { currentSort = document.getElementById('sortSelect').value || 'newest'; loadPosts(); }
 
   // タブ・学部切替
   function switchTab(tab, el) { currentTab = tab; document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); el.classList.add('active'); const titles = { all:'新着投稿', lecture:'授業口コミ', circle:'サークル情報', campus:'キャンパスライフ', qa:'Q&A' }; document.getElementById('section-title').textContent = titles[tab]; loadPosts(); }
@@ -602,6 +642,87 @@
 
   function closeQaModal() { document.getElementById('qaModal').classList.remove('open'); }
 
+  // 投稿詳細（コメント表示）
+  async function openPostDetail(postId) {
+    try {
+      if (!db) throw new Error('Supabase client not initialized');
+      const { data: post, error } = await db.from('posts').select('*').eq('id', postId).single();
+      if (error || !post || post.category === 'qa') return;
+
+      const comments = await loadComments(postId);
+      const catMap = { lecture: ['📚 授業口コミ', 'cat-lecture'], circle: ['🎯 サークル情報', 'cat-circle'], campus: ['🏫 キャンパスライフ', 'cat-campus'] };
+      const [catLabel, catCls] = catMap[post.category] || ['その他', 'cat-campus'];
+      const fTag = post.faculty ? `<span class="faculty-tag">${FACULTIES[post.faculty]||post.faculty}</span>` : '';
+      const stars = post.stars ? '⭐'.repeat(post.stars) : '';
+      const timeStr = formatTime(post.created_at);
+
+      const cmtHtml = !comments.length
+        ? '<p style="color:#aaa;font-size:0.9rem;text-align:center;padding:2rem 0;">コメントがまだありません。最初のコメントを書いてみませんか？</p>'
+        : comments.map(c => `<div class="comment-item"><div class="comment-meta"><span class="comment-author">@${escHtml(c.author)}</span><span class="comment-time">${formatTime(c.created_at)}</span></div><div class="comment-text">${escHtml(c.text)}</div></div>`).join('');
+
+      const catHtml = `<span class="category-tag ${catCls}">${catLabel}</span>`;
+      document.getElementById('detailModalTitle').textContent = post.title;
+      document.getElementById('post-detail-content').innerHTML = `
+        <div class="post-detail">
+          <div class="post-detail-header">
+            ${catHtml}${fTag}<span class="post-detail-meta">@${escHtml(post.author)}</span>${stars?`<span>${stars}</span>`:''}<span class="post-detail-time">${timeStr}</span>
+          </div>
+          <div class="post-detail-title">${escHtml(post.title)}</div>
+          <div class="post-detail-body">${escHtml(post.body)}</div>
+          <div class="post-detail-stats">
+            <span>❤️ ${post.likes||0}</span>
+            <span>💬 ${comments.length}件のコメント</span>
+          </div>
+          <div class="comments-section">
+            <h4>コメント</h4>
+            ${cmtHtml}
+            <div class="comment-input-area">
+              <h5>コメントを追加</h5>
+              <textarea class="form-textarea" id="commentInput-${postId}" placeholder="あなたの意見や感想をシェアしてください..." style="margin-bottom:0.7rem"></textarea>
+              <button class="btn-submit" style="margin-top:0" onclick="submitComment(${JSON.stringify(postId)})">コメントを投稿</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.getElementById('postDetailModal').classList.add('open');
+    } catch (e) { console.error(e); }
+  }
+
+  function closePostDetailModal() { document.getElementById('postDetailModal').classList.remove('open'); }
+
+  async function loadComments(postId) {
+    try {
+      if (!db) throw new Error('Supabase client not initialized');
+      const { data, error } = await db.from('comments').select('*').eq('post_id', postId).order('created_at', { ascending: false });
+      if (error) { console.error('loadComments error', error); return []; }
+      return Array.isArray(data) ? data : [];
+    } catch (e) { console.error(e); return []; }
+  }
+
+  async function submitComment(postId) {
+    const input = document.getElementById(`commentInput-${postId}`);
+    const text = input?.value?.trim();
+    if (!text) { alert('コメントを入力してください'); return; }
+
+    try {
+      if (!db) throw new Error('Supabase client not initialized');
+      const newComment = { post_id: postId, author: currentUser, text };
+      const { error: insertErr } = await db.from('comments').insert([newComment]);
+      if (insertErr) { alert('コメント投稿に失敗しました: ' + insertErr.message); return; }
+
+      // posts テーブルのコメント数を更新
+      const post = allPosts.find(p => p.id === postId);
+      if (post) {
+        const newCount = (post.comments || 0) + 1;
+        await db.from('posts').update({ comments: newCount }).eq('id', postId);
+        post.comments = newCount;
+      }
+
+      // モーダルを再表示
+      await openPostDetail(postId);
+    } catch (e) { console.error(e); alert('コメント投稿に失敗しました'); }
+  }
+
   async function submitAnswer(postId) {
     const input = document.getElementById('answerInput-' + postId);
     const text = input.value.trim();
@@ -619,6 +740,7 @@
 
   // モーダル外クリックで閉じる
   document.getElementById('postModal').addEventListener('click', e => { if (e.target===document.getElementById('postModal')) closePostModal(); });
+  document.getElementById('postDetailModal').addEventListener('click', e => { if (e.target===document.getElementById('postDetailModal')) closePostDetailModal(); });
   document.getElementById('qaModal').addEventListener('click', e => { if (e.target===document.getElementById('qaModal')) closeQaModal(); });
   document.getElementById('nicknameModal').addEventListener('click', e => { if (e.target===document.getElementById('nicknameModal')) closeNicknameModal(); });
 
