@@ -150,6 +150,12 @@
       border-color: var(--crimson-dark);
     }
 
+    /* on very narrow screens allow two rows so QA is never off-screen */
+    @media (max-width: 500px) {
+      .trend-tabs { white-space: normal; }
+      .trend-tab { flex: 1 1 calc(50% - 0.6rem); padding: 5px 8px; font-size: 0.85rem; }
+    }
+
     .trend-item { display: flex; align-items: flex-start; gap: 12px; padding: 0.75rem 0; border-bottom: 1px solid #f5f5f5; cursor: pointer; transition: all 0.2s; }
     .trend-item:hover { padding-left: 4px; color: var(--crimson); }
     .trend-item:last-child { border-bottom: none; }
