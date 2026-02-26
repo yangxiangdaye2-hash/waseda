@@ -193,7 +193,8 @@
     /* ニックネーム設定モーダル */
     .nickname-modal { max-width: 420px; }
 
-    @media (max-width: 768px) {
+    /* stack sidebar above posts on tablets/phones up to ~992px */
+    @media (max-width: 992px) {
       .header-inner { height: 60px; padding: 0; }
       .logo-jp { font-size: 1.2rem; }
       .header-right { gap: 0.6rem; }
@@ -210,8 +211,14 @@
       .tabs-inner { max-width: none; padding: 0 1rem; }
       .tab { padding: 12px 14px; font-size: 0.85rem; }
       
-      .main { grid-template-columns: 1fr; padding: 1.5rem 1rem; gap: 1.5rem; }
-      .sidebar { display: none; }
+      /* make main a flex column and reverse order so sidebar shows before posts */
+      .main {
+        display: flex;
+        flex-direction: column-reverse;
+        padding: 1.5rem 1rem;
+        gap: 1.5rem;
+      }
+      /* sidebar remains visible so trending stays accessible */
       
       .posts-header { flex-direction: column; align-items: flex-start; }
       .posts-header h2 { font-size: 1.1rem; }
