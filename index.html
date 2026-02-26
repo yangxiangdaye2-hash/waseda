@@ -123,19 +123,21 @@
     .sidebar-card-body { padding: 1.4rem 1.2rem; }
 
     /* category tabs inside trend card */
-    .trend-tabs { display: flex; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .trend-tabs { display: flex; gap: 0.6rem; margin-bottom: 0.8rem; overflow-x: auto; white-space: nowrap; padding-bottom: 0.2rem; }
     .trend-tab {
-      flex: 1;
-      padding: 8px 14px;
-      font-size: 0.95rem;
+      flex: none;
+      display: inline-block;
+      padding: 6px 10px;
+      font-size: 0.9rem;
       font-weight: 700;
       background: white;
       color: var(--crimson);
       border: 2px solid var(--crimson);
-      border-radius: 8px;
+      border-radius: 6px;
       cursor: pointer;
       transition: background 0.2s, color 0.2s, transform 0.1s;
       text-align: center;
+      white-space: nowrap;
     }
     .trend-tab:hover {
       background: var(--crimson);
