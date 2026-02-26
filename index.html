@@ -41,549 +41,498 @@
 
   .tabs { background: white; border-bottom: 2px solid var(--border); padding: 0 2rem; position: sticky; top: 60px; z-index: 90; }
   .tabs-inner { max-width: 1100px; margin: 0 auto; display: flex; }
-  .tab { padding: 0.9rem 1.2rem; font-size: 0.85rem; font-weight: 500; color: var(--gray); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.2s; }
-  .tab:hover { color: var(--crimson); }
-  .tab.active { color: var(--crimson); border-bottom-color: var(--crimson); font-weight: 700; }
 
-  .main { max-width: 1100px; margin: 0 auto; padding: 2rem; display: grid; grid-template-columns: 1fr 290px; gap: 2rem; }
 
-  .search-banner { background: var(--crimson-pale); border: 1px solid #f0d8d8; border-radius: 8px; padding: 0.7rem 1rem; margin-bottom: 1rem; font-size: 0.85rem; color: var(--crimson); display: none; align-items: center; justify-content: space-between; }
-  .search-banner.show { display: flex; }
-  .clear-search { cursor: pointer; font-weight: 700; font-size: 0.8rem; }
+    .main { max-width: 1100px; margin: 0 auto; padding: 2rem; display: grid; grid-template-columns: 1fr 290px; gap: 2rem; }
 
-  .posts-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; }
-  .posts-header h2 { font-size: 1.1rem; font-weight: 700; }
-  .sort-select { border: 1px solid var(--border); padding: 5px 10px; border-radius: 6px; font-size: 0.8rem; color: var(--gray); background: white; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; }
+    .search-banner { background: var(--crimson-pale); border: 1px solid #f0d8d8; border-radius: 8px; padding: 0.7rem 1rem; margin-bottom: 1rem; font-size: 0.85rem; color: var(--crimson); display: none; align-items: center; justify-content: space-between; }
+    .search-banner.show { display: flex; }
+    .clear-search { cursor: pointer; font-weight: 700; font-size: 0.8rem; }
 
-  .post-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem 1.4rem; margin-bottom: 1rem; transition: box-shadow 0.2s, transform 0.2s; cursor: pointer; }
-  .post-card:hover { box-shadow: 0 4px 20px rgba(139,0,0,0.1); transform: translateY(-1px); }
-  .post-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 0.6rem; flex-wrap: wrap; }
-  .category-tag { font-size: 0.7rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
-  .faculty-tag { font-size: 0.7rem; padding: 3px 10px; border-radius: 20px; background: var(--crimson-pale); color: var(--crimson); font-weight: 600; }
-  .cat-lecture { background: #fff3e0; color: #e65100; }
-  .cat-circle { background: #e8f5e9; color: #2e7d32; }
-  .cat-campus { background: #e3f2fd; color: #1565c0; }
-  .cat-qa { background: #f3e5f5; color: #6a1b9a; }
-  .author { font-size: 0.8rem; color: var(--gray); font-weight: 500; }
-  .post-time { font-size: 0.75rem; color: #aaa; margin-left: auto; }
-  .post-title { font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; line-height: 1.4; }
-  .post-body { font-size: 0.85rem; color: var(--gray); line-height: 1.7; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .post-footer { display: flex; gap: 1rem; margin-top: 0.9rem; padding-top: 0.9rem; border-top: 1px solid #f0f0f0; }
-  .post-action { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; color: #aaa; cursor: pointer; transition: color 0.2s; }
-  .post-action:hover { color: var(--crimson); }
-  .post-action.liked { color: var(--crimson); }
-  .stars { color: var(--gold); font-size: 0.85rem; }
+    .posts-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; }
+    .posts-header h2 { font-size: 1.1rem; font-weight: 700; }
+    .sort-select { border: 1px solid var(--border); padding: 5px 10px; border-radius: 6px; font-size: 0.8rem; color: var(--gray); background: white; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; }
 
-  .qa-card { background: white; border: 1.5px solid #e8d5f5; border-radius: 12px; padding: 1.2rem 1.4rem; margin-bottom: 1rem; cursor: pointer; transition: box-shadow 0.2s, transform 0.2s; }
-  .qa-card:hover { box-shadow: 0 4px 20px rgba(106,27,154,0.1); transform: translateY(-1px); }
-  .qa-status { font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
-  .qa-status.answered { background: #e8f5e9; color: #2e7d32; }
-  .qa-status.open { background: #fff3e0; color: #e65100; }
+    .post-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem 1.4rem; margin-bottom: 1rem; transition: box-shadow 0.2s, transform 0.2s; cursor: pointer; }
+    .post-card:hover { box-shadow: 0 4px 20px rgba(139,0,0,0.1); transform: translateY(-1px); }
+    .post-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 0.6rem; flex-wrap: wrap; }
+    .category-tag { font-size: 0.7rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+    .faculty-tag { font-size: 0.7rem; padding: 3px 10px; border-radius: 20px; background: var(--crimson-pale); color: var(--crimson); font-weight: 600; }
+    .cat-lecture { background: #fff3e0; color: #e65100; }
+    .cat-circle { background: #e8f5e9; color: #2e7d32; }
+    .cat-campus { background: #e3f2fd; color: #1565c0; }
+    .cat-qa { background: #f3e5f5; color: #6a1b9a; }
+    .author { font-size: 0.8rem; color: var(--gray); font-weight: 500; }
+    .post-time { font-size: 0.75rem; color: #aaa; margin-left: auto; }
+    .post-title { font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; line-height: 1.4; }
+    .post-body { font-size: 0.85rem; color: var(--gray); line-height: 1.7; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .post-footer { display: flex; gap: 1rem; margin-top: 0.9rem; padding-top: 0.9rem; border-top: 1px solid #f0f0f0; }
+    .post-action { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; color: #aaa; cursor: pointer; transition: color 0.2s; }
+    .post-action:hover { color: var(--crimson); }
+    .post-action.liked { color: var(--crimson); }
+    .stars { color: var(--gold); font-size: 0.85rem; }
 
-  .loading { text-align: center; padding: 3rem; color: var(--gray); font-size: 0.9rem; }
-  .empty-tab { text-align: center; padding: 4rem 2rem; color: var(--gray); }
-  .empty-tab .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+    .qa-card { background: white; border: 1.5px solid #e8d5f5; border-radius: 12px; padding: 1.2rem 1.4rem; margin-bottom: 1rem; cursor: pointer; transition: box-shadow 0.2s, transform 0.2s; }
+    .qa-card:hover { box-shadow: 0 4px 20px rgba(106,27,154,0.1); transform: translateY(-1px); }
+    .qa-status { font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+    .qa-status.answered { background: #e8f5e9; color: #2e7d32; }
+    .qa-status.open { background: #fff3e0; color: #e65100; }
 
-  .sidebar { display: flex; flex-direction: column; gap: 1.5rem; }
-  .sidebar-card { background: white; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-  .sidebar-card-header { background: var(--crimson); padding: 0.8rem 1.2rem; color: white; font-size: 0.85rem; font-weight: 700; }
-  .sidebar-card-body { padding: 1rem 1.2rem; }
-  .trend-item { display: flex; align-items: flex-start; gap: 10px; padding: 0.55rem 0; border-bottom: 1px solid #f5f5f5; cursor: pointer; }
-  .trend-item:last-child { border-bottom: none; }
-  .trend-num { font-size: 1.1rem; font-weight: 900; color: var(--crimson); min-width: 22px; font-family: 'Playfair Display', serif; }
-  .trend-text { font-size: 0.82rem; color: var(--dark); line-height: 1.4; }
-  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
-  .stat-box { text-align: center; padding: 0.8rem; background: var(--crimson-pale); border-radius: 8px; }
-  .stat-num { font-size: 1.4rem; font-weight: 900; color: var(--crimson); font-family: 'Playfair Display', serif; }
-  .stat-label { font-size: 0.7rem; color: var(--gray); margin-top: 2px; }
+    .loading { text-align: center; padding: 3rem; color: var(--gray); font-size: 0.9rem; }
+    .empty-tab { text-align: center; padding: 4rem 2rem; color: var(--gray); }
+    .empty-tab .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
 
-  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
-  .modal-overlay.open { display: flex; }
-  .modal { background: white; border-radius: 16px; width: 100%; max-width: 560px; overflow: hidden; animation: slideUp 0.3s ease; max-height: 90vh; overflow-y: auto; }
-  .modal-wide { max-width: 620px; }
-  @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-  .modal-header { background: var(--crimson); padding: 1.2rem 1.5rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1; }
-  .modal-header h3 { color: white; font-size: 1rem; font-weight: 700; }
-  .modal-close { color: white; background: none; border: none; font-size: 1.4rem; cursor: pointer; line-height: 1; }
-  .modal-body { padding: 1.5rem; }
-  .form-group { margin-bottom: 1.1rem; }
-  .form-label { display: block; font-size: 0.82rem; font-weight: 700; color: var(--dark); margin-bottom: 0.4rem; }
-  .form-input, .form-select, .form-textarea { width: 100%; border: 1.5px solid var(--border); border-radius: 8px; padding: 0.6rem 0.9rem; font-size: 0.9rem; font-family: 'Noto Sans JP', sans-serif; color: var(--dark); outline: none; background: white; }
-  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--crimson); }
-  .form-textarea { resize: vertical; min-height: 90px; }
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-  .btn-submit { width: 100%; background: var(--crimson); color: white; border: none; padding: 0.9rem; border-radius: 8px; font-size: 0.95rem; font-weight: 700; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; margin-top: 0.5rem; }
-  .btn-submit:hover { background: var(--crimson-light); }
-  .btn-submit:disabled { background: #ccc; cursor: not-allowed; }
+    .sidebar { display: flex; flex-direction: column; gap: 1.5rem; }
+    .sidebar-card { background: white; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .sidebar-card-header { background: var(--crimson); padding: 0.8rem 1.2rem; color: white; font-size: 0.85rem; font-weight: 700; }
+    .sidebar-card-body { padding: 1rem 1.2rem; }
+    .trend-item { display: flex; align-items: flex-start; gap: 10px; padding: 0.55rem 0; border-bottom: 1px solid #f5f5f5; cursor: pointer; }
+    .trend-item:last-child { border-bottom: none; }
+    .trend-num { font-size: 1.1rem; font-weight: 900; color: var(--crimson); min-width: 22px; font-family: 'Playfair Display', serif; }
+    .trend-text { font-size: 0.82rem; color: var(--dark); line-height: 1.4; }
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+    .stat-box { text-align: center; padding: 0.8rem; background: var(--crimson-pale); border-radius: 8px; }
+    .stat-num { font-size: 1.4rem; font-weight: 900; color: var(--crimson); font-family: 'Playfair Display', serif; }
+    .stat-label { font-size: 0.7rem; color: var(--gray); margin-top: 2px; }
 
-  .qa-detail { padding: 1.5rem; }
-  .qa-question-box { background: #f8f3ff; border-left: 4px solid #7b1fa2; border-radius: 0 8px 8px 0; padding: 1rem 1.2rem; margin-bottom: 1.5rem; }
-  .qa-question-box .q-label { font-size: 0.75rem; font-weight: 700; color: #7b1fa2; margin-bottom: 0.5rem; }
-  .qa-question-box .q-text { font-size: 0.95rem; font-weight: 700; }
-  .answers-section h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 1rem; color: var(--gray); }
-  .answer-item { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 1rem; margin-bottom: 0.8rem; }
-  .answer-meta { display: flex; gap: 8px; margin-bottom: 0.5rem; align-items: center; }
-  .answer-author { font-size: 0.8rem; font-weight: 700; }
-  .answer-time { font-size: 0.75rem; color: #aaa; }
-  .best-badge { font-size: 0.7rem; background: #e8f5e9; color: #2e7d32; padding: 2px 8px; border-radius: 10px; font-weight: 700; }
-  .answer-text { font-size: 0.87rem; color: var(--gray); line-height: 1.7; }
-  .answer-input-area { margin-top: 1.2rem; border-top: 1px solid var(--border); padding-top: 1.2rem; }
-  .answer-input-area h4 { font-size: 0.88rem; font-weight: 700; margin-bottom: 0.6rem; }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: white; border-radius: 16px; width: 100%; max-width: 560px; overflow: hidden; animation: slideUp 0.3s ease; max-height: 90vh; overflow-y: auto; }
+    .modal-wide { max-width: 620px; }
+    @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .modal-header { background: var(--crimson); padding: 1.2rem 1.5rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1; }
+    .modal-header h3 { color: white; font-size: 1rem; font-weight: 700; }
+    .modal-close { color: white; background: none; border: none; font-size: 1.4rem; cursor: pointer; line-height: 1; }
+    .modal-body { padding: 1.5rem; }
+    .form-group { margin-bottom: 1.1rem; }
+    .form-label { display: block; font-size: 0.82rem; font-weight: 700; color: var(--dark); margin-bottom: 0.4rem; }
+    .form-input, .form-select, .form-textarea { width: 100%; border: 1.5px solid var(--border); border-radius: 8px; padding: 0.6rem 0.9rem; font-size: 0.9rem; font-family: 'Noto Sans JP', sans-serif; color: var(--dark); outline: none; background: white; }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--crimson); }
+    .form-textarea { resize: vertical; min-height: 90px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .btn-submit { width: 100%; background: var(--crimson); color: white; border: none; padding: 0.9rem; border-radius: 8px; font-size: 0.95rem; font-weight: 700; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; margin-top: 0.5rem; }
+    .btn-submit:hover { background: var(--crimson-light); }
+    .btn-submit:disabled { background: #ccc; cursor: not-allowed; }
 
-  /* ニックネーム設定モーダル */
-  .nickname-modal { max-width: 400px; }
+    .qa-detail { padding: 1.5rem; }
+    .qa-question-box { background: #f8f3ff; border-left: 4px solid #7b1fa2; border-radius: 0 8px 8px 0; padding: 1rem 1.2rem; margin-bottom: 1.5rem; }
+    .qa-question-box .q-label { font-size: 0.75rem; font-weight: 700; color: #7b1fa2; margin-bottom: 0.5rem; }
+    .qa-question-box .q-text { font-size: 0.95rem; font-weight: 700; }
+    .answers-section h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 1rem; color: var(--gray); }
+    .answer-item { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 1rem; margin-bottom: 0.8rem; }
+    .answer-meta { display: flex; gap: 8px; margin-bottom: 0.5rem; align-items: center; }
+    .answer-author { font-size: 0.8rem; font-weight: 700; }
+    .answer-time { font-size: 0.75rem; color: #aaa; }
+    .best-badge { font-size: 0.7rem; background: #e8f5e9; color: #2e7d32; padding: 2px 8px; border-radius: 10px; font-weight: 700; }
+    .answer-text { font-size: 0.87rem; color: var(--gray); line-height: 1.7; }
+    .answer-input-area { margin-top: 1.2rem; border-top: 1px solid var(--border); padding-top: 1.2rem; }
+    .answer-input-area h4 { font-size: 0.88rem; font-weight: 700; margin-bottom: 0.6rem; }
 
-  @media (max-width: 768px) {
-    .main { grid-template-columns: 1fr; padding: 1rem; }
-    .sidebar { display: none; }
-    .tab { padding: 0.7rem 0.8rem; font-size: 0.78rem; }
-    .form-row { grid-template-columns: 1fr; }
-  }
-</style>
-</head>
-<body>
+    /* ニックネーム設定モーダル */
+    .nickname-modal { max-width: 400px; }
 
-<header>
-  <div class="header-inner">
-    <a class="logo" href="#"><span class="logo-jp">ワセダノート</span><span class="logo-en">WASEDA NOTE</span></a>
-    <div class="header-right">
-      <div class="nickname-badge" id="nicknameBadge" onclick="openNicknameModal()">👤 設定中...</div>
-      <button class="btn-post" onclick="openPostModal()">＋ 投稿する</button>
-    </div>
-  </div>
-</header>
+    @media (max-width: 768px) {
+      .main { grid-template-columns: 1fr; padding: 1rem; }
+      .sidebar { display: none; }
+      .tab { padding: 0.7rem 0.8rem; font-size: 0.78rem; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+  </style>
+  </head>
+  <body>
 
-<div class="hero">
-  <h1>早稲田生のための、早稲田生による情報共有</h1>
-  <p>授業の口コミ・サークル・キャンパスライフをみんなでシェアしよう</p>
-  <div class="search-bar">
-    <input class="search-input" type="text" id="searchInput" placeholder="🔍 授業名・キーワードで検索..." onkeydown="if(event.key==='Enter')doSearch()">
-    <button class="search-btn" onclick="doSearch()">検索</button>
-  </div>
-</div>
-
-<div class="faculty-bar">
-  <div class="faculty-bar-inner">
-    <span class="faculty-label">学部：</span>
-    <button class="faculty-chip active" onclick="selectFaculty('all',this)">すべて</button>
-    <button class="faculty-chip" onclick="selectFaculty('seikei',this)">政治経済</button>
-    <button class="faculty-chip" onclick="selectFaculty('ho',this)">法</button>
-    <button class="faculty-chip" onclick="selectFaculty('shogaku',this)">商</button>
-    <button class="faculty-chip" onclick="selectFaculty('kyoiku',this)">教育</button>
-    <button class="faculty-chip" onclick="selectFaculty('bun',this)">文</button>
-    <button class="faculty-chip" onclick="selectFaculty('bunkagaku',this)">文化構想</button>
-    <button class="faculty-chip" onclick="selectFaculty('kiso',this)">基幹理工</button>
-    <button class="faculty-chip" onclick="selectFaculty('sozo',this)">創造理工</button>
-    <button class="faculty-chip" onclick="selectFaculty('sentan',this)">先進理工</button>
-    <button class="faculty-chip" onclick="selectFaculty('ningen',this)">人間科学</button>
-    <button class="faculty-chip" onclick="selectFaculty('sports',this)">スポーツ科学</button>
-    <button class="faculty-chip" onclick="selectFaculty('kokusai',this)">国際教養</button>
-    <button class="faculty-chip" onclick="selectFaculty('shakou',this)">社会科学</button>
-  </div>
-</div>
-
-<div class="tabs">
-  <div class="tabs-inner">
-    <div class="tab active" onclick="switchTab('all',this)">📋 すべて</div>
-    <div class="tab" onclick="switchTab('lecture',this)">📚 授業口コミ</div>
-    <div class="tab" onclick="switchTab('circle',this)">🎯 サークル</div>
-    <div class="tab" onclick="switchTab('campus',this)">🏫 キャンパスライフ</div>
-    <div class="tab" onclick="switchTab('qa',this)">❓ Q&amp;A</div>
-  </div>
-</div>
-
-<div class="main">
-  <div class="posts-section">
-    <div id="search-banner" class="search-banner">
-      <span id="search-banner-text"></span>
-      <span class="clear-search" onclick="clearSearch()">✕ クリア</span>
-    </div>
-    <div class="posts-header">
-      <h2 id="section-title">新着投稿</h2>
-      <select class="sort-select"><option>新着順</option></select>
-    </div>
-    <div id="posts-container"><div class="loading">読み込み中...</div></div>
-  </div>
-
-  <aside class="sidebar">
-    <div class="sidebar-card">
-      <div class="sidebar-card-header">🔥 トレンド</div>
-      <div class="sidebar-card-body">
-        <div class="trend-item"><span class="trend-num">1</span><span class="trend-text">春学期の楽単授業まとめ</span></div>
-        <div class="trend-item"><span class="trend-num">2</span><span class="trend-text">早稲田祭サークル出展情報</span></div>
-        <div class="trend-item"><span class="trend-num">3</span><span class="trend-text">3号館コンビニリニューアル</span></div>
-        <div class="trend-item"><span class="trend-num">4</span><span class="trend-text">インターン報告スレッド</span></div>
-        <div class="trend-item"><span class="trend-num">5</span><span class="trend-text">政経の必修変更について</span></div>
+  <header>
+    <div class="header-inner">
+      <a class="logo" href="#"><span class="logo-jp">ワセダノート</span><span class="logo-en">WASEDA NOTE</span></a>
+      <div class="header-right">
+        <div class="nickname-badge" id="nicknameBadge" onclick="openNicknameModal()">👤 設定中...</div>
+        <button class="btn-post" onclick="openPostModal()">＋ 投稿する</button>
       </div>
     </div>
-    <div class="sidebar-card">
-      <div class="sidebar-card-header">📊 統計</div>
-      <div class="sidebar-card-body">
-        <div class="stats-grid">
-          <div class="stat-box"><div class="stat-num" id="stat-posts">-</div><div class="stat-label">投稿数</div></div>
-          <div class="stat-box"><div class="stat-num" id="stat-qa">-</div><div class="stat-label">Q&amp;A数</div></div>
+  </header>
+
+  <div class="hero">
+    <h1>早稲田生のための、早稲田生による情報共有</h1>
+    <p>授業の口コミ・サークル・キャンパスライフをみんなでシェアしよう</p>
+    <div class="search-bar">
+      <input class="search-input" type="text" id="searchInput" placeholder="🔍 授業名・キーワードで検索..." onkeydown="if(event.key==='Enter')doSearch()">
+      <button class="search-btn" onclick="doSearch()">検索</button>
+    </div>
+  </div>
+
+  <div class="faculty-bar">
+    <div class="faculty-bar-inner">
+      <span class="faculty-label">学部：</span>
+      <button class="faculty-chip active" onclick="selectFaculty('all',this)">すべて</button>
+      <button class="faculty-chip" onclick="selectFaculty('seikei',this)">政治経済</button>
+      <button class="faculty-chip" onclick="selectFaculty('ho',this)">法</button>
+      <button class="faculty-chip" onclick="selectFaculty('shogaku',this)">商</button>
+      <button class="faculty-chip" onclick="selectFaculty('kyoiku',this)">教育</button>
+      <button class="faculty-chip" onclick="selectFaculty('bun',this)">文</button>
+      <button class="faculty-chip" onclick="selectFaculty('bunkagaku',this)">文化構想</button>
+      <button class="faculty-chip" onclick="selectFaculty('kiso',this)">基幹理工</button>
+      <button class="faculty-chip" onclick="selectFaculty('sozo',this)">創造理工</button>
+      <button class="faculty-chip" onclick="selectFaculty('sentan',this)">先進理工</button>
+      <button class="faculty-chip" onclick="selectFaculty('ningen',this)">人間科学</button>
+      <button class="faculty-chip" onclick="selectFaculty('sports',this)">スポーツ科学</button>
+      <button class="faculty-chip" onclick="selectFaculty('kokusai',this)">国際教養</button>
+      <button class="faculty-chip" onclick="selectFaculty('shakou',this)">社会科学</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tabs-inner">
+      <div class="tab active" onclick="switchTab('all',this)">📋 すべて</div>
+      <div class="tab" onclick="switchTab('lecture',this)">📚 授業口コミ</div>
+      <div class="tab" onclick="switchTab('circle',this)">🎯 サークル</div>
+      <div class="tab" onclick="switchTab('campus',this)">🏫 キャンパスライフ</div>
+      <div class="tab" onclick="switchTab('qa',this)">❓ Q&amp;A</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="posts-section">
+      <div id="search-banner" class="search-banner">
+        <span id="search-banner-text"></span>
+        <span class="clear-search" onclick="clearSearch()">✕ クリア</span>
+      </div>
+      <div class="posts-header">
+        <h2 id="section-title">新着投稿</h2>
+        <select class="sort-select"><option>新着順</option></select>
+      </div>
+      <div id="posts-container"><div class="loading">読み込み中...</div></div>
+    </div>
+
+    <aside class="sidebar">
+      <div class="sidebar-card">
+        <div class="sidebar-card-header">🔥 トレンド</div>
+        <div class="sidebar-card-body">
+          <div class="trend-item"><span class="trend-num">1</span><span class="trend-text">春学期の楽単授業まとめ</span></div>
+          <div class="trend-item"><span class="trend-num">2</span><span class="trend-text">早稲田祭サークル出展情報</span></div>
+          <div class="trend-item"><span class="trend-num">3</span><span class="trend-text">3号館コンビニリニューアル</span></div>
+          <div class="trend-item"><span class="trend-num">4</span><span class="trend-text">インターン報告スレッド</span></div>
+          <div class="trend-item"><span class="trend-num">5</span><span class="trend-text">政経の必修変更について</span></div>
         </div>
       </div>
-    </div>
-  </aside>
-</div>
+      <div class="sidebar-card">
+        <div class="sidebar-card-header">📊 統計</div>
+        <div class="sidebar-card-body">
+          <div class="stats-grid">
+            <div class="stat-box"><div class="stat-num" id="stat-posts">-</div><div class="stat-label">投稿数</div></div>
+            <div class="stat-box"><div class="stat-num" id="stat-qa">-</div><div class="stat-label">Q&amp;A数</div></div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
 
-<!-- 投稿モーダル -->
-<div class="modal-overlay" id="postModal">
-  <div class="modal">
-    <div class="modal-header">
-      <h3>✏️ 新規投稿</h3>
-      <button class="modal-close" onclick="closePostModal()">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-row">
+  <!-- 投稿モーダル -->
+  <div class="modal-overlay" id="postModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>✏️ 新規投稿</h3>
+        <button class="modal-close" onclick="closePostModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">カテゴリ</label>
+            <select class="form-select" id="postCategory" onchange="onCategoryChange(this)">
+              <option value="lecture">📚 授業口コミ</option>
+              <option value="circle">🎯 サークル情報</option>
+              <option value="campus">🏫 キャンパスライフ</option>
+              <option value="qa">❓ Q&amp;A（質問）</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">学部</label>
+            <select class="form-select" id="postFaculty">
+              <option value="">学部を選択（任意）</option>
+              <option value="seikei">政治経済学部</option>
+              <option value="ho">法学部</option>
+              <option value="shogaku">商学部</option>
+              <option value="kyoiku">教育学部</option>
+              <option value="bun">文学部</option>
+              <option value="bunkagaku">文化構想学部</option>
+              <option value="kiso">基幹理工学部</option>
+              <option value="sozo">創造理工学部</option>
+              <option value="sentan">先進理工学部</option>
+              <option value="ningen">人間科学部</option>
+              <option value="sports">スポーツ科学部</option>
+              <option value="kokusai">国際教養学部</option>
+              <option value="shakou">社会科学部</option>
+            </select>
+          </div>
+        </div>
         <div class="form-group">
-          <label class="form-label">カテゴリ</label>
-          <select class="form-select" id="postCategory" onchange="onCategoryChange(this)">
-            <option value="lecture">📚 授業口コミ</option>
-            <option value="circle">🎯 サークル情報</option>
-            <option value="campus">🏫 キャンパスライフ</option>
-            <option value="qa">❓ Q&amp;A（質問）</option>
+          <label class="form-label" id="title-label">タイトル</label>
+          <input class="form-input" type="text" id="postTitle" placeholder="例：政治経済学の授業について">
+        </div>
+        <div class="form-group">
+          <label class="form-label" id="body-label">内容</label>
+          <textarea class="form-textarea" id="postBody" placeholder="詳しい内容を書いてください..."></textarea>
+        </div>
+        <div class="form-group" id="lectureExtra" style="display:none;">
+          <label class="form-label">授業評価</label>
+          <select class="form-select" id="postStars">
+            <option value="5">⭐⭐⭐⭐⭐ とても良い</option>
+            <option value="4">⭐⭐⭐⭐ 良い</option>
+            <option value="3">⭐⭐⭐ 普通</option>
+            <option value="2">⭐⭐ 微妙</option>
+            <option value="1">⭐ 良くない</option>
           </select>
         </div>
+        <button class="btn-submit" id="submitBtn" onclick="submitPost()">投稿する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q&Aモーダル -->
+  <div class="modal-overlay" id="qaModal">
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <h3>❓ Q&amp;A スレッド</h3>
+        <button class="modal-close" onclick="closeQaModal()">×</button>
+      </div>
+      <div id="qa-detail-content"></div>
+    </div>
+  </div>
+
+  <!-- ニックネームモーダル -->
+  <div class="modal-overlay" id="nicknameModal">
+    <div class="modal nickname-modal">
+      <div class="modal-header">
+        <h3>👤 ニックネーム設定</h3>
+        <button class="modal-close" onclick="closeNicknameModal()">×</button>
+      </div>
+      <div class="modal-body">
         <div class="form-group">
-          <label class="form-label">学部</label>
-          <select class="form-select" id="postFaculty">
-            <option value="">学部を選択（任意）</option>
-            <option value="seikei">政治経済学部</option>
-            <option value="ho">法学部</option>
-            <option value="shogaku">商学部</option>
-            <option value="kyoiku">教育学部</option>
-            <option value="bun">文学部</option>
-            <option value="bunkagaku">文化構想学部</option>
-            <option value="kiso">基幹理工学部</option>
-            <option value="sozo">創造理工学部</option>
-            <option value="sentan">先進理工学部</option>
-            <option value="ningen">人間科学部</option>
-            <option value="sports">スポーツ科学部</option>
-            <option value="kokusai">国際教養学部</option>
-            <option value="shakou">社会科学部</option>
-          </select>
+          <label class="form-label">ニックネーム</label>
+          <input class="form-input" type="text" id="nicknameInput" placeholder="例：waseda_taro" maxlength="20">
         </div>
+        <button class="btn-submit" onclick="saveNickname()">保存する</button>
       </div>
-      <div class="form-group">
-        <label class="form-label" id="title-label">タイトル</label>
-        <input class="form-input" type="text" id="postTitle" placeholder="例：政治経済学の授業について">
-      </div>
-      <div class="form-group">
-        <label class="form-label" id="body-label">内容</label>
-        <textarea class="form-textarea" id="postBody" placeholder="詳しい内容を書いてください..."></textarea>
-      </div>
-      <div class="form-group" id="lectureExtra" style="display:none;">
-        <label class="form-label">授業評価</label>
-        <select class="form-select" id="postStars">
-          <option value="5">⭐⭐⭐⭐⭐ とても良い</option>
-          <option value="4">⭐⭐⭐⭐ 良い</option>
-          <option value="3">⭐⭐⭐ 普通</option>
-          <option value="2">⭐⭐ 微妙</option>
-          <option value="1">⭐ 良くない</option>
-        </select>
-      </div>
-      <button class="btn-submit" id="submitBtn" onclick="submitPost()">投稿する</button>
     </div>
   </div>
-</div>
 
-<!-- Q&Aモーダル -->
-<div class="modal-overlay" id="qaModal">
-  <div class="modal modal-wide">
-    <div class="modal-header">
-      <h3>❓ Q&amp;A スレッド</h3>
-      <button class="modal-close" onclick="closeQaModal()">×</button>
-    </div>
-    <div id="qa-detail-content"></div>
-  </div>
-</div>
-
-<!-- ニックネームモーダル -->
-<div class="modal-overlay" id="nicknameModal">
-  <div class="modal nickname-modal">
-    <div class="modal-header">
-      <h3>👤 ニックネーム設定</h3>
-      <button class="modal-close" onclick="closeNicknameModal()">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label class="form-label">ニックネーム</label>
-        <input class="form-input" type="text" id="nicknameInput" placeholder="例：waseda_taro" maxlength="20">
-      </div>
-      <button class="btn-submit" onclick="saveNickname()">保存する</button>
-    </div>
-  </div>
-</div>
-
-<script>
-// Supabase初期化
-const SUPABASE_URL = 'https://hazntivymzywhowtdtcc.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_Mr1wt5ZOoLtmYqPEoIKeUw_cM4ZPSbN';
-const { createClient } = supabase;
-const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-const FACULTIES = {
-  seikei:'政治経済学部', ho:'法学部', shogaku:'商学部', kyoiku:'教育学部',
-  bun:'文学部', bunkagaku:'文化構想学部', kiso:'基幹理工学部', sozo:'創造理工学部',
-  sentan:'先進理工学部', ningen:'人間科学部', sports:'スポーツ科学部',
-  kokusai:'国際教養学部', shakou:'社会科学部'
-};
-
-let currentTab = 'all';
-let currentFaculty = 'all';
-let searchQuery = '';
-let currentUser = localStorage.getItem('waseda_nickname') || 'ゲスト';
-let allPosts = [];
-
-// ニックネーム
-function updateNicknameBadge() {
-  document.getElementById('nicknameBadge').textContent = '👤 ' + currentUser;
-}
-
-function openNicknameModal() {
-  document.getElementById('nicknameInput').value = currentUser;
-  document.getElementById('nicknameModal').classList.add('open');
-}
-
-function closeNicknameModal() {
-  document.getElementById('nicknameModal').classList.remove('open');
-}
-
-function saveNickname() {
-  const val = document.getElementById('nicknameInput').value.trim();
-  if (!val) { alert('ニックネームを入力してください'); return; }
-  currentUser = val;
-  localStorage.setItem('waseda_nickname', val);
-  updateNicknameBadge();
-  closeNicknameModal();
-}
-
-// 投稿取得
-async function loadPosts() {
-  document.getElementById('posts-container').innerHTML = '<div class="loading">読み込み中...</div>';
+  <script>
+  // Supabase初期化（CDNのエクスポートの違いに対応する）
+  const SUPABASE_URL = 'https://hazntivymzywhowtdtcc.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_Mr1wt5ZOoLtmYqPEoIKeUw_cM4ZPSbN';
+  let db;
   try {
-    let query = db.from('posts').select('*').order('created_at', { ascending: false });
-    if (currentTab !== 'all') query = query.eq('category', currentTab);
-    if (currentFaculty !== 'all') query = query.eq('faculty', currentFaculty);
-    if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,body.ilike.%${searchQuery}%`);
-
-    const { data, error } = await query;
-    if (error) throw error;
-    allPosts = data || [];
-    renderPosts(allPosts);
-    updateStats();
-  } catch (err) {
-    console.error(err);
-    document.getElementById('posts-container').innerHTML = '<div class="empty-tab"><div class="empty-icon">⚠️</div><p>データの取得に失敗しました</p></div>';
+    if (typeof createClient === 'function') {
+      db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } else if (window.supabase && typeof window.supabase.createClient === 'function') {
+      db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } else {
+      throw new Error('Supabase client not found');
+    }
+  } catch (e) {
+    console.error('Supabase init error:', e);
   }
-}
 
-function updateStats() {
-  const total = allPosts.length;
-  const qa = allPosts.filter(p => p.category === 'qa').length;
-  document.getElementById('stat-posts').textContent = total.toLocaleString();
-  document.getElementById('stat-qa').textContent = qa.toLocaleString();
-}
-
-function formatTime(ts) {
-  const diff = Math.floor((Date.now() - new Date(ts)) / 1000);
-  if (diff < 60) return 'たった今';
-  if (diff < 3600) return Math.floor(diff/60) + '分前';
-  if (diff < 86400) return Math.floor(diff/3600) + '時間前';
-  return Math.floor(diff/86400) + '日前';
-}
-
-function renderPosts(posts) {
-  const container = document.getElementById('posts-container');
-  if (!posts.length) {
-    container.innerHTML = '<div class="empty-tab"><div class="empty-icon">📭</div><p>投稿がありません。最初の投稿者になろう！</p></div>';
-    return;
-  }
-  const catMap = {
-    lecture:['cat-lecture','📚 授業口コミ'],
-    circle:['cat-circle','🎯 サークル'],
-    campus:['cat-campus','🏫 キャンパスライフ'],
-    qa:['cat-qa','❓ Q&A']
+  const FACULTIES = {
+    seikei:'政治経済学部', ho:'法学部', shogaku:'商学部', kyoiku:'教育学部',
+    bun:'文学部', bunkagaku:'文化構想学部', kiso:'基幹理工学部', sozo:'創造理工学部',
+    sentan:'先進理工学部', ningen:'人間科学部', sports:'スポーツ科学部',
+    kokusai:'国際教養学部', shakou:'社会科学部'
   };
 
-  container.innerHTML = posts.map(p => {
-    const [cls, label] = catMap[p.category] || ['cat-campus','その他'];
-    const fTag = p.faculty ? `<span class="faculty-tag">${FACULTIES[p.faculty]||p.faculty}</span>` : '';
-    const timeStr = formatTime(p.created_at);
+  let currentTab = 'all';
+  let currentFaculty = 'all';
+  let searchQuery = '';
+  let currentUser = localStorage.getItem('waseda_nickname') || 'ゲスト';
+  let allPosts = [];
+  let answersCountMap = {};
 
-    if (p.category === 'qa') {
-      const answers = Array.isArray(p.answers) ? p.answers : [];
-      const sc = p.solved ? 'answered' : 'open';
-      const sl = p.solved ? '✅ 解決済み' : '🔓 回答募集中';
-      return `<div class="qa-card" onclick="openQaDetail(${p.id})">
-        <div class="post-meta"><span class="category-tag cat-qa">❓ Q&amp;A</span><span class="qa-status ${sc}">${sl}</span>${fTag}<span class="post-time">${timeStr}</span></div>
+  // ニックネーム
+  function updateNicknameBadge() { document.getElementById('nicknameBadge').textContent = '👤 ' + currentUser; }
+  function openNicknameModal() { document.getElementById('nicknameInput').value = currentUser; document.getElementById('nicknameModal').classList.add('open'); }
+  function closeNicknameModal() { document.getElementById('nicknameModal').classList.remove('open'); }
+  function saveNickname() { const val = document.getElementById('nicknameInput').value.trim(); if (!val) { alert('ニックネームを入力してください'); return; } currentUser = val; localStorage.setItem('waseda_nickname', val); updateNicknameBadge(); closeNicknameModal(); }
+
+  // 投稿取得
+  async function loadPosts() {
+    const container = document.getElementById('posts-container');
+    container.innerHTML = '<div class="loading">読み込み中...</div>';
+    try {
+      let query = db.from('posts').select('*').order('created_at', { ascending: false });
+      if (currentTab !== 'all') query = query.eq('category', currentTab);
+      if (currentFaculty !== 'all') query = query.eq('faculty', currentFaculty);
+      if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,body.ilike.%${searchQuery}%`);
+
+      const { data, error } = await query;
+      if (error) throw error;
+      allPosts = data || [];
+
+      // answers 件数を別テーブルから取得
+      answersCountMap = {};
+      try {
+        const ids = allPosts.map(p => p.id).filter(Boolean);
+        if (ids.length && db) {
+          const { data: ansRows, error: ansErr } = await db.from('answers').select('post_id').in('post_id', ids);
+          if (!ansErr && Array.isArray(ansRows)) ansRows.forEach(r => { answersCountMap[r.post_id] = (answersCountMap[r.post_id] || 0) + 1; });
+        }
+      } catch (e) { console.warn('answers count fetch failed', e); }
+
+      renderPosts(allPosts);
+      updateStats();
+    } catch (err) {
+      console.error(err);
+      container.innerHTML = '<div class="empty-tab"><div class="empty-icon">⚠️</div><p>データの取得に失敗しました</p></div>';
+    }
+  }
+
+  function updateStats() { const total = allPosts.length; const qa = allPosts.filter(p => p.category === 'qa').length; document.getElementById('stat-posts').textContent = total.toLocaleString(); document.getElementById('stat-qa').textContent = qa.toLocaleString(); }
+
+  function formatTime(ts) { const diff = Math.floor((Date.now() - new Date(ts)) / 1000); if (diff < 60) return 'たった今'; if (diff < 3600) return Math.floor(diff/60) + '分前'; if (diff < 86400) return Math.floor(diff/3600) + '時間前'; return Math.floor(diff/86400) + '日前'; }
+
+  function renderPosts(posts) {
+    const container = document.getElementById('posts-container');
+    if (!posts.length) { container.innerHTML = '<div class="empty-tab"><div class="empty-icon">📭</div><p>投稿がありません。最初の投稿者になろう！</p></div>'; return; }
+    const catMap = { lecture:['cat-lecture','📚 授業口コミ'], circle:['cat-circle','🎯 サークル'], campus:['cat-campus','🏫 キャンパスライフ'], qa:['cat-qa','❓ Q&A'] };
+
+    container.innerHTML = posts.map(p => {
+      const [cls, label] = catMap[p.category] || ['cat-campus','その他'];
+      const fTag = p.faculty ? `<span class="faculty-tag">${FACULTIES[p.faculty]||p.faculty}</span>` : '';
+      const timeStr = formatTime(p.created_at);
+
+      if (p.category === 'qa') {
+        const ansCount = answersCountMap[p.id] || 0;
+        const sc = p.solved ? 'answered' : 'open';
+        const sl = p.solved ? '✅ 解決済み' : '🔓 回答募集中';
+        return `<div class="qa-card" onclick='openQaDetail(${JSON.stringify(p.id)})'>
+          <div class="post-meta"><span class="category-tag cat-qa">❓ Q&amp;A</span><span class="qa-status ${sc}">${sl}</span>${fTag}<span class="post-time">${timeStr}</span></div>
+          <div class="post-title">${escHtml(p.title)}</div>
+          <div class="post-body">${escHtml(p.body)}</div>
+          <div class="post-footer">
+            <span class="post-action">💬 回答 ${ansCount}件</span>
+            <span class="post-action" onclick='event.stopPropagation(); likePost(${JSON.stringify(p.id)}, this)'>❤️ <span class="like-count">${p.likes||0}</span></span>
+            <span class="post-action">@${escHtml(p.author)}</span>
+          </div></div>`;
+      }
+
+      const stars = p.stars ? '⭐'.repeat(p.stars) : '';
+      return `<div class="post-card">
+        <div class="post-meta"><span class="category-tag ${cls}">${label}</span>${fTag}<span class="author">@${escHtml(p.author)}</span>${stars?`<span class="stars">${stars}</span>`:''}<span class="post-time">${timeStr}</span></div>
         <div class="post-title">${escHtml(p.title)}</div>
         <div class="post-body">${escHtml(p.body)}</div>
         <div class="post-footer">
-          <span class="post-action">💬 回答 ${answers.length}件</span>
-          <span class="post-action">❤️ ${p.likes||0}</span>
-          <span class="post-action">@${escHtml(p.author)}</span>
+          <span class="post-action" onclick='event.stopPropagation(); likePost(${JSON.stringify(p.id)}, this)'>❤️ <span class="like-count">${p.likes||0}</span></span>
+          <span class="post-action">💬 ${p.comments||0}</span>
         </div></div>`;
-    }
+    }).join('');
+  }
 
-    const stars = p.stars ? '⭐'.repeat(p.stars) : '';
-    return `<div class="post-card">
-      <div class="post-meta"><span class="category-tag ${cls}">${label}</span>${fTag}<span class="author">@${escHtml(p.author)}</span>${stars?`<span class="stars">${stars}</span>`:''}<span class="post-time">${timeStr}</span></div>
-      <div class="post-title">${escHtml(p.title)}</div>
-      <div class="post-body">${escHtml(p.body)}</div>
-      <div class="post-footer">
-        <span class="post-action" onclick="likePost(${p.id}, this)">❤️ <span class="like-count">${p.likes||0}</span></span>
-        <span class="post-action">💬 ${p.comments||0}</span>
-      </div></div>`;
-  }).join('');
-}
+  function escHtml(str) { return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-function escHtml(str) {
-  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+  // いいね
+  async function likePost(id, el) {
+    try {
+      const countEl = el && el.querySelector ? el.querySelector('.like-count') : null;
+      const cur = countEl ? parseInt(countEl.textContent||'0') : 0;
+      const newCount = cur + 1;
+      if (countEl) countEl.textContent = newCount;
+      if (!db) throw new Error('Supabase client not initialized');
+      const { error } = await db.from('posts').update({ likes: newCount }).eq('id', id);
+      if (error) { console.error('Like update error', error); if (countEl) countEl.textContent = cur; }
+    } catch (e) { console.error(e); alert('いいねの更新に失敗しました'); }
+  }
 
-// いいね
-async function likePost(id, el) {
-  const countEl = el.querySelector('.like-count');
-  const cur = parseInt(countEl.textContent);
-  const newCount = cur + 1;
-  countEl.textContent = newCount;
-  await db.from('posts').update({ likes: newCount }).eq('id', id);
-}
+  // 検索
+  function doSearch() { searchQuery = document.getElementById('searchInput').value.trim(); const banner = document.getElementById('search-banner'); if (searchQuery) { banner.classList.add('show'); document.getElementById('search-banner-text').textContent = `「${searchQuery}」の検索結果`; } else { banner.classList.remove('show'); } loadPosts(); }
+  function clearSearch() { searchQuery = ''; document.getElementById('searchInput').value = ''; document.getElementById('search-banner').classList.remove('show'); loadPosts(); }
 
-// 検索
-function doSearch() {
-  searchQuery = document.getElementById('searchInput').value.trim();
-  const banner = document.getElementById('search-banner');
-  if (searchQuery) { banner.classList.add('show'); document.getElementById('search-banner-text').textContent = `「${searchQuery}」の検索結果`; }
-  else { banner.classList.remove('show'); }
+  // タブ・学部切替
+  function switchTab(tab, el) { currentTab = tab; document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); el.classList.add('active'); const titles = { all:'新着投稿', lecture:'授業口コミ', circle:'サークル情報', campus:'キャンパスライフ', qa:'Q&A' }; document.getElementById('section-title').textContent = titles[tab]; loadPosts(); }
+  function selectFaculty(f, el) { currentFaculty = f; document.querySelectorAll('.faculty-chip').forEach(c => c.classList.remove('active')); el.classList.add('active'); loadPosts(); }
+
+  // 投稿モーダル
+  function openPostModal() { document.getElementById('postModal').classList.add('open'); }
+  function closePostModal() { document.getElementById('postModal').classList.remove('open'); }
+  function onCategoryChange(sel) { const isL = sel.value === 'lecture', isQ = sel.value === 'qa'; document.getElementById('lectureExtra').style.display = isL ? 'block' : 'none'; document.getElementById('title-label').textContent = isQ ? '質問タイトル' : 'タイトル'; document.getElementById('body-label').textContent = isQ ? '質問の詳細' : '内容'; document.getElementById('postTitle').placeholder = isQ ? '例：政経の必修登録の方法は？' : '例：マクロ経済学の口コミ'; }
+
+  // 投稿送信
+  async function submitPost() {
+    const title = document.getElementById('postTitle').value.trim();
+    const body = document.getElementById('postBody').value.trim();
+    const category = document.getElementById('postCategory').value;
+    const faculty = document.getElementById('postFaculty').value;
+    if (!title || !body) { alert('タイトルと内容を入力してください'); return; }
+
+    const btn = document.getElementById('submitBtn'); btn.disabled = true; btn.textContent = '投稿中...';
+    const stars = category === 'lecture' ? parseInt(document.getElementById('postStars').value) : null;
+    const newPost = { category, faculty: faculty || null, author: currentUser, title, body, likes: 0, comments: 0, stars };
+
+    const { error } = await db.from('posts').insert([newPost]);
+    btn.disabled = false; btn.textContent = '投稿する';
+    if (error) { alert('投稿に失敗しました: ' + error.message); return; }
+
+    closePostModal(); document.getElementById('postTitle').value = ''; document.getElementById('postBody').value = ''; loadPosts();
+  }
+
+  // answers テーブルから指定投稿の回答を取得するヘルパー
+  async function loadAnswers(postId) {
+    try { if (!db) throw new Error('Supabase client not initialized'); const { data, error } = await db.from('answers').select('*').eq('post_id', postId).order('created_at', { ascending: false }); if (error) { console.error('loadAnswers error', error); return []; } return Array.isArray(data) ? data : []; } catch (e) { console.error(e); return []; }
+  }
+
+  // Q&A詳細
+  async function openQaDetail(id) {
+    try {
+      if (!db) throw new Error('Supabase client not initialized');
+      const { data: post, error } = await db.from('posts').select('*').eq('id', id).single();
+      if (error || !post) return;
+
+      const answers = await loadAnswers(id);
+      const ansHtml = !answers.length
+        ? '<p style="color:#aaa;font-size:0.85rem;text-align:center;padding:1rem 0;">まだ回答がありません。最初に回答しよう！</p>'
+        : answers.map(a => { const time = a.created_at ? formatTime(a.created_at) : (a.time || ''); return `<div class="answer-item"><div class="answer-meta"><span class="answer-author">@${escHtml(a.author)}</span>${a.best?'<span class="best-badge">✅ ベストアンサー</span>':''}<span class="answer-time">${time}</span></div><div class="answer-text">${escHtml(a.text)}</div></div>`; }).join('');
+
+      document.getElementById('qa-detail-content').innerHTML = `
+        <div class="qa-detail">
+          <div class="qa-question-box">
+            <div class="q-label">❓ 質問</div>
+            <div class="q-text">${escHtml(post.title)}</div>
+            <div style="font-size:0.85rem;color:var(--gray);margin-top:0.6rem;line-height:1.7">${escHtml(post.body)}</div>
+            <div style="font-size:0.75rem;color:#aaa;margin-top:0.5rem">@${escHtml(post.author)} · ${formatTime(post.created_at)}${post.faculty?' · '+FACULTIES[post.faculty]:''}</div>
+          </div>
+          <div class="answers-section"><h4>💬 回答 ${answers.length}件</h4>${ansHtml}</div>
+          <div class="answer-input-area">
+            <h4>✏️ 回答する</h4>
+            <textarea class="form-textarea" id="answerInput-${id}" placeholder="あなたの知識や経験をシェアしてください..." style="margin-bottom:0.7rem"></textarea>
+            <button class="btn-submit" style="margin-top:0" onclick="submitAnswer(${JSON.stringify(id)})">回答を投稿</button>
+          </div>
+        </div>`;
+      document.getElementById('qaModal').classList.add('open');
+    } catch (e) { console.error(e); }
+  }
+
+  function closeQaModal() { document.getElementById('qaModal').classList.remove('open'); }
+
+  async function submitAnswer(postId) {
+    const input = document.getElementById('answerInput-' + postId);
+    const text = input.value.trim();
+    if (!text) { alert('回答を入力してください'); return; }
+    try {
+      if (!db) throw new Error('Supabase client not initialized');
+      const newAns = { post_id: postId, author: currentUser, text };
+      const { data: inserted, error: insertErr } = await db.from('answers').insert([newAns]);
+      if (insertErr) throw insertErr;
+      input.value = '';
+      openQaDetail(postId);
+      loadPosts();
+    } catch (e) { console.error(e); alert('回答の投稿に失敗しました'); }
+  }
+
+  // モーダル外クリックで閉じる
+  document.getElementById('postModal').addEventListener('click', e => { if (e.target===document.getElementById('postModal')) closePostModal(); });
+  document.getElementById('qaModal').addEventListener('click', e => { if (e.target===document.getElementById('qaModal')) closeQaModal(); });
+  document.getElementById('nicknameModal').addEventListener('click', e => { if (e.target===document.getElementById('nicknameModal')) closeNicknameModal(); });
+
+  // 初期化
+  updateNicknameBadge();
   loadPosts();
-}
-
-function clearSearch() {
-  searchQuery = '';
-  document.getElementById('searchInput').value = '';
-  document.getElementById('search-banner').classList.remove('show');
-  loadPosts();
-}
-
-// タブ・学部切替
-function switchTab(tab, el) {
-  currentTab = tab;
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  const titles = { all:'新着投稿', lecture:'授業口コミ', circle:'サークル情報', campus:'キャンパスライフ', qa:'Q&A' };
-  document.getElementById('section-title').textContent = titles[tab];
-  loadPosts();
-}
-
-function selectFaculty(f, el) {
-  currentFaculty = f;
-  document.querySelectorAll('.faculty-chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
-  loadPosts();
-}
-
-// 投稿モーダル
-function openPostModal() { document.getElementById('postModal').classList.add('open'); }
-function closePostModal() { document.getElementById('postModal').classList.remove('open'); }
-
-function onCategoryChange(sel) {
-  const isL = sel.value === 'lecture', isQ = sel.value === 'qa';
-  document.getElementById('lectureExtra').style.display = isL ? 'block' : 'none';
-  document.getElementById('title-label').textContent = isQ ? '質問タイトル' : 'タイトル';
-  document.getElementById('body-label').textContent = isQ ? '質問の詳細' : '内容';
-  document.getElementById('postTitle').placeholder = isQ ? '例：政経の必修登録の方法は？' : '例：マクロ経済学の口コミ';
-}
-
-// 投稿送信
-async function submitPost() {
-  const title = document.getElementById('postTitle').value.trim();
-  const body = document.getElementById('postBody').value.trim();
-  const category = document.getElementById('postCategory').value;
-  const faculty = document.getElementById('postFaculty').value;
-  if (!title || !body) { alert('タイトルと内容を入力してください'); return; }
-
-  const btn = document.getElementById('submitBtn');
-  btn.disabled = true;
-  btn.textContent = '投稿中...';
-
-  const stars = category === 'lecture' ? parseInt(document.getElementById('postStars').value) : null;
-  const newPost = {
-    category, faculty: faculty || null, author: currentUser,
-    title, body, likes: 0, comments: 0,
-    stars, answers: [], solved: false
-  };
-
-  const { error } = await db.from('posts').insert([newPost]);
-  btn.disabled = false;
-  btn.textContent = '投稿する';
-
-  if (error) { alert('投稿に失敗しました: ' + error.message); return; }
-
-  closePostModal();
-  document.getElementById('postTitle').value = '';
-  document.getElementById('postBody').value = '';
-  loadPosts();
-}
-
-// Q&A詳細
-async function openQaDetail(id) {
-  const { data: post, error } = await db.from('posts').select('*').eq('id', id).single();
-  if (error || !post) return;
-
-  const answers = Array.isArray(post.answers) ? post.answers : [];
-  const ansHtml = !answers.length
-    ? '<p style="color:#aaa;font-size:0.85rem;text-align:center;padding:1rem 0;">まだ回答がありません。最初に回答しよう！</p>'
-    : answers.map(a => `<div class="answer-item"><div class="answer-meta"><span class="answer-author">@${escHtml(a.author)}</span>${a.best?'<span class="best-badge">✅ ベストアンサー</span>':''}<span class="answer-time">${a.time}</span></div><div class="answer-text">${escHtml(a.text)}</div></div>`).join('');
-
-  document.getElementById('qa-detail-content').innerHTML = `
-    <div class="qa-detail">
-      <div class="qa-question-box">
-        <div class="q-label">❓ 質問</div>
-        <div class="q-text">${escHtml(post.title)}</div>
-        <div style="font-size:0.85rem;color:var(--gray);margin-top:0.6rem;line-height:1.7">${escHtml(post.body)}</div>
-        <div style="font-size:0.75rem;color:#aaa;margin-top:0.5rem">@${escHtml(post.author)} · ${formatTime(post.created_at)}${post.faculty?' · '+FACULTIES[post.faculty]:''}</div>
-      </div>
-      <div class="answers-section"><h4>💬 回答 ${answers.length}件</h4>${ansHtml}</div>
-      <div class="answer-input-area">
-        <h4>✏️ 回答する</h4>
-        <textarea class="form-textarea" id="answerInput-${id}" placeholder="あなたの知識や経験をシェアしてください..." style="margin-bottom:0.7rem"></textarea>
-        <button class="btn-submit" style="margin-top:0" onclick="submitAnswer(${id})">回答を投稿</button>
-      </div>
-    </div>`;
-  document.getElementById('qaModal').classList.add('open');
-}
-
-function closeQaModal() { document.getElementById('qaModal').classList.remove('open'); }
-
-async function submitAnswer(postId) {
-  const input = document.getElementById('answerInput-' + postId);
-  const text = input.value.trim();
-  if (!text) { alert('回答を入力してください'); return; }
-
-  const { data: post } = await db.from('posts').select('answers').eq('id', postId).single();
-  const answers = Array.isArray(post?.answers) ? post.answers : [];
-  answers.push({ id: Date.now(), author: currentUser, time: 'たった今', text, best: false });
-
-  const { error } = await db.from('posts').update({ answers, solved: true }).eq('id', postId);
-  if (error) { alert('回答の投稿に失敗しました'); return; }
-
-  input.value = '';
-  openQaDetail(postId);
-  loadPosts();
-}
-
-// モーダル外クリックで閉じる
-document.getElementById('postModal').addEventListener('click', e => { if (e.target===document.getElementById('postModal')) closePostModal(); });
-document.getElementById('qaModal').addEventListener('click', e => { if (e.target===document.getElementById('qaModal')) closeQaModal(); });
-document.getElementById('nicknameModal').addEventListener('click', e => { if (e.target===document.getElementById('nicknameModal')) closeNicknameModal(); });
-
-// 初期化
-updateNicknameBadge();
-loadPosts();
-</script>
-</body>
-</html>
+  </script>
+  </body>
+  </html>
