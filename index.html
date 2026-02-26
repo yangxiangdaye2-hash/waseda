@@ -39,8 +39,9 @@
   .faculty-chip:hover { border-color: var(--crimson); color: var(--crimson); }
   .faculty-chip.active { background: var(--crimson); color: white; border-color: var(--crimson); }
 
-  .tabs { background: white; border-bottom: 2px solid var(--border); padding: 0 2rem; position: sticky; top: 60px; z-index: 90; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-  .tabs-inner { max-width: 1100px; margin: 0 auto; display: flex; gap: 0; }
+  .tabs { background: white; border-bottom: 2px solid var(--border); position: sticky; top: 60px; z-index: 90; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs-inner { max-width: 1100px; margin: 0 auto; display: flex; gap: 0; padding: 0 2rem; }
   .tab { padding: 0.9rem 1.3rem; font-size: 0.875rem; font-weight: 600; color: var(--gray); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: color 0.18s, border-color 0.18s, background 0.18s; white-space: nowrap; letter-spacing: 0.01em; user-select: none; }
   .tab:hover { color: var(--crimson); background: var(--crimson-pale); border-bottom-color: rgba(139,0,0,0.25); }
   .tab.active { color: var(--crimson); border-bottom-color: var(--crimson); font-weight: 700; }
@@ -137,6 +138,7 @@
     @media (max-width: 768px) {
       .main { grid-template-columns: 1fr; padding: 1rem; }
       .sidebar { display: none; }
+      .tabs-inner { max-width: none; padding: 0 1rem; }
       .tab { padding: 0.75rem 0.8rem; font-size: 0.78rem; }
       .form-row { grid-template-columns: 1fr; }
     }
@@ -201,7 +203,10 @@
       </div>
       <div class="posts-header">
         <h2 id="section-title">新着投稿</h2>
-        <select class="sort-select"><option>新着順</option></select>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+          <button class="btn-post" id="categoryPostBtn" style="margin: 0;" onclick="openPostModalWithCategory()">＋ 投稿する</button>
+          <select class="sort-select"><option>新着順</option></select>
+        </div>
       </div>
       <div id="posts-container"><div class="loading">読み込み中...</div></div>
     </div>
@@ -453,6 +458,11 @@
 
   // 投稿モーダル
   function openPostModal() { document.getElementById('postModal').classList.add('open'); }
+  function openPostModalWithCategory(category = null) {
+    if (category === null) category = currentTab === 'all' ? 'lecture' : (currentTab === 'qa' ? 'qa' : currentTab);
+    document.getElementById('postModal').classList.add('open');
+    setTimeout(() => { const sel = document.getElementById('postCategory'); sel.value = category; onCategoryChange(sel); }, 0);
+  }
   function closePostModal() { document.getElementById('postModal').classList.remove('open'); }
   function onCategoryChange(sel) { const isL = sel.value === 'lecture', isQ = sel.value === 'qa'; document.getElementById('lectureExtra').style.display = isL ? 'block' : 'none'; document.getElementById('title-label').textContent = isQ ? '質問タイトル' : 'タイトル'; document.getElementById('body-label').textContent = isQ ? '質問の詳細' : '内容'; document.getElementById('postTitle').placeholder = isQ ? '例：政経の必修登録の方法は？' : '例：マクロ経済学の口コミ'; }
 
