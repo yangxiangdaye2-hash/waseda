@@ -122,6 +122,32 @@
     .sidebar-card-header { background: linear-gradient(135deg, var(--crimson) 0%, var(--crimson-dark) 100%); padding: 14px 16px; color: white; font-size: 0.9rem; font-weight: 700; letter-spacing: 0.05em; }
     .sidebar-card-body { padding: 1.4rem 1.2rem; }
 
+    /* category tabs inside trend card */
+    .trend-tabs { display: flex; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .trend-tab {
+      flex: 1;
+      padding: 8px 14px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      background: white;
+      color: var(--crimson);
+      border: 2px solid var(--crimson);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, transform 0.1s;
+      text-align: center;
+    }
+    .trend-tab:hover {
+      background: var(--crimson);
+      color: white;
+      transform: translateY(-1px);
+    }
+    .trend-tab.active {
+      background: var(--crimson-dark);
+      color: white;
+      border-color: var(--crimson-dark);
+    }
+
     .trend-item { display: flex; align-items: flex-start; gap: 12px; padding: 0.75rem 0; border-bottom: 1px solid #f5f5f5; cursor: pointer; transition: all 0.2s; }
     .trend-item:hover { padding-left: 4px; color: var(--crimson); }
     .trend-item:last-child { border-bottom: none; }
