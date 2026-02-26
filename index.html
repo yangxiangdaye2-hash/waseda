@@ -323,6 +323,12 @@
       <div class="sidebar-card">
         <div class="sidebar-card-header">🔥 トレンド</div>
         <div class="sidebar-card-body">
+          <div class="trend-tabs">
+            <button class="trend-tab active" data-cat="lecture">授業口コミ</button>
+            <button class="trend-tab" data-cat="circle">サークル</button>
+            <button class="trend-tab" data-cat="campus">キャンパスライフ</button>
+            <button class="trend-tab" data-cat="qa">Q&amp;A</button>
+          </div>
           <div id="trendContainer"><div class="trend-loading">読み込み中...</div></div>
         </div>
       </div>
@@ -456,6 +462,7 @@
   let currentTab = 'all';
   let currentFaculty = 'all';
   let currentSort = 'newest';
+  let currentTrendCategory = 'lecture';
   let searchQuery = '';
   let currentUser = localStorage.getItem('waseda_nickname') || 'ゲスト';
   let allPosts = [];
@@ -499,7 +506,7 @@
       } catch (e) { console.warn('answers count fetch failed', e); }
 
       renderPosts(allPosts);
-      if (currentTab === 'all') loadTrendingPosts();
+      if (currentTab === 'all') loadTrendingPosts(currentTrendCategory);
     } catch (err) {
       console.error(err);
       container.innerHTML = '<div class="empty-tab"><div class="empty-icon">⚠️</div><div class="empty-title">データ読み込みエラー</div><div class="empty-text">申し訳ございません。データの取得に失敗しました。</div></div>';
@@ -508,7 +515,7 @@
 
 
   // トレンドポスト取得と描画
-  async function loadTrendingPosts() {
+  async function loadTrendingPosts(category = currentTrendCategory) {
     try {
       if (!db) throw new Error('Supabase client not initialized');
       
@@ -519,19 +526,21 @@
       const now = new Date();
       const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
 
-      // First try: get top 5 posts from last 24h regardless of category
+      // First try: get top 3 posts within 24h in the given category
       let { data: postsData, error: err1 } = await db.from('posts')
         .select('*')
+        .eq('category', category)
         .gte('created_at', twentyFourHoursAgo)
         .order('likes', { ascending: false })
-        .limit(5);
+        .limit(3);
 
-      // Fallback: most recent 5 posts overall
+      // Fallback: most recent 3 posts in that category
       if (err1 || !postsData || postsData.length === 0) {
         const { data: recentData, error: err2 } = await db.from('posts')
           .select('*')
+          .eq('category', category)
           .order('created_at', { ascending: false })
-          .limit(5);
+          .limit(3);
         if (err2) throw err2;
         postsData = recentData || [];
       }
@@ -560,6 +569,22 @@
         container.innerHTML = '<div style="color: var(--gray); font-size: 0.9rem; text-align: center; padding: 1rem;">投稿を読み込んでいます...</div>';
       }
     }
+  }
+
+  function switchTrendCategory(cat) {
+    currentTrendCategory = cat;
+    document.querySelectorAll('.trend-tab').forEach(t => {
+      t.classList.toggle('active', t.getAttribute('data-cat') === cat);
+    });
+    const c = document.getElementById('trendContainer');
+    if (c) c.innerHTML = '<div class="trend-loading">読み込み中...</div>';
+    loadTrendingPosts(cat);
+  }
+
+  function setupTrendTabs() {
+    document.querySelectorAll('.trend-tab').forEach(btn => {
+      btn.addEventListener('click', () => switchTrendCategory(btn.getAttribute('data-cat')));
+    });
   }
 
   // トレンドポストにスクロール・ハイライト
@@ -826,6 +851,7 @@
 
   // 初期化
   updateNicknameBadge();
+  setupTrendTabs();
   loadPosts();
   </script>
   </body>
