@@ -121,9 +121,6 @@
     .sidebar-card:hover { box-shadow: 0 4px 20px rgba(139, 0, 0, 0.08); }
     .sidebar-card-header { background: linear-gradient(135deg, var(--crimson) 0%, var(--crimson-dark) 100%); padding: 14px 16px; color: white; font-size: 0.9rem; font-weight: 700; letter-spacing: 0.05em; }
     .sidebar-card-body { padding: 1.4rem 1.2rem; }
-    .trend-tabs { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.8rem; }
-    .trend-tab { flex: 1; padding: 4px 6px; font-size: 0.75rem; background: #f5f5f5; border: none; border-radius: 6px; cursor: pointer; transition: background 0.2s; }
-    .trend-tab.active { background: var(--crimson); color: white; }
 
     .trend-item { display: flex; align-items: flex-start; gap: 12px; padding: 0.75rem 0; border-bottom: 1px solid #f5f5f5; cursor: pointer; transition: all 0.2s; }
     .trend-item:hover { padding-left: 4px; color: var(--crimson); }
@@ -326,12 +323,6 @@
       <div class="sidebar-card">
         <div class="sidebar-card-header">🔥 トレンド</div>
         <div class="sidebar-card-body">
-          <div class="trend-tabs">
-            <button class="trend-tab active" data-cat="lecture">授業口コミ</button>
-            <button class="trend-tab" data-cat="circle">サークル</button>
-            <button class="trend-tab" data-cat="campus">キャンパスライフ</button>
-            <button class="trend-tab" data-cat="qa">Q&amp;A</button>
-          </div>
           <div id="trendContainer"><div class="trend-loading">読み込み中...</div></div>
         </div>
       </div>
@@ -465,7 +456,6 @@
   let currentTab = 'all';
   let currentFaculty = 'all';
   let currentSort = 'newest';
-  let currentTrendCategory = 'lecture';
   let searchQuery = '';
   let currentUser = localStorage.getItem('waseda_nickname') || 'ゲスト';
   let allPosts = [];
@@ -509,7 +499,7 @@
       } catch (e) { console.warn('answers count fetch failed', e); }
 
       renderPosts(allPosts);
-      loadTrendingPosts(currentTrendCategory);
+      if (currentTab === 'all') loadTrendingPosts();
     } catch (err) {
       console.error(err);
       container.innerHTML = '<div class="empty-tab"><div class="empty-icon">⚠️</div><div class="empty-title">データ読み込みエラー</div><div class="empty-text">申し訳ございません。データの取得に失敗しました。</div></div>';
@@ -518,7 +508,7 @@
 
 
   // トレンドポスト取得と描画
-  async function loadTrendingPosts(category = currentTrendCategory) {
+  async function loadTrendingPosts() {
     try {
       if (!db) throw new Error('Supabase client not initialized');
       
@@ -529,21 +519,19 @@
       const now = new Date();
       const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
 
-      // First try: get top 3 posts within 24h in the given category
+      // First try: get top 5 posts from last 24h regardless of category
       let { data: postsData, error: err1 } = await db.from('posts')
         .select('*')
-        .eq('category', category)
         .gte('created_at', twentyFourHoursAgo)
         .order('likes', { ascending: false })
-        .limit(3);
+        .limit(5);
 
-      // Fallback: most recent 3 posts in that category
+      // Fallback: most recent 5 posts overall
       if (err1 || !postsData || postsData.length === 0) {
         const { data: recentData, error: err2 } = await db.from('posts')
           .select('*')
-          .eq('category', category)
           .order('created_at', { ascending: false })
-          .limit(3);
+          .limit(5);
         if (err2) throw err2;
         postsData = recentData || [];
       }
@@ -572,22 +560,6 @@
         container.innerHTML = '<div style="color: var(--gray); font-size: 0.9rem; text-align: center; padding: 1rem;">投稿を読み込んでいます...</div>';
       }
     }
-  }
-
-  function switchTrendCategory(cat) {
-    currentTrendCategory = cat;
-    document.querySelectorAll('.trend-tab').forEach(t => {
-      t.classList.toggle('active', t.getAttribute('data-cat') === cat);
-    });
-    const c = document.getElementById('trendContainer');
-    if (c) c.innerHTML = '<div class="trend-loading">読み込み中...</div>';
-    loadTrendingPosts(cat);
-  }
-
-  function setupTrendTabs() {
-    document.querySelectorAll('.trend-tab').forEach(btn => {
-      btn.addEventListener('click', () => switchTrendCategory(btn.getAttribute('data-cat')));
-    });
   }
 
   // トレンドポストにスクロール・ハイライト
@@ -671,7 +643,16 @@
   function updateSort() { currentSort = document.getElementById('sortSelect').value || 'newest'; loadPosts(); }
 
   // タブ・学部切替
-  function switchTab(tab, el) { currentTab = tab; document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); el.classList.add('active'); const titles = { all:'新着投稿', lecture:'授業口コミ', circle:'サークル情報', campus:'キャンパスライフ', qa:'Q&A' }; document.getElementById('section-title').textContent = titles[tab]; loadPosts(); }
+  function switchTab(tab, el) {
+    currentTab = tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    const titles = { all:'新着投稿', lecture:'授業口コミ', circle:'サークル情報', campus:'キャンパスライフ', qa:'Q&A' };
+    document.getElementById('section-title').textContent = titles[tab];
+    loadPosts();
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) sidebar.style.display = (tab === 'all' ? 'flex' : 'none');
+  }
   function selectFaculty(f, el) { currentFaculty = f; document.querySelectorAll('.faculty-chip').forEach(c => c.classList.remove('active')); el.classList.add('active'); loadPosts(); }
 
   // 投稿モーダル
@@ -845,7 +826,6 @@
 
   // 初期化
   updateNicknameBadge();
-  setupTrendTabs();
   loadPosts();
   </script>
   </body>
