@@ -2,8 +2,10 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta name="google-site-verification" content="9OxFQQHfJelUvYSKyGNO0LYCFwb_LICV6b3N2-Go5fU" />
+<meta name="description" content="早稲田大学生の情報共有掲示板。授業口コミ、サークル情報、キャンパスライフ、Q&Aを学生同士でシェア。受験生にも役立つ早稲田の最新情報。">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ワセダノート - 早稲田生の情報共有掲示板</title>
+<title>ワセダノート - 早稲田大学生の情報共有掲示板</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -44,12 +46,15 @@
   .faculty-chip:hover { border-color: var(--crimson); color: var(--crimson); background: var(--crimson-pale); }
   .faculty-chip.active { background: var(--crimson); color: white; border-color: var(--crimson); font-weight: 700; box-shadow: 0 2px 8px rgba(139, 0, 0, 0.2); }
 
-  .tabs { background: var(--white); border-bottom: 3px solid #f0ede0; position: sticky; top: 70px; z-index: 90; box-shadow: 0 2px 12px rgba(0,0,0,0.08); overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-  .tabs::-webkit-scrollbar { display: none; }
+  .tabs { background: var(--white); border-bottom: 3px solid #f0ede0; position: sticky; top: 70px; z-index: 90; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
   .tabs-inner { max-width: 1200px; margin: 0 auto; display: flex; gap: 0; padding: 0 2rem; }
-  .tab { padding: 15px 18px; font-size: 0.95rem; font-weight: 600; color: var(--gray); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -3px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); white-space: nowrap; letter-spacing: 0.02em; user-select: none; position: relative; }
+  .tab { flex: 1; min-width: 0; padding: 15px 10px; font-size: 0.95rem; font-weight: 600; color: var(--gray); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -3px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); white-space: nowrap; letter-spacing: 0.02em; user-select: none; position: relative; text-align: center; overflow: hidden; text-overflow: ellipsis; }
   .tab:hover { color: var(--crimson); background: rgba(139, 0, 0, 0.04); }
   .tab.active { color: var(--crimson); border-bottom-color: var(--crimson); font-weight: 700; }
+  @media (max-width: 480px) {
+    .tabs-inner { padding: 0 0.3rem; }
+    .tab { font-size: 0.72rem; padding: 12px 4px; letter-spacing: 0; }
+  }
 
 
     .main { max-width: 1200px; margin: 0 auto; padding: 2.5rem 2rem; display: grid; grid-template-columns: 1fr 320px; gap: 2.5rem; }
@@ -238,8 +243,8 @@
       .faculty-label { font-size: 0.7rem; margin-right: 0; }
       .faculty-chip { padding: 6px 12px; font-size: 0.75rem; }
       
-      .tabs-inner { max-width: none; padding: 0 1rem; }
-      .tab { padding: 12px 14px; font-size: 0.85rem; }
+      .tabs-inner { max-width: none; padding: 0 0.5rem; }
+      .tab { font-size: 0.8rem; padding: 12px 6px; }
       
       /* make main a flex column and reverse order so sidebar shows before posts */
       .main {
