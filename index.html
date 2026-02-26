@@ -515,18 +515,33 @@
     try {
       if (!db) throw new Error('Supabase client not initialized');
       
-      // First try: get top 5 posts by likes (exclude Q&A)
-      let { data: postsData, error: err1 } = await db.from('posts').select('*').neq('category', 'qa').gt('likes', 0).order('likes', { ascending: false }).limit(5);
-      
-      // If that returned nothing, get most recent posts (exclude Q&A)
+      const container = document.getElementById('trendContainer');
+      if (!container) return;
+
+      // Calculate timestamp for 24 hours ago
+      const now = new Date();
+      const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+
+      // First try: get top 5 posts from last 24 hours by likes (exclude Q&A)
+      let { data: postsData, error: err1 } = await db.from('posts')
+        .select('*')
+        .neq('category', 'qa')
+        .gte('created_at', twentyFourHoursAgo)
+        .order('likes', { ascending: false })
+        .limit(5);
+
+      // If that returned nothing, get 5 most recent posts (exclude Q&A)
       if (err1 || !postsData || postsData.length === 0) {
-        const { data: recentData, error: err2 } = await db.from('posts').select('*').neq('category', 'qa').order('created_at', { ascending: false }).limit(5);
+        const { data: recentData, error: err2 } = await db.from('posts')
+          .select('*')
+          .neq('category', 'qa')
+          .order('created_at', { ascending: false })
+          .limit(5);
         if (err2) throw err2;
         postsData = recentData || [];
       }
 
       const posts = Array.isArray(postsData) ? postsData : [];
-      const container = document.getElementById('trendContainer');
 
       if (!posts || posts.length === 0) {
         container.innerHTML = '<div style="color: var(--gray); font-size: 0.9rem; text-align: center; padding: 1rem;">投稿がまだありません</div>';
@@ -547,7 +562,7 @@
       console.error('loadTrendingPosts error:', e);
       const container = document.getElementById('trendContainer');
       if (container) {
-        container.innerHTML = '<div style="color: var(--gray); font-size: 0.9rem; text-align: center; padding: 1rem;">データを読み込み中...</div>';
+        container.innerHTML = '<div style="color: var(--gray); font-size: 0.9rem; text-align: center; padding: 1rem;">投稿を読み込んでいます...</div>';
       }
     }
   }
