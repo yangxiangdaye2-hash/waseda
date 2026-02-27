@@ -1232,21 +1232,50 @@
       const { data, error } = await db.from('reports').select('*').eq('resolved', false).order('created_at', { ascending: false });
       if (error) throw error;
       if (!data || !data.length) { list.innerHTML = '<div style="color:#aaa;font-size:0.9rem;text-align:center;padding:1rem;">未対応の通報はありません</div>'; return; }
-      list.innerHTML = data.map(r => `
+
+      // 通報された投稿・コメントの内容を一括取得
+      const postIds = [...new Set(data.filter(r => r.post_id).map(r => r.post_id))];
+      const commentIds = [...new Set(data.filter(r => r.comment_id).map(r => r.comment_id))];
+      let postsMap = {}, commentsMap = {};
+      if (postIds.length) {
+        const { data: posts } = await db.from('posts').select('id, title, author, body').in('id', postIds);
+        if (posts) posts.forEach(p => { postsMap[p.id] = p; });
+      }
+      if (commentIds.length) {
+        const { data: comments } = await db.from('comments').select('id, text, author').in('id', commentIds);
+        if (comments) comments.forEach(c => { commentsMap[c.id] = c; });
+      }
+
+      list.innerHTML = data.map(r => {
+        const post = r.post_id ? postsMap[r.post_id] : null;
+        const comment = r.comment_id ? commentsMap[r.comment_id] : null;
+        const contentHtml = post
+          ? `<div style="margin-top:8px;padding:8px 12px;background:white;border-radius:6px;border:1px solid #eee;">
+               <div style="font-size:0.8rem;font-weight:700;color:var(--dark);margin-bottom:2px;">${escHtml(post.title)}</div>
+               <div style="font-size:0.75rem;color:#888;">@${escHtml(post.author)}</div>
+               <div style="font-size:0.78rem;color:#666;margin-top:4px;line-height:1.5;">${escHtml((post.body||'').slice(0,120))}${(post.body||'').length>120?'…':''}</div>
+             </div>`
+          : comment
+          ? `<div style="margin-top:8px;padding:8px 12px;background:white;border-radius:6px;border:1px solid #eee;">
+               <div style="font-size:0.75rem;color:#888;margin-bottom:2px;">コメント by @${escHtml(comment.author)}</div>
+               <div style="font-size:0.78rem;color:#666;line-height:1.5;">${escHtml((comment.text||'').slice(0,120))}${(comment.text||'').length>120?'…':''}</div>
+             </div>`
+          : '';
+        return `
         <div style="padding:0.9rem;background:#fff9f9;border:1px solid #f5c6cb;border-radius:8px;margin-bottom:0.8rem;">
           <div style="display:flex;justify-content:space-between;align-items:start;gap:8px;flex-wrap:wrap;">
-            <div>
+            <div style="flex:1;min-width:0;">
               <div style="font-size:0.82rem;font-weight:700;color:#c0392b;margin-bottom:4px;">⚠️ ${escHtml(r.reason)}</div>
               <div style="font-size:0.78rem;color:#666;">通報者: @${escHtml(r.reporter_nickname)} · ${formatTime(r.created_at)}</div>
-              ${r.post_id ? `<div style="font-size:0.78rem;color:#888;margin-top:2px;">投稿ID: ${r.post_id}</div>` : ''}
-              ${r.comment_id ? `<div style="font-size:0.78rem;color:#888;margin-top:2px;">コメントID: ${r.comment_id}</div>` : ''}
+              ${contentHtml}
             </div>
-            <div style="display:flex;gap:6px;flex-shrink:0;">
-              <button style="padding:4px 10px;background:#4caf50;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.78rem;" onclick="markReportResolved(${JSON.stringify(r.id)})">✓ 確認済み</button>
-              ${r.post_id ? `<button style="padding:4px 10px;background:#e53935;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.78rem;" onclick="deleteReportedPost(${JSON.stringify(r.post_id)}, ${JSON.stringify(r.id)})">🗑️ 投稿を削除</button>` : ''}
+            <div style="display:flex;gap:6px;flex-shrink:0;flex-direction:column;align-items:flex-end;">
+              <button style="padding:4px 10px;background:#4caf50;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.78rem;white-space:nowrap;" onclick="markReportResolved(${JSON.stringify(r.id)})">✓ 確認済み</button>
+              ${r.post_id ? `<button style="padding:4px 10px;background:#e53935;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.78rem;white-space:nowrap;" onclick="deleteReportedPost(${JSON.stringify(r.post_id)}, ${JSON.stringify(r.id)})">🗑️ 投稿を削除</button>` : ''}
             </div>
           </div>
-        </div>`).join('');
+        </div>`;
+      }).join('');
     } catch (e) { console.error(e); list.innerHTML = '<div style="color:#e53935;font-size:0.9rem;">読み込みに失敗しました</div>'; }
   }
 
