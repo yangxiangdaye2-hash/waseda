@@ -1148,11 +1148,13 @@
       return 0;
     });
 
+    const likedSet = getLikedPosts();
     container.innerHTML = sorted.map(p => {
       const [cls, label] = catMap[p.category] || ['cat-campus','その他'];
       const fTag = p.faculty ? `<span class="faculty-tag">${FACULTIES[p.faculty]||p.faculty}</span>` : '';
       const timeStr = formatTime(p.created_at);
       const deleteBtn = (p.device_id === getDeviceId() || isAdmin) ? `<span class="post-action delete-btn" onclick='event.stopPropagation(); deletePost(${JSON.stringify(p.id)})'>🗑️</span>` : '';
+      const likedCls = likedSet.has(String(p.id)) ? ' liked' : '';
       const pinnedClass = p.pinned ? 'post-pinned' : '';
       const prBadge = (p.category === 'job' && p.is_pr) ? '<span class="pr-badge">PR</span>' : '';
 
@@ -1166,7 +1168,7 @@
           <div class="post-body">${escHtml(p.body)}</div>
           <div class="post-footer">
             <span class="post-action">💬 回答 ${ansCount}件</span>
-            <span class="post-action" onclick='event.stopPropagation(); likePost(${JSON.stringify(p.id)}, this)'>❤️ <span class="like-count">${p.likes||0}</span></span>
+            <span class="post-action${likedCls}" onclick='event.stopPropagation(); likePost(${JSON.stringify(p.id)}, this)'>❤️ <span class="like-count">${p.likes||0}</span></span>
             <span class="post-action">@${escHtml(p.author)}</span>
             ${deleteBtn}
             <span class="report-btn" onclick='event.stopPropagation(); openReportModal(${JSON.stringify(p.id)}, null)'>🚩 通報</span>
@@ -1212,7 +1214,7 @@
         <div class="post-title">${escHtml(p.title)}</div>
         <div class="post-body">${escHtml(p.body)}</div>
         <div class="post-footer">
-          <span class="post-action" onclick='event.stopPropagation(); likePost(${JSON.stringify(p.id)}, this)'>❤️ <span class="like-count">${p.likes||0}</span></span>
+          <span class="post-action${likedCls}" onclick='event.stopPropagation(); likePost(${JSON.stringify(p.id)}, this)'>❤️ <span class="like-count">${p.likes||0}</span></span>
           <span class="post-action">💬 ${p.comments||0}</span>
           ${deleteBtn}
           <span class="report-btn" onclick='event.stopPropagation(); openReportModal(${JSON.stringify(p.id)}, null)'>🚩 通報</span>
@@ -1222,17 +1224,37 @@
 
   function escHtml(str) { return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-  // いいね
+  // いいね（1人1回、ローカルストレージで管理）
+  function getLikedPosts() {
+    try { return new Set(JSON.parse(localStorage.getItem('waseda_liked') || '[]')); }
+    catch { return new Set(); }
+  }
+  function setPostLiked(id, liked) {
+    const s = getLikedPosts();
+    liked ? s.add(String(id)) : s.delete(String(id));
+    localStorage.setItem('waseda_liked', JSON.stringify([...s]));
+  }
+
   async function likePost(id, el) {
     try {
-      const countEl = el && el.querySelector ? el.querySelector('.like-count') : null;
-      const cur = countEl ? parseInt(countEl.textContent||'0') : 0;
-      const newCount = cur + 1;
-      if (countEl) countEl.textContent = newCount;
       if (!db) throw new Error('Supabase client not initialized');
+      const alreadyLiked = getLikedPosts().has(String(id));
+      const countEl = el && el.querySelector ? el.querySelector('.like-count') : null;
+      const cur = countEl ? parseInt(countEl.textContent || '0') : 0;
+      const newCount = alreadyLiked ? Math.max(0, cur - 1) : cur + 1;
+      // 楽観的UI更新
+      if (countEl) countEl.textContent = newCount;
+      el.classList.toggle('liked', !alreadyLiked);
+      setPostLiked(id, !alreadyLiked);
       const { error } = await db.from('posts').update({ likes: newCount }).eq('id', id);
-      if (error) { console.error('Like update error', error); if (countEl) countEl.textContent = cur; }
-    } catch (e) { console.error(e); alert('いいねの更新に失敗しました'); }
+      if (error) {
+        // 失敗時は元に戻す
+        if (countEl) countEl.textContent = cur;
+        el.classList.toggle('liked', alreadyLiked);
+        setPostLiked(id, alreadyLiked);
+        console.error('Like update error', error);
+      }
+    } catch (e) { console.error(e); }
   }
 
   // 投稿削除
