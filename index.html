@@ -518,7 +518,7 @@
         <h2 id="section-title">新着投稿</h2>
         <div class="posts-header-controls">
           <button class="btn-post" id="categoryPostBtn" style="margin: 0;" onclick="openPostModalWithCategory()">＋ 投稿する</button>
-          <select class="sort-select" id="sortSelect" onchange="updateSort()"><option value="newest">新着順</option><option value="popular">人気順（いいね数）</option></select>
+          <select class="sort-select" id="sortSelect" onchange="updateSort()"><option value="newest">新着順</option><option value="popular">人気順（24時間）</option></select>
         </div>
       </div>
       <div id="posts-container"><div class="loading">読み込み中...</div></div>
@@ -913,14 +913,27 @@
 
       // ソート処理
       if (currentSort === 'popular') {
-        query = query.order('likes', { ascending: false });
+        // 24時間以内の投稿をいいね数順で取得
+        const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { data: recentData, error: recentErr } = await query.gte('created_at', since24h).order('likes', { ascending: false });
+        if (!recentErr && recentData && recentData.length > 0) {
+          allPosts = recentData;
+        } else {
+          // 24時間以内に投稿がなければ全期間のいいね数順にフォールバック
+          let fbQuery = db.from('posts').select('*');
+          if (currentTab !== 'all') fbQuery = fbQuery.eq('category', currentTab);
+          if (currentFaculty !== 'all') fbQuery = fbQuery.eq('faculty', currentFaculty);
+          if (searchQuery) fbQuery = fbQuery.or(`title.ilike.%${searchQuery}%,body.ilike.%${searchQuery}%`);
+          const { data: fbData, error: fbErr } = await fbQuery.order('likes', { ascending: false });
+          if (fbErr) throw fbErr;
+          allPosts = fbData || [];
+        }
       } else {
         query = query.order('created_at', { ascending: false });
+        const { data, error } = await query;
+        if (error) throw error;
+        allPosts = data || [];
       }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      allPosts = data || [];
 
       // answers 件数を別テーブルから取得
       answersCountMap = {};
