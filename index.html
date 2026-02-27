@@ -352,8 +352,10 @@
     .star-rating label:hover ~ label { color: var(--gold); }
 
     /* Optional fields toggle */
-    .btn-toggle-optional { width: 100%; background: none; border: 1.5px dashed var(--border); border-radius: 8px; padding: 10px; font-size: 0.85rem; color: var(--gray); cursor: pointer; margin: 0.5rem 0 0; transition: all 0.2s; font-family: 'Noto Sans JP', sans-serif; font-weight: 600; }
-    .btn-toggle-optional:hover { border-color: var(--crimson); color: var(--crimson); }
+    .btn-toggle-optional { width: 100%; background: linear-gradient(135deg, var(--crimson-pale) 0%, #fff5f5 100%); border: 1.5px solid var(--crimson-light); border-radius: 8px; padding: 11px 14px; font-size: 0.88rem; color: var(--crimson); cursor: pointer; margin: 0.75rem 0 0; transition: all 0.2s; font-family: 'Noto Sans JP', sans-serif; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn-toggle-optional:hover { background: var(--crimson); color: #fff; border-color: var(--crimson); }
+    .btn-toggle-optional::before { content: '＋'; font-size: 1rem; font-weight: 900; }
+    .btn-toggle-optional.open::before { content: '－'; }
     .lecture-optional { overflow: hidden; max-height: 0; transition: max-height 0.4s ease; }
     .lecture-optional.open { max-height: 1000px; }
     .lecture-optional-inner { padding-top: 1rem; }
@@ -600,7 +602,7 @@
             <textarea class="form-textarea" id="lectureBody" placeholder="授業の感想や評価を書いてください..."></textarea>
           </div>
           <!-- 任意フィールドトグル -->
-          <button type="button" class="btn-toggle-optional" id="lectureOptionalToggle" onclick="toggleLectureOptional()">詳細を追加する ▼</button>
+          <button type="button" class="btn-toggle-optional" id="lectureOptionalToggle" onclick="toggleLectureOptional()">詳細を追加する</button>
           <div class="lecture-optional" id="lectureOptional">
             <div class="lecture-optional-inner">
               <div class="form-group">
@@ -676,9 +678,9 @@
                 <label class="form-label">出席</label>
                 <select class="form-select" id="lectureAttendance">
                   <option value="">選択（任意）</option>
-                  <option value="必須">必須</option>
-                  <option value="任意">任意</option>
-                  <option value="関係なし">関係なし</option>
+                  <option value="毎回">毎回</option>
+                  <option value="時々">時々</option>
+                  <option value="なし">なし</option>
                 </select>
               </div>
               <div class="form-group">
@@ -1679,7 +1681,7 @@
     const optEl = document.getElementById('lectureOptional');
     const optBtn = document.getElementById('lectureOptionalToggle');
     if (optEl) optEl.classList.remove('open');
-    if (optBtn) optBtn.textContent = '詳細を追加する ▼';
+    if (optBtn) { optBtn.classList.remove('open'); optBtn.textContent = '詳細を追加する'; }
     document.getElementById('circleName').value = '';
     document.getElementById('circleType').value = '';
     document.getElementById('circleBody').value = '';
@@ -1698,7 +1700,8 @@
     const el = document.getElementById('lectureOptional');
     const btn = document.getElementById('lectureOptionalToggle');
     const isOpen = el.classList.toggle('open');
-    btn.textContent = isOpen ? '詳細を閉じる ▲' : '詳細を追加する ▼';
+    btn.classList.toggle('open', isOpen);
+    btn.textContent = isOpen ? '詳細を閉じる' : '詳細を追加する';
   }
   function openPostModalWithCategory(category = null) {
     if (category === null) category = currentTab === 'all' ? 'lecture' : (currentTab === 'qa' ? 'qa' : currentTab);
