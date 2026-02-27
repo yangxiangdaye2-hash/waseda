@@ -343,6 +343,24 @@
     .site-footer { border-top: 1px solid var(--border); padding: 1.5rem 1.5rem; text-align: center; }
     .site-footer p { font-size: 0.75rem; color: var(--gray-light); line-height: 1.7; max-width: 700px; margin: 0 auto; }
 
+    /* Star rating */
+    .star-rating { display: flex; flex-direction: row-reverse; justify-content: flex-end; gap: 4px; margin-top: 4px; }
+    .star-rating input[type="radio"] { display: none; }
+    .star-rating label { font-size: 2rem; color: #ddd; cursor: pointer; transition: color 0.15s; line-height: 1; }
+    .star-rating input:checked ~ label,
+    .star-rating label:hover,
+    .star-rating label:hover ~ label { color: var(--gold); }
+
+    /* Optional fields toggle */
+    .btn-toggle-optional { width: 100%; background: none; border: 1.5px dashed var(--border); border-radius: 8px; padding: 10px; font-size: 0.85rem; color: var(--gray); cursor: pointer; margin: 0.5rem 0 0; transition: all 0.2s; font-family: 'Noto Sans JP', sans-serif; font-weight: 600; }
+    .btn-toggle-optional:hover { border-color: var(--crimson); color: var(--crimson); }
+    .lecture-optional { overflow: hidden; max-height: 0; transition: max-height 0.4s ease; }
+    .lecture-optional.open { max-height: 1000px; }
+    .lecture-optional-inner { padding-top: 1rem; }
+
+    /* extra_fields display on card */
+    .extra-fields-bar { font-size: 0.75rem; color: var(--gray-light); margin-top: 4px; }
+
     /* Post modal notice */
     .post-notice { font-size: 0.78rem; color: var(--gray-light); text-align: center; margin-top: 0.6rem; padding-top: 0.8rem; border-top: 1px solid #f0f0f0; }
 
@@ -562,47 +580,117 @@
 
         <!-- 授業口コミ専用フィールド -->
         <div id="lecture-fields" class="category-fields">
+          <!-- 必須フィールド -->
           <div class="form-group">
             <label class="form-label">授業名 <span style="color:#e74c3c;">*</span></label>
             <input class="form-input" type="text" id="lectureName" placeholder="例：政治経済学入門">
           </div>
           <div class="form-group">
-            <label class="form-label">担当教員名</label>
-            <input class="form-input" type="text" id="lectureTeacher" placeholder="例：田中 太郎（任意）">
-          </div>
-          <div class="form-group">
-            <label class="form-label">学部 <span style="color:#e74c3c;">*</span></label>
-            <select class="form-select" id="lectureFaculty">
-              <option value="">学部を選択</option>
-              <option value="seikei">政治経済学部</option>
-              <option value="ho">法学部</option>
-              <option value="shogaku">商学部</option>
-              <option value="kyoiku">教育学部</option>
-              <option value="bun">文学部</option>
-              <option value="bunkagaku">文化構想学部</option>
-              <option value="kiso">基幹理工学部</option>
-              <option value="sozo">創造理工学部</option>
-              <option value="sentan">先進理工学部</option>
-              <option value="ningen">人間科学部</option>
-              <option value="sports">スポーツ科学部</option>
-              <option value="kokusai">国際教養学部</option>
-              <option value="shakou">社会科学部</option>
-            </select>
-          </div>
-          <div class="form-group">
             <label class="form-label">評価 <span style="color:#e74c3c;">*</span></label>
-            <select class="form-select" id="lectureRating">
-              <option value="">評価を選択</option>
-              <option value="5">⭐⭐⭐⭐⭐ とても良い</option>
-              <option value="4">⭐⭐⭐⭐ 良い</option>
-              <option value="3">⭐⭐⭐ 普通</option>
-              <option value="2">⭐⭐ 微妙</option>
-              <option value="1">⭐ 良くない</option>
-            </select>
+            <div class="star-rating">
+              <input type="radio" id="star5" name="lectureStars" value="5"><label for="star5">★</label>
+              <input type="radio" id="star4" name="lectureStars" value="4"><label for="star4">★</label>
+              <input type="radio" id="star3" name="lectureStars" value="3"><label for="star3">★</label>
+              <input type="radio" id="star2" name="lectureStars" value="2"><label for="star2">★</label>
+              <input type="radio" id="star1" name="lectureStars" value="1"><label for="star1">★</label>
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label">レビュー <span style="color:#e74c3c;">*</span></label>
             <textarea class="form-textarea" id="lectureBody" placeholder="授業の感想や評価を書いてください..."></textarea>
+          </div>
+          <!-- 任意フィールドトグル -->
+          <button type="button" class="btn-toggle-optional" id="lectureOptionalToggle" onclick="toggleLectureOptional()">詳細を追加する ▼</button>
+          <div class="lecture-optional" id="lectureOptional">
+            <div class="lecture-optional-inner">
+              <div class="form-group">
+                <label class="form-label">学部</label>
+                <select class="form-select" id="lectureFaculty">
+                  <option value="">学部を選択（任意）</option>
+                  <option value="seikei">政治経済学部</option>
+                  <option value="ho">法学部</option>
+                  <option value="shogaku">商学部</option>
+                  <option value="kyoiku">教育学部</option>
+                  <option value="bun">文学部</option>
+                  <option value="bunkagaku">文化構想学部</option>
+                  <option value="kiso">基幹理工学部</option>
+                  <option value="sozo">創造理工学部</option>
+                  <option value="sentan">先進理工学部</option>
+                  <option value="ningen">人間科学部</option>
+                  <option value="sports">スポーツ科学部</option>
+                  <option value="kokusai">国際教養学部</option>
+                  <option value="shakou">社会科学部</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">担当教員名</label>
+                <input class="form-input" type="text" id="lectureTeacher" placeholder="例：田中 太郎（任意）">
+              </div>
+              <div class="form-group">
+                <label class="form-label">学期</label>
+                <select class="form-select" id="lectureSemester">
+                  <option value="">選択（任意）</option>
+                  <option value="春学期">春学期</option>
+                  <option value="秋学期">秋学期</option>
+                  <option value="通年">通年</option>
+                  <option value="集中講義">集中講義</option>
+                </select>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">曜日</label>
+                  <select class="form-select" id="lectureDay">
+                    <option value="">選択（任意）</option>
+                    <option value="月">月曜</option>
+                    <option value="火">火曜</option>
+                    <option value="水">水曜</option>
+                    <option value="木">木曜</option>
+                    <option value="金">金曜</option>
+                    <option value="土">土曜</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">時限</label>
+                  <select class="form-select" id="lecturePeriod">
+                    <option value="">選択（任意）</option>
+                    <option value="1">1限</option>
+                    <option value="2">2限</option>
+                    <option value="3">3限</option>
+                    <option value="4">4限</option>
+                    <option value="5">5限</option>
+                    <option value="6">6限</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">評価方法</label>
+                <select class="form-select" id="lectureExamType">
+                  <option value="">選択（任意）</option>
+                  <option value="テスト">テスト</option>
+                  <option value="レポート">レポート</option>
+                  <option value="両方">テスト＋レポート</option>
+                  <option value="その他">その他</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">出席</label>
+                <select class="form-select" id="lectureAttendance">
+                  <option value="">選択（任意）</option>
+                  <option value="必須">必須</option>
+                  <option value="任意">任意</option>
+                  <option value="関係なし">関係なし</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">単位の取りやすさ</label>
+                <select class="form-select" id="lectureCredits">
+                  <option value="">選択（任意）</option>
+                  <option value="楽">楽</option>
+                  <option value="普通">普通</option>
+                  <option value="難しい">難しい</option>
+                </select>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1090,7 +1178,22 @@
       if (p.category === 'lecture') {
         const stars = p.stars ? '⭐'.repeat(p.stars) : '';
         const teacher = p.lecture_teacher ? `<span style="font-size:0.8rem;color:var(--gray);">👨‍🏫 ${escHtml(p.lecture_teacher)}</span>` : '';
-        extraMeta = `${teacher}${stars}`;
+        let extraBar = '';
+        if (p.extra_fields) {
+          try {
+            const ef = typeof p.extra_fields === 'string' ? JSON.parse(p.extra_fields) : p.extra_fields;
+            const parts = [];
+            if (ef.semester) parts.push(ef.semester);
+            if (ef.schedule) parts.push(ef.schedule);
+            if (ef.day) parts.push(`${ef.day}曜`);
+            if (ef.period) parts.push(ef.period);
+            if (ef.exam_type) parts.push(ef.exam_type);
+            if (ef.attendance) parts.push(`出席${ef.attendance}`);
+            if (ef.credits) parts.push(`単位:${ef.credits}`);
+            if (parts.length) extraBar = `<div class="extra-fields-bar">${escHtml(parts.join(' | '))}</div>`;
+          } catch(e) {}
+        }
+        extraMeta = `${teacher}${stars}${extraBar}`;
       } else if (p.category === 'circle') {
         const typeMap = { sports:'運動系', culture:'文化系', other:'その他' };
         const type = p.circle_type ? `<span style="font-size:0.8rem;background:#f0f0f0;padding:2px 8px;border-radius:4px;color:#555;">${typeMap[p.circle_type]||p.circle_type}</span>` : '';
@@ -1538,10 +1641,23 @@
   function resetPostForm() {
     document.getElementById('postCategory').value = 'lecture';
     document.getElementById('lectureName').value = '';
-    document.getElementById('lectureTeacher').value = '';
-    document.getElementById('lectureFaculty').value = '';
-    document.getElementById('lectureRating').value = '';
     document.getElementById('lectureBody').value = '';
+    // Reset star radio buttons
+    document.querySelectorAll('input[name="lectureStars"]').forEach(r => r.checked = false);
+    // Reset optional lecture fields
+    document.getElementById('lectureFaculty').value = '';
+    document.getElementById('lectureTeacher').value = '';
+    document.getElementById('lectureSemester').value = '';
+    document.getElementById('lectureDay').value = '';
+    document.getElementById('lecturePeriod').value = '';
+    document.getElementById('lectureExamType').value = '';
+    document.getElementById('lectureAttendance').value = '';
+    document.getElementById('lectureCredits').value = '';
+    // Close optional section
+    const optEl = document.getElementById('lectureOptional');
+    const optBtn = document.getElementById('lectureOptionalToggle');
+    if (optEl) optEl.classList.remove('open');
+    if (optBtn) optBtn.textContent = '詳細を追加する ▼';
     document.getElementById('circleName').value = '';
     document.getElementById('circleType').value = '';
     document.getElementById('circleBody').value = '';
@@ -1554,6 +1670,13 @@
     document.getElementById('qaFaculty').value = '';
     document.getElementById('qaBody').value = '';
     onCategoryChange('lecture');
+  }
+
+  function toggleLectureOptional() {
+    const el = document.getElementById('lectureOptional');
+    const btn = document.getElementById('lectureOptionalToggle');
+    const isOpen = el.classList.toggle('open');
+    btn.textContent = isOpen ? '詳細を閉じる ▲' : '詳細を追加する ▼';
   }
   function openPostModalWithCategory(category = null) {
     if (category === null) category = currentTab === 'all' ? 'lecture' : (currentTab === 'qa' ? 'qa' : currentTab);
@@ -1590,22 +1713,40 @@
     if (category === 'lecture') {
       // 授業口コミの場合
       const lectureName = document.getElementById('lectureName').value.trim();
-      const lectureTeacher = document.getElementById('lectureTeacher').value.trim();
-      const lectureFaculty = document.getElementById('lectureFaculty').value;
-      const lectureRating = document.getElementById('lectureRating').value;
+      const starsEl = document.querySelector('input[name="lectureStars"]:checked');
       const lectureBody = document.getElementById('lectureBody').value.trim();
-      
-      if (!lectureName || !lectureBody || !lectureFaculty || !lectureRating) {
-        alert('授業名、学部、評価、レビューは必須です');
+
+      if (!lectureName || !starsEl || !lectureBody) {
+        alert('授業名、評価（星）、レビューは必須です');
         return;
       }
-      
+
+      const lectureTeacher = document.getElementById('lectureTeacher').value.trim();
+      const lectureFaculty = document.getElementById('lectureFaculty').value;
+      const semester = document.getElementById('lectureSemester').value;
+      const day = document.getElementById('lectureDay').value;
+      const period = document.getElementById('lecturePeriod').value;
+      const examType = document.getElementById('lectureExamType').value;
+      const attendance = document.getElementById('lectureAttendance').value;
+      const credits = document.getElementById('lectureCredits').value;
+
       title = lectureName;
       body = lectureBody;
-      faculty = lectureFaculty;
+      faculty = lectureFaculty || null;
+
+      const extraFields = {};
+      if (semester) extraFields.semester = semester;
+      if (day && period) extraFields.schedule = `${day}曜${period}限`;
+      else if (day) extraFields.day = day;
+      else if (period) extraFields.period = `${period}限`;
+      if (examType) extraFields.exam_type = examType;
+      if (attendance) extraFields.attendance = attendance;
+      if (credits) extraFields.credits = credits;
+
       extraData = {
         lecture_teacher: lectureTeacher || null,
-        stars: parseInt(lectureRating)
+        stars: parseInt(starsEl.value),
+        extra_fields: Object.keys(extraFields).length > 0 ? JSON.stringify(extraFields) : null
       };
       
     } else if (category === 'circle') {
