@@ -346,6 +346,18 @@
     /* Post modal notice */
     .post-notice { font-size: 0.78rem; color: var(--gray-light); text-align: center; margin-top: 0.6rem; padding-top: 0.8rem; border-top: 1px solid #f0f0f0; }
 
+    /* Report button */
+    .report-btn { font-size: 0.72rem; color: var(--gray-lighter); cursor: pointer; padding: 2px 6px; border-radius: 4px; transition: all 0.2s; margin-left: auto; opacity: 0; flex-shrink: 0; }
+    .post-card:hover .report-btn, .qa-card:hover .report-btn { opacity: 1; }
+    .report-btn:hover { color: #e65100; background: #fff3e0; opacity: 1; }
+    @media (max-width: 768px) { .report-btn { opacity: 1; } }
+
+    /* Report reason options */
+    .report-reasons { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1.2rem; }
+    .report-reason-label { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 8px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; }
+    .report-reason-label:hover { border-color: var(--crimson); background: var(--crimson-pale); }
+    .report-reason-label input[type="radio"] { accent-color: var(--crimson); }
+
     @media (max-width: 992px) {
       .main { grid-template-columns: 1fr 220px; padding: 1.2rem 1rem; gap: 1.2rem; }
 
@@ -702,6 +714,26 @@
     <p>ワセダノートは早稲田大学の公式サービスではありません。本サービスに投稿された内容は投稿者個人の意見であり、運営は投稿内容の正確性・適切性について一切の責任を負いません。利用者は良識ある投稿を心がけてください。</p>
   </footer>
 
+  <!-- 通報モーダル -->
+  <div class="modal-overlay" id="reportModal">
+    <div class="modal" style="max-width:400px;">
+      <div class="modal-header">
+        <h3>🚩 通報</h3>
+        <button class="modal-close" onclick="closeReportModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.88rem;color:var(--gray);margin-bottom:1.2rem;">通報理由を選択してください。悪質な投稿は削除される場合があります。</p>
+        <div class="report-reasons">
+          <label class="report-reason-label"><input type="radio" name="reportReason" value="不適切なコンテンツ"> 不適切なコンテンツ</label>
+          <label class="report-reason-label"><input type="radio" name="reportReason" value="スパム"> スパム</label>
+          <label class="report-reason-label"><input type="radio" name="reportReason" value="誹謗中傷"> 誹謗中傷</label>
+          <label class="report-reason-label"><input type="radio" name="reportReason" value="その他"> その他</label>
+        </div>
+        <button class="btn-submit" onclick="submitReport()">通報する</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 管理パネルモーダル -->
   <!-- admin modal with tabs -->
   <div class="modal-overlay" id="adminModal">
@@ -714,6 +746,7 @@
         <button class="admin-tab-btn active" data-tab="announcements" onclick="switchAdminTab('announcements')">📢 お知らせ管理</button>
         <button class="admin-tab-btn" data-tab="jobs" onclick="switchAdminTab('jobs')">💼 求人・PR管理</button>
         <button class="admin-tab-btn" data-tab="posts" onclick="switchAdminTab('posts')">📝 投稿管理</button>
+        <button class="admin-tab-btn" data-tab="reports" onclick="switchAdminTab('reports')">🚩 通報管理</button>
       </div>
       <div class="modal-body admin-tab-body">
         <!-- お知らせ管理 tab -->
@@ -767,6 +800,13 @@
           <h4>📝 投稿を管理</h4>
           <p style="color:#666;margin-bottom:1rem;">投稿一覧から削除・ピン留めを操作できます</p>
           <div id="adminPostList" style="max-height:400px;overflow-y:auto;"></div>
+        </div>
+
+        <!-- 通報管理 tab -->
+        <div id="tab-reports" class="admin-tab-content" style="display:none;">
+          <h4>🚩 通報一覧（未対応）</h4>
+          <p style="color:#666;margin-bottom:1rem;">未解決の通報を確認・対応できます</p>
+          <div id="adminReportList" style="max-height:400px;overflow-y:auto;"></div>
         </div>
       </div>
     </div>
@@ -1028,6 +1068,7 @@
             <span class="post-action" onclick='event.stopPropagation(); likePost(${JSON.stringify(p.id)}, this)'>❤️ <span class="like-count">${p.likes||0}</span></span>
             <span class="post-action">@${escHtml(p.author)}</span>
             ${deleteBtn}
+            <span class="report-btn" onclick='event.stopPropagation(); openReportModal(${JSON.stringify(p.id)}, null)'>🚩 通報</span>
           </div></div>`;
       }
 
@@ -1058,6 +1099,7 @@
           <span class="post-action" onclick='event.stopPropagation(); likePost(${JSON.stringify(p.id)}, this)'>❤️ <span class="like-count">${p.likes||0}</span></span>
           <span class="post-action">💬 ${p.comments||0}</span>
           ${deleteBtn}
+          <span class="report-btn" onclick='event.stopPropagation(); openReportModal(${JSON.stringify(p.id)}, null)'>🚩 通報</span>
         </div></div>`;
     }).join('');
   }
@@ -1138,12 +1180,93 @@
   // Tab switching for admin modal
   function switchAdminTab(tab) {
     document.querySelectorAll('.admin-tab-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.admin-tab-content').forEach(content => content.classList.remove('active'));
+    document.querySelectorAll('.admin-tab-content').forEach(content => { content.classList.remove('active'); content.style.display = 'none'; });
     event.target.classList.add('active');
     const contentEl = document.getElementById('tab-' + tab);
-    if (contentEl) contentEl.classList.add('active');
+    if (contentEl) { contentEl.classList.add('active'); contentEl.style.display = 'block'; }
     if (tab === 'posts') renderAdminPostList();
     if (tab === 'jobs') renderAdminJobList();
+    if (tab === 'reports') loadAdminReports();
+  }
+
+  // ===== REPORT SYSTEM =====
+  let reportTargetPostId = null;
+  let reportTargetCommentId = null;
+
+  function openReportModal(postId, commentId) {
+    reportTargetPostId = postId;
+    reportTargetCommentId = commentId;
+    document.querySelectorAll('input[name="reportReason"]').forEach(r => r.checked = false);
+    document.getElementById('reportModal').classList.add('open');
+  }
+  function closeReportModal() {
+    document.getElementById('reportModal').classList.remove('open');
+    reportTargetPostId = null;
+    reportTargetCommentId = null;
+  }
+
+  async function submitReport() {
+    const reason = document.querySelector('input[name="reportReason"]:checked')?.value;
+    if (!reason) { alert('通報理由を選択してください'); return; }
+    try {
+      if (!db) throw new Error('Supabase not initialized');
+      const report = {
+        post_id: reportTargetPostId,
+        comment_id: reportTargetCommentId,
+        reason,
+        reporter_nickname: currentUser,
+        resolved: false
+      };
+      const { error } = await db.from('reports').insert([report]);
+      if (error) throw error;
+      closeReportModal();
+      alert('通報を受け付けました。ご協力ありがとうございます。');
+    } catch (e) { console.error(e); alert('通報の送信に失敗しました'); }
+  }
+
+  async function loadAdminReports() {
+    const list = document.getElementById('adminReportList');
+    if (!list) return;
+    list.innerHTML = '<div style="color:#aaa;font-size:0.9rem;">読み込み中...</div>';
+    try {
+      const { data, error } = await db.from('reports').select('*').eq('resolved', false).order('created_at', { ascending: false });
+      if (error) throw error;
+      if (!data || !data.length) { list.innerHTML = '<div style="color:#aaa;font-size:0.9rem;text-align:center;padding:1rem;">未対応の通報はありません</div>'; return; }
+      list.innerHTML = data.map(r => `
+        <div style="padding:0.9rem;background:#fff9f9;border:1px solid #f5c6cb;border-radius:8px;margin-bottom:0.8rem;">
+          <div style="display:flex;justify-content:space-between;align-items:start;gap:8px;flex-wrap:wrap;">
+            <div>
+              <div style="font-size:0.82rem;font-weight:700;color:#c0392b;margin-bottom:4px;">⚠️ ${escHtml(r.reason)}</div>
+              <div style="font-size:0.78rem;color:#666;">通報者: @${escHtml(r.reporter_nickname)} · ${formatTime(r.created_at)}</div>
+              ${r.post_id ? `<div style="font-size:0.78rem;color:#888;margin-top:2px;">投稿ID: ${r.post_id}</div>` : ''}
+              ${r.comment_id ? `<div style="font-size:0.78rem;color:#888;margin-top:2px;">コメントID: ${r.comment_id}</div>` : ''}
+            </div>
+            <div style="display:flex;gap:6px;flex-shrink:0;">
+              <button style="padding:4px 10px;background:#4caf50;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.78rem;" onclick="markReportResolved(${JSON.stringify(r.id)})">✓ 確認済み</button>
+              ${r.post_id ? `<button style="padding:4px 10px;background:#e53935;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.78rem;" onclick="deleteReportedPost(${JSON.stringify(r.post_id)}, ${JSON.stringify(r.id)})">🗑️ 投稿を削除</button>` : ''}
+            </div>
+          </div>
+        </div>`).join('');
+    } catch (e) { console.error(e); list.innerHTML = '<div style="color:#e53935;font-size:0.9rem;">読み込みに失敗しました</div>'; }
+  }
+
+  async function markReportResolved(reportId) {
+    try {
+      const { error } = await db.from('reports').update({ resolved: true }).eq('id', reportId);
+      if (error) throw error;
+      loadAdminReports();
+    } catch (e) { console.error(e); alert('更新に失敗しました'); }
+  }
+
+  async function deleteReportedPost(postId, reportId) {
+    if (!confirm('この投稿を削除しますか？')) return;
+    try {
+      await db.from('posts').delete().eq('id', postId);
+      await db.from('reports').update({ resolved: true }).eq('id', reportId);
+      allPosts = allPosts.filter(p => p.id !== postId);
+      renderPosts(allPosts);
+      loadAdminReports();
+    } catch (e) { console.error(e); alert('削除に失敗しました'); }
   }
 
   // ANNOUNCEMENTS
@@ -1603,7 +1726,8 @@
         ? '<p style="color:#aaa;font-size:0.9rem;text-align:center;padding:2rem 0;">コメントがまだありません。最初のコメントを書いてみませんか？</p>'
         : comments.map(c => {
             const delIcon = (c.device_id === getDeviceId() || isAdmin) ? `<span class="comment-delete" onclick="deleteComment(${JSON.stringify(c.id)}, ${JSON.stringify(postId)})">🗑️</span>` : '';
-            return `<div class="comment-item"><div class="comment-meta"><span class="comment-author">@${escHtml(c.author)}</span><span class="comment-time">${formatTime(c.created_at)}</span>${delIcon}</div><div class="comment-text">${escHtml(c.text)}</div></div>`;
+            const reportIcon = `<span class="comment-delete" style="color:var(--gray-lighter);margin-left:4px;" onclick="openReportModal(null, ${JSON.stringify(c.id)})">🚩</span>`;
+            return `<div class="comment-item"><div class="comment-meta"><span class="comment-author">@${escHtml(c.author)}</span><span class="comment-time">${formatTime(c.created_at)}</span>${delIcon}${reportIcon}</div><div class="comment-text">${escHtml(c.text)}</div></div>`;
           }).join('');
 
       const catHtml = `<span class="category-tag ${catCls}">${catLabel}</span>`;
@@ -1691,6 +1815,7 @@
   document.getElementById('qaModal').addEventListener('click', e => { if (e.target===document.getElementById('qaModal')) closeQaModal(); });
   document.getElementById('nicknameModal').addEventListener('click', e => { if (e.target===document.getElementById('nicknameModal')) closeNicknameModal(); });
   document.getElementById('adminModal').addEventListener('click', e => { if (e.target===document.getElementById('adminModal')) closeAdminModal(); });
+  document.getElementById('reportModal').addEventListener('click', e => { if (e.target===document.getElementById('reportModal')) closeReportModal(); });
 
   // 初期化
   updateNicknameBadge();
