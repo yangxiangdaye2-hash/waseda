@@ -829,6 +829,17 @@
   let currentTrendCategory = 'lecture';
   let searchQuery = '';
   let currentUser = localStorage.getItem('waseda_nickname') || 'ゲスト';
+
+  // デバイスID（本人確認用・自動生成）
+  function getDeviceId() {
+    let id = localStorage.getItem('waseda_device_id');
+    if (!id) {
+      id = 'dev_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now().toString(36);
+      localStorage.setItem('waseda_device_id', id);
+    }
+    return id;
+  }
+
   let allPosts = [];
   let answersCountMap = {};
 
@@ -988,7 +999,7 @@
       const [cls, label] = catMap[p.category] || ['cat-campus','その他'];
       const fTag = p.faculty ? `<span class="faculty-tag">${FACULTIES[p.faculty]||p.faculty}</span>` : '';
       const timeStr = formatTime(p.created_at);
-      const deleteBtn = (p.author === currentUser || isAdmin) ? `<span class="post-action delete-btn" onclick='event.stopPropagation(); deletePost(${JSON.stringify(p.id)})'>🗑️</span>` : '';
+      const deleteBtn = (p.device_id === getDeviceId() || isAdmin) ? `<span class="post-action delete-btn" onclick='event.stopPropagation(); deletePost(${JSON.stringify(p.id)})'>🗑️</span>` : '';
       const pinnedClass = p.pinned ? 'post-pinned' : '';
       const prBadge = (p.category === 'job' && p.is_pr) ? '<span class="pr-badge">PR</span>' : '';
 
@@ -1059,7 +1070,9 @@
     if (!confirm('この投稿を削除してもよろしいですか？')) return;
     try {
       if (!db) throw new Error('Supabase client not initialized');
-      const { error } = await db.from('posts').delete().eq('id', postId);
+      let q = db.from('posts').delete().eq('id', postId);
+      if (!isAdmin) q = q.eq('device_id', getDeviceId());
+      const { error } = await q;
       if (error) throw error;
       // update local cache and UI
       allPosts = allPosts.filter(p => p.id !== postId);
@@ -1074,7 +1087,9 @@
     if (!confirm('このコメントを削除してもよろしいですか？')) return;
     try {
       if (!db) throw new Error('Supabase client not initialized');
-      const { error } = await db.from('comments').delete().eq('id', commentId);
+      let q = db.from('comments').delete().eq('id', commentId);
+      if (!isAdmin) q = q.eq('device_id', getDeviceId());
+      const { error } = await q;
       if (error) throw error;
       // decrement count on post
       const post = allPosts.find(p => p.id === postId);
@@ -1480,6 +1495,7 @@
       category,
       faculty,
       author: currentUser,
+      device_id: getDeviceId(),
       title,
       body,
       likes: 0,
@@ -1514,7 +1530,7 @@
       if (error || !post) return;
 
       const answers = await loadAnswers(id);
-      const deleteQaIcon = (post.author === currentUser || isAdmin) ? `<span class="delete-btn" style="cursor:pointer;margin-left:10px;" onclick="deletePost(${JSON.stringify(post.id)})">🗑️</span>` : '';
+      const deleteQaIcon = (post.device_id === getDeviceId() || isAdmin) ? `<span class="delete-btn" style="cursor:pointer;margin-left:10px;" onclick="deletePost(${JSON.stringify(post.id)})">🗑️</span>` : '';
       const ansHtml = !answers.length
         ? '<p style="color:#aaa;font-size:0.85rem;text-align:center;padding:1rem 0;">まだ回答がありません。最初に回答しよう！</p>'
         : answers.map(a => { const time = a.created_at ? formatTime(a.created_at) : (a.time || ''); return `<div class="answer-item"><div class="answer-meta"><span class="answer-author">@${escHtml(a.author)}</span>${a.best?'<span class="best-badge">✅ ベストアンサー</span>':''}<span class="answer-time">${time}</span></div><div class="answer-text">${escHtml(a.text)}</div></div>`; }).join('');
@@ -1552,7 +1568,7 @@
       const [catLabel, catCls] = catMap[post.category] || ['その他', 'cat-campus'];
       const fTag = post.faculty ? `<span class="faculty-tag">${FACULTIES[post.faculty]||post.faculty}</span>` : '';
       const timeStr = formatTime(post.created_at);
-      const deletePostIcon = (post.author === currentUser || isAdmin) ? `<span class="delete-btn" style="cursor:pointer;margin-left:10px;" onclick="deletePost(${JSON.stringify(post.id)})">🗑️</span>` : '';
+      const deletePostIcon = (post.device_id === getDeviceId() || isAdmin) ? `<span class="delete-btn" style="cursor:pointer;margin-left:10px;" onclick="deletePost(${JSON.stringify(post.id)})">🗑️</span>` : '';
 
       // Category-specific metadata
       let extraInfo = '';
@@ -1574,7 +1590,7 @@
       const cmtHtml = !comments.length
         ? '<p style="color:#aaa;font-size:0.9rem;text-align:center;padding:2rem 0;">コメントがまだありません。最初のコメントを書いてみませんか？</p>'
         : comments.map(c => {
-            const delIcon = (c.author === currentUser || isAdmin) ? `<span class="comment-delete" onclick="deleteComment(${JSON.stringify(c.id)}, ${JSON.stringify(postId)})">🗑️</span>` : '';
+            const delIcon = (c.device_id === getDeviceId() || isAdmin) ? `<span class="comment-delete" onclick="deleteComment(${JSON.stringify(c.id)}, ${JSON.stringify(postId)})">🗑️</span>` : '';
             return `<div class="comment-item"><div class="comment-meta"><span class="comment-author">@${escHtml(c.author)}</span><span class="comment-time">${formatTime(c.created_at)}</span>${delIcon}</div><div class="comment-text">${escHtml(c.text)}</div></div>`;
           }).join('');
 
@@ -1625,7 +1641,7 @@
 
     try {
       if (!db) throw new Error('Supabase client not initialized');
-      const newComment = { post_id: postId, author: currentUser, text };
+      const newComment = { post_id: postId, author: currentUser, device_id: getDeviceId(), text };
       const { error: insertErr } = await db.from('comments').insert([newComment]);
       if (insertErr) { alert('コメント投稿に失敗しました: ' + insertErr.message); return; }
 
@@ -1648,7 +1664,7 @@
     if (!text) { alert('回答を入力してください'); return; }
     try {
       if (!db) throw new Error('Supabase client not initialized');
-      const newAns = { post_id: postId, author: currentUser, text };
+      const newAns = { post_id: postId, author: currentUser, device_id: getDeviceId(), text };
       const { data: inserted, error: insertErr } = await db.from('answers').insert([newAns]);
       if (insertErr) throw insertErr;
       input.value = '';
