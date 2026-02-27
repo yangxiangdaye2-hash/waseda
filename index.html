@@ -342,6 +342,8 @@
 
     /* stack sidebar above posts on tablets/phones up to ~992px */
     @media (max-width: 992px) {
+      .main { grid-template-columns: 1fr; }
+      
       .header-inner { height: 56px; padding: 0; }
       .logo-jp { font-size: 1rem; letter-spacing: 0.02em; }
       .logo-en { font-size: 0.6rem; letter-spacing: 0.08em; }
@@ -379,7 +381,8 @@
       
       /* Sidebar more compact */
       .sidebar { gap: 1rem; }
-      .sidebar-card { padding: 1rem; }
+      .sidebar-card { padding: 1rem; margin-bottom: 1.5rem; }
+      .sidebar-card-body { padding: 1rem 0.9rem; }
       .sidebar-card-header { padding: 11px 13px; font-size: 0.85rem; }
       .trend-text { font-size: 0.8rem; }
       .trend-likes { font-size: 0.8rem; }
