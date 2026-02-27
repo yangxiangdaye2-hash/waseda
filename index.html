@@ -396,30 +396,6 @@
       .category-tag { font-size: 0.65rem; padding: 4px 9px; }
       .faculty-tag { font-size: 0.65rem; padding: 4px 9px; }
     }
-      
-      /* make main a flex column and reverse order so sidebar shows before posts */
-      .main {
-        display: flex;
-        flex-direction: column-reverse;
-        padding: 1.5rem 1rem;
-        gap: 1.5rem;
-      }
-      /* sidebar remains visible so trending stays accessible */
-      
-      .posts-header { flex-direction: column; align-items: flex-start; }
-      .posts-header h2 { font-size: 1.1rem; }
-      
-      .post-card { border-left: 3px solid var(--gold); padding: 1.2rem 1.4rem; margin-bottom: 1rem; }
-      .post-title { font-size: 1rem; }
-      .post-body { font-size: 0.85rem; }
-      .post-meta { gap: 8px; }
-      .category-tag { font-size: 0.65rem; padding: 4px 10px; }
-      .faculty-tag { font-size: 0.65rem; padding: 4px 10px; }
-      
-      .form-row { grid-template-columns: 1fr; gap: 1rem; }
-      
-      .modal-body { padding: 1.5rem; }
-    }
     
     @media (max-width: 480px) {
       .hero { padding: 2rem 1.5rem 1.5rem; }
@@ -543,17 +519,29 @@
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">カテゴリ</label>
-            <select class="form-select" id="postCategory" onchange="onCategoryChange(this)">
+            <select class="form-select" id="postCategory" onchange="onCategoryChange(this.value)">
               <option value="lecture">📚 授業口コミ</option>
               <option value="circle">🎯 サークル情報</option>
               <option value="campus">🏫 キャンパスライフ</option>
               <option value="qa">❓ Q&amp;A（質問）</option>
             </select>
           </div>
+        </div>
+
+        <!-- 授業口コミ専用フィールド -->
+        <div id="lecture-fields" class="category-fields">
           <div class="form-group">
-            <label class="form-label">学部</label>
-            <select class="form-select" id="postFaculty">
-              <option value="">学部を選択（任意）</option>
+            <label class="form-label">授業名 <span style="color:#e74c3c;">*</span></label>
+            <input class="form-input" type="text" id="lectureName" placeholder="例：政治経済学入門">
+          </div>
+          <div class="form-group">
+            <label class="form-label">担当教員名</label>
+            <input class="form-input" type="text" id="lectureTeacher" placeholder="例：田中 太郎（任意）">
+          </div>
+          <div class="form-group">
+            <label class="form-label">学部 <span style="color:#e74c3c;">*</span></label>
+            <select class="form-select" id="lectureFaculty">
+              <option value="">学部を選択</option>
               <option value="seikei">政治経済学部</option>
               <option value="ho">法学部</option>
               <option value="shogaku">商学部</option>
@@ -569,25 +557,121 @@
               <option value="shakou">社会科学部</option>
             </select>
           </div>
+          <div class="form-group">
+            <label class="form-label">評価 <span style="color:#e74c3c;">*</span></label>
+            <select class="form-select" id="lectureRating">
+              <option value="">評価を選択</option>
+              <option value="5">⭐⭐⭐⭐⭐ とても良い</option>
+              <option value="4">⭐⭐⭐⭐ 良い</option>
+              <option value="3">⭐⭐⭐ 普通</option>
+              <option value="2">⭐⭐ 微妙</option>
+              <option value="1">⭐ 良くない</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">レビュー <span style="color:#e74c3c;">*</span></label>
+            <textarea class="form-textarea" id="lectureBody" placeholder="授業の感想や評価を書いてください..."></textarea>
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label" id="title-label">タイトル</label>
-          <input class="form-input" type="text" id="postTitle" placeholder="例：政治経済学の授業について">
+
+        <!-- サークル専用フィールド -->
+        <div id="circle-fields" class="category-fields" style="display:none;">
+          <div class="form-group">
+            <label class="form-label">サークル名 <span style="color:#e74c3c;">*</span></label>
+            <input class="form-input" type="text" id="circleName" placeholder="例：ダンスサークル WASEDA">
+          </div>
+          <div class="form-group">
+            <label class="form-label">サークルの種類</label>
+            <select class="form-select" id="circleType">
+              <option value="">種類を選択（任意）</option>
+              <option value="sports">運動系</option>
+              <option value="culture">文化系</option>
+              <option value="other">その他</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">内容 <span style="color:#e74c3c;">*</span></label>
+            <textarea class="form-textarea" id="circleBody" placeholder="サークルの説明、募集情報などを書いてください..."></textarea>
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label" id="body-label">内容</label>
-          <textarea class="form-textarea" id="postBody" placeholder="詳しい内容を書いてください..."></textarea>
+
+        <!-- キャンパスライフ専用フィールド -->
+        <div id="campus-fields" class="category-fields" style="display:none;">
+          <div class="form-group">
+            <label class="form-label">タイトル <span style="color:#e74c3c;">*</span></label>
+            <input class="form-input" type="text" id="campusTitle" placeholder="例：紅葉の季節の早稲田キャンパス">
+          </div>
+          <div class="form-group">
+            <label class="form-label">場所</label>
+            <select class="form-select" id="campusLocation">
+              <option value="">場所を選択（任意）</option>
+              <option value="waseda">早稲田キャンパス</option>
+              <option value="nishi">西早稲田キャンパス</option>
+              <option value="toyama">戸山キャンパス</option>
+              <option value="tokorozawa">所沢キャンパス</option>
+              <option value="other">その他</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">日時</label>
+            <input class="form-input" type="text" id="campusDateTime" placeholder="例：2月27日（木）14時頃（任意）">
+          </div>
+          <div class="form-group">
+            <label class="form-label">学部 <span style="color:#e74c3c;">*</span></label>
+            <select class="form-select" id="campusFaculty">
+              <option value="">学部を選択</option>
+              <option value="seikei">政治経済学部</option>
+              <option value="ho">法学部</option>
+              <option value="shogaku">商学部</option>
+              <option value="kyoiku">教育学部</option>
+              <option value="bun">文学部</option>
+              <option value="bunkagaku">文化構想学部</option>
+              <option value="kiso">基幹理工学部</option>
+              <option value="sozo">創造理工学部</option>
+              <option value="sentan">先進理工学部</option>
+              <option value="ningen">人間科学部</option>
+              <option value="sports">スポーツ科学部</option>
+              <option value="kokusai">国際教養学部</option>
+              <option value="shakou">社会科学部</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">内容 <span style="color:#e74c3c;">*</span></label>
+            <textarea class="form-textarea" id="campusBody" placeholder="詳しい内容を書いてください..."></textarea>
+          </div>
         </div>
-        <div class="form-group" id="lectureExtra" style="display:none;">
-          <label class="form-label">授業評価</label>
-          <select class="form-select" id="postStars">
-            <option value="5">⭐⭐⭐⭐⭐ とても良い</option>
-            <option value="4">⭐⭐⭐⭐ 良い</option>
-            <option value="3">⭐⭐⭐ 普通</option>
-            <option value="2">⭐⭐ 微妙</option>
-            <option value="1">⭐ 良くない</option>
-          </select>
+
+        <!-- Q&A専用フィールド -->
+        <div id="qa-fields" class="category-fields" style="display:none;">
+          <div class="form-group">
+            <label class="form-label">質問タイトル <span style="color:#e74c3c;">*</span></label>
+            <input class="form-input" type="text" id="qaTitle" placeholder="例：どの学部の授業を取るのがおすすめ？">
+          </div>
+          <div class="form-group">
+            <label class="form-label">学部 <span style="color:#e74c3c;">*</span></label>
+            <select class="form-select" id="qaFaculty">
+              <option value="">学部を選択</option>
+              <option value="seikei">政治経済学部</option>
+              <option value="ho">法学部</option>
+              <option value="shogaku">商学部</option>
+              <option value="kyoiku">教育学部</option>
+              <option value="bun">文学部</option>
+              <option value="bunkagaku">文化構想学部</option>
+              <option value="kiso">基幹理工学部</option>
+              <option value="sozo">創造理工学部</option>
+              <option value="sentan">先進理工学部</option>
+              <option value="ningen">人間科学部</option>
+              <option value="sports">スポーツ科学部</option>
+              <option value="kokusai">国際教養学部</option>
+              <option value="shakou">社会科学部</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">詳細 <span style="color:#e74c3c;">*</span></label>
+            <textarea class="form-textarea" id="qaBody" placeholder="質問の詳細を書いてください..."></textarea>
+          </div>
         </div>
+
         <button class="btn-submit" id="submitBtn" onclick="submitPost()">投稿する</button>
       </div>
     </div>
@@ -911,10 +995,27 @@
           </div></div>`;
       }
 
-      const stars = p.stars ? '⭐'.repeat(p.stars) : '';
+      // Category-specific metadata
+      let extraMeta = '';
+      if (p.category === 'lecture') {
+        const stars = p.stars ? '⭐'.repeat(p.stars) : '';
+        const teacher = p.lecture_teacher ? `<span style="font-size:0.8rem;color:var(--gray);">👨‍🏫 ${escHtml(p.lecture_teacher)}</span>` : '';
+        extraMeta = `${teacher}${stars}`;
+      } else if (p.category === 'circle') {
+        const typeMap = { sports:'運動系', culture:'文化系', other:'その他' };
+        const type = p.circle_type ? `<span style="font-size:0.8rem;background:#f0f0f0;padding:2px 8px;border-radius:4px;color:#555;">${typeMap[p.circle_type]||p.circle_type}</span>` : '';
+        extraMeta = type;
+      } else if (p.category === 'campus') {
+        const locationMap = { waseda:'早稲田', nishi:'西早稲田', toyama:'戸山', tokorozawa:'所沢', other:'その他' };
+        const loc = p.campus_location ? `<span style="font-size:0.8rem;color:var(--gray);">📍 ${locationMap[p.campus_location]||p.campus_location}</span>` : '';
+        const dt = p.campus_datetime ? `<span style="font-size:0.8rem;color:var(--gray);">🕐 ${escHtml(p.campus_datetime)}</span>` : '';
+        extraMeta = `${loc}${dt}`;
+      }
+
       const postCardClass = p.category === 'job' ? 'post-card job' : `post-card ${p.category}`;
       return `<div class="${postCardClass} ${pinnedClass}" id="post-${p.id}" onclick='openPostDetail(${JSON.stringify(p.id)})'>
-        <div class="post-meta"><span class="category-tag ${cls}">${label}${prBadge}</span>${fTag}<span class="author">@${escHtml(p.author)}</span>${stars?`<span class="stars">${stars}</span>`:''}<span class="post-time">${timeStr}</span></div>
+        <div class="post-meta"><span class="category-tag ${cls}">${label}${prBadge}</span>${fTag}<span class="author">@${escHtml(p.author)}</span><span class="post-time">${timeStr}</span></div>
+        ${extraMeta ? `<div style="margin-bottom:0.5rem;display:flex;gap:0.6rem;flex-wrap:wrap;font-size:0.85rem;">${extraMeta}</div>` : ''}
         <div class="post-title">${escHtml(p.title)}</div>
         <div class="post-body">${escHtml(p.body)}</div>
         <div class="post-footer">
@@ -1225,32 +1326,166 @@
   function selectFaculty(f, el) { currentFaculty = f; document.querySelectorAll('.faculty-chip').forEach(c => c.classList.remove('active')); el.classList.add('active'); loadPosts(); }
 
   // 投稿モーダル
-  function openPostModal() { document.getElementById('postModal').classList.add('open'); }
+  function openPostModal() { 
+    document.getElementById('postModal').classList.add('open'); 
+    resetPostForm();
+  }
+  function resetPostForm() {
+    document.getElementById('postCategory').value = 'lecture';
+    document.getElementById('lectureName').value = '';
+    document.getElementById('lectureTeacher').value = '';
+    document.getElementById('lectureFaculty').value = '';
+    document.getElementById('lectureRating').value = '';
+    document.getElementById('lectureBody').value = '';
+    document.getElementById('circleName').value = '';
+    document.getElementById('circleType').value = '';
+    document.getElementById('circleBody').value = '';
+    document.getElementById('campusTitle').value = '';
+    document.getElementById('campusLocation').value = '';
+    document.getElementById('campusDateTime').value = '';
+    document.getElementById('campusFaculty').value = '';
+    document.getElementById('campusBody').value = '';
+    document.getElementById('qaTitle').value = '';
+    document.getElementById('qaFaculty').value = '';
+    document.getElementById('qaBody').value = '';
+    onCategoryChange('lecture');
+  }
   function openPostModalWithCategory(category = null) {
     if (category === null) category = currentTab === 'all' ? 'lecture' : (currentTab === 'qa' ? 'qa' : currentTab);
     document.getElementById('postModal').classList.add('open');
-    setTimeout(() => { const sel = document.getElementById('postCategory'); sel.value = category; onCategoryChange(sel); }, 0);
+    resetPostForm();
+    setTimeout(() => { document.getElementById('postCategory').value = category; onCategoryChange(category); }, 0);
   }
   function closePostModal() { document.getElementById('postModal').classList.remove('open'); }
-  function onCategoryChange(sel) { const isL = sel.value === 'lecture', isQ = sel.value === 'qa'; document.getElementById('lectureExtra').style.display = isL ? 'block' : 'none'; document.getElementById('title-label').textContent = isQ ? '質問タイトル' : 'タイトル'; document.getElementById('body-label').textContent = isQ ? '質問の詳細' : '内容'; document.getElementById('postTitle').placeholder = isQ ? '例：政経の必修登録の方法は？' : '例：マクロ経済学の口コミ'; }
+  
+  function onCategoryChange(category) {
+    // Hide all category fields
+    document.getElementById('lecture-fields').style.display = 'none';
+    document.getElementById('circle-fields').style.display = 'none';
+    document.getElementById('campus-fields').style.display = 'none';
+    document.getElementById('qa-fields').style.display = 'none';
+    
+    // Show selected category fields
+    if (category === 'lecture') {
+      document.getElementById('lecture-fields').style.display = 'block';
+    } else if (category === 'circle') {
+      document.getElementById('circle-fields').style.display = 'block';
+    } else if (category === 'campus') {
+      document.getElementById('campus-fields').style.display = 'block';
+    } else if (category === 'qa') {
+      document.getElementById('qa-fields').style.display = 'block';
+    }
+  }
 
   // 投稿送信
   async function submitPost() {
-    const title = document.getElementById('postTitle').value.trim();
-    const body = document.getElementById('postBody').value.trim();
     const category = document.getElementById('postCategory').value;
-    const faculty = document.getElementById('postFaculty').value;
-    if (!title || !body) { alert('タイトルと内容を入力してください'); return; }
+    let title, body, faculty, extraData = {};
+    
+    if (category === 'lecture') {
+      // 授業口コミの場合
+      const lectureName = document.getElementById('lectureName').value.trim();
+      const lectureTeacher = document.getElementById('lectureTeacher').value.trim();
+      const lectureFaculty = document.getElementById('lectureFaculty').value;
+      const lectureRating = document.getElementById('lectureRating').value;
+      const lectureBody = document.getElementById('lectureBody').value.trim();
+      
+      if (!lectureName || !lectureBody || !lectureFaculty || !lectureRating) {
+        alert('授業名、学部、評価、レビューは必須です');
+        return;
+      }
+      
+      title = lectureName;
+      body = lectureBody;
+      faculty = lectureFaculty;
+      extraData = {
+        lecture_teacher: lectureTeacher || null,
+        stars: parseInt(lectureRating)
+      };
+      
+    } else if (category === 'circle') {
+      // サークルの場合
+      const circleName = document.getElementById('circleName').value.trim();
+      const circleType = document.getElementById('circleType').value;
+      const circleBody = document.getElementById('circleBody').value.trim();
+      
+      if (!circleName || !circleBody) {
+        alert('サークル名と内容は必須です');
+        return;
+      }
+      
+      title = circleName;
+      body = circleBody;
+      faculty = null; // サークルは学部非表示
+      extraData = {
+        circle_type: circleType || null
+      };
+      
+    } else if (category === 'campus') {
+      // キャンパスライフの場合
+      const campusTitle = document.getElementById('campusTitle').value.trim();
+      const campusLocation = document.getElementById('campusLocation').value;
+      const campusDateTime = document.getElementById('campusDateTime').value.trim();
+      const campusFaculty = document.getElementById('campusFaculty').value;
+      const campusBody = document.getElementById('campusBody').value.trim();
+      
+      if (!campusTitle || !campusBody || !campusFaculty) {
+        alert('タイトル、学部、内容は必須です');
+        return;
+      }
+      
+      title = campusTitle;
+      body = campusBody;
+      faculty = campusFaculty;
+      extraData = {
+        campus_location: campusLocation || null,
+        campus_datetime: campusDateTime || null
+      };
+      
+    } else if (category === 'qa') {
+      // Q&Aの場合
+      const qaTitle = document.getElementById('qaTitle').value.trim();
+      const qaFaculty = document.getElementById('qaFaculty').value;
+      const qaBody = document.getElementById('qaBody').value.trim();
+      
+      if (!qaTitle || !qaBody || !qaFaculty) {
+        alert('質問タイトル、学部、詳細は必須です');
+        return;
+      }
+      
+      title = qaTitle;
+      body = qaBody;
+      faculty = qaFaculty;
+      extraData = {};
+    }
 
-    const btn = document.getElementById('submitBtn'); btn.disabled = true; btn.textContent = '投稿中...';
-    const stars = category === 'lecture' ? parseInt(document.getElementById('postStars').value) : null;
-    const newPost = { category, faculty: faculty || null, author: currentUser, title, body, likes: 0, comments: 0, stars };
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = '投稿中...';
+    
+    const newPost = {
+      category,
+      faculty,
+      author: currentUser,
+      title,
+      body,
+      likes: 0,
+      comments: 0,
+      ...extraData
+    };
 
     const { error } = await db.from('posts').insert([newPost]);
-    btn.disabled = false; btn.textContent = '投稿する';
-    if (error) { alert('投稿に失敗しました: ' + error.message); return; }
+    btn.disabled = false;
+    btn.textContent = '投稿する';
+    
+    if (error) {
+      alert('投稿に失敗しました: ' + error.message);
+      return;
+    }
 
-    closePostModal(); document.getElementById('postTitle').value = ''; document.getElementById('postBody').value = ''; loadPosts();
+    closePostModal();
+    resetPostForm();
+    loadPosts();
   }
 
   // answers テーブルから指定投稿の回答を取得するヘルパー
@@ -1303,9 +1538,25 @@
       const catMap = { lecture: ['📚 授業口コミ', 'cat-lecture'], circle: ['🎯 サークル情報', 'cat-circle'], campus: ['🏫 キャンパスライフ', 'cat-campus'], job:['💼 求人', 'cat-job'] };
       const [catLabel, catCls] = catMap[post.category] || ['その他', 'cat-campus'];
       const fTag = post.faculty ? `<span class="faculty-tag">${FACULTIES[post.faculty]||post.faculty}</span>` : '';
-      const stars = post.stars ? '⭐'.repeat(post.stars) : '';
       const timeStr = formatTime(post.created_at);
       const deletePostIcon = (post.author === currentUser || isAdmin) ? `<span class="delete-btn" style="cursor:pointer;margin-left:10px;" onclick="deletePost(${JSON.stringify(post.id)})">🗑️</span>` : '';
+
+      // Category-specific metadata
+      let extraInfo = '';
+      if (post.category === 'lecture') {
+        const stars = post.stars ? '⭐'.repeat(post.stars) : '';
+        const teacher = post.lecture_teacher ? `<div style="margin-top:0.8rem;padding:0.8rem;background:#f9f9f9;border-radius:6px;border-left:3px solid var(--crimson);"><strong>👨‍🏫 担当教員：</strong> ${escHtml(post.lecture_teacher)}</div>` : '';
+        extraInfo = `${stars?`<div style="margin-top:0.8rem;font-size:1.1rem;">${stars}</div>`:''}<div style="margin-top:0.5rem;color:var(--gray);font-size:0.9rem;">評価：${stars ? post.stars + '/' : ''}5</div>${teacher}`;
+      } else if (post.category === 'circle') {
+        const typeMap = { sports:'運動系', culture:'文化系', other:'その他' };
+        const type = post.circle_type ? `<div style="margin-top:0.8rem;padding:0.6rem 12px;background:#f0f0f0;border-radius:4px;display:inline-block;color:#555;font-weight:600;">${typeMap[post.circle_type]||post.circle_type}</div>` : '';
+        extraInfo = type;
+      } else if (post.category === 'campus') {
+        const locationMap = { waseda:'早稲田', nishi:'西早稲田', toyama:'戸山', tokorozawa:'所沢', other:'その他' };
+        const loc = post.campus_location ? `<div><strong>📍 場所：</strong> ${locationMap[post.campus_location]||post.campus_location}</div>` : '';
+        const dt = post.campus_datetime ? `<div><strong>🕐 日時：</strong> ${escHtml(post.campus_datetime)}</div>` : '';
+        extraInfo = (loc || dt) ? `<div style="margin-top:0.8rem;padding:0.8rem;background:#f9f9f9;border-radius:6px;border-left:3px solid var(--crimson);font-size:0.95rem;">${loc}${dt}</div>` : '';
+      }
 
       const cmtHtml = !comments.length
         ? '<p style="color:#aaa;font-size:0.9rem;text-align:center;padding:2rem 0;">コメントがまだありません。最初のコメントを書いてみませんか？</p>'
@@ -1319,9 +1570,10 @@
       document.getElementById('post-detail-content').innerHTML = `
         <div class="post-detail">
           <div class="post-detail-header">
-            ${catHtml}${fTag}<span class="post-detail-meta">@${escHtml(post.author)}</span>${stars?`<span>${stars}</span>`:''}<span class="post-detail-time">${timeStr}</span>${deletePostIcon}
+            ${catHtml}${fTag}<span class="post-detail-meta">@${escHtml(post.author)}</span><span class="post-detail-time">${timeStr}</span>${deletePostIcon}
           </div>
           <div class="post-detail-title">${escHtml(post.title)}</div>
+          ${extraInfo ? `<div style="margin-bottom:1rem;">${extraInfo}</div>` : ''}
           <div class="post-detail-body">${escHtml(post.body)}</div>
           <div class="post-detail-stats">
             <span>❤️ ${post.likes||0}</span>
