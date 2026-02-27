@@ -222,7 +222,7 @@
     .sidebar-card-body { padding: 1.4rem 1.2rem; }
 
     /* category tabs inside trend card */
-    .trend-tabs { display: none; }
+    .trend-tabs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; margin-bottom: 0.8rem; }
     .trend-tab {
       display: block;
       padding: 7px 6px;
@@ -401,7 +401,8 @@
     
     @media (max-width: 768px) {
       .main { grid-template-columns: 1fr; gap: 1rem; padding: 1rem 0.8rem; }
-      .sidebar { margin-top: 1rem; }
+      .sidebar { order: -1; margin-top: 0; margin-bottom: 0.5rem; }
+      .posts-section { order: 0; }
     }
     
     @media (max-width: 480px) {
