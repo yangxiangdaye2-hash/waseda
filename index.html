@@ -134,18 +134,16 @@
   .tabs-inner::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); }
   .tabs-inner::-webkit-scrollbar-thumb { background: rgba(139,0,0,0.2); border-radius: 2px; }
 
-  .tab { display: inline-block; padding: 7px 14px; font-size: 0.85rem; font-weight: 600; background: white; color: var(--crimson); border: 1.5px solid var(--crimson); border-radius: 18px; cursor: pointer; transition: background 0.2s, color 0.2s, transform 0.1s; text-align: center; white-space: nowrap; letter-spacing: 0.02em; user-select: none; flex-shrink: 0; }
+  .tab { display: inline-block; padding: 7px 13px; font-size: 0.82rem; font-weight: 600; background: white; color: var(--crimson); border: 1.5px solid var(--crimson); border-radius: 18px; cursor: pointer; transition: all 0.2s; text-align: center; white-space: nowrap; letter-spacing: 0.01em; user-select: none; flex-shrink: 0; }
   .tab:hover { background: var(--crimson); color: white; transform: translateY(-1px); }
   .tab.active { background: linear-gradient(135deg, var(--crimson) 0%, var(--crimson-dark) 100%); color: white; border-color: var(--crimson-dark); font-weight: 700; box-shadow: 0 2px 8px rgba(139, 0, 0, 0.2); }
-  @media (min-width: 768px) {
-    .tab { font-size: 0.9rem; padding: 8px 12px; }
-  }
-  @media (max-width: 768px) {
-    .tabs-inner { padding: 0.4rem 0.3rem; gap: 0.25rem; }
-    .tab { font-size: 0.7rem; padding: 4px 7px; border-radius: 14px; border-width: 1px; letter-spacing: 0; }
+  @media (max-width: 992px) {
+    .tabs-inner { padding: 0.45rem 0.4rem; gap: 0.35rem; }
+    .tab { font-size: 0.75rem; padding: 5px 10px; }
   }
   @media (max-width: 480px) {
-    .tab { font-size: 0.65rem; padding: 3px 6px; }
+    .tabs-inner { padding: 0.4rem 0.3rem; gap: 0.3rem; }
+    .tab { font-size: 0.7rem; padding: 4px 8px; }
   }
 
 
@@ -347,73 +345,70 @@
       .header-inner { height: 56px; padding: 0; }
       .logo-jp { font-size: 1rem; letter-spacing: 0.02em; }
       .logo-en { font-size: 0.6rem; letter-spacing: 0.08em; }
-      .header-right { gap: 0.4rem; }
-      .nickname-badge { padding: 4px 10px; font-size: 0.7rem; }
-      .btn-post { padding: 5px 12px; font-size: 0.75rem; }
-      .btn-admin { padding: 4px 8px; font-size: 0.75rem; }
+      .header-right { gap: 0.5rem; }
+      .nickname-badge { padding: 5px 11px; font-size: 0.75rem; }
+      .btn-post { padding: 6px 13px; font-size: 0.8rem; }
+      .btn-admin { padding: 5px 10px; font-size: 0.8rem; }
 
       /* Responsive banner */
-      .announcement-container { padding: 12px 14px; gap: 10px; }
-      .announcement-icon { font-size: 26px; }
-      .announcement-title { font-size: 1rem; margin-bottom: 4px; }
-      .announcement-body { font-size: 0.85rem; }
-      .announcement-close { font-size: 18px; padding: 2px 4px; }
+      .announcement-container { padding: 14px 16px; gap: 12px; }
+      .announcement-icon { font-size: 28px; }
+      .announcement-title { font-size: 1.05rem; margin-bottom: 5px; }
+      .announcement-body { font-size: 0.9rem; }
+      .announcement-close { font-size: 20px; padding: 3px 6px; }
 
-      /* Tabs: horizontal scroll on mobile */
-      .tabs-inner { padding: 0.4rem 0.3rem; gap: 0.25rem; }
-      .tab { padding: 4px 7px; font-size: 0.7rem; border-radius: 14px; border-width: 1px; }
-      .tab.active { padding: 4px 7px; }
+      /* Tabs: using global media query */
 
-      .hero { padding: 1.2rem 1rem; }
-      .hero h1 { font-size: 1rem; margin-bottom: 0.3rem; }
-      .hero p { font-size: 0.8rem; margin-bottom: 0.9rem; }
+      .hero { padding: 1.5rem 1.2rem; }
+      .hero h1 { font-size: 1.05rem; margin-bottom: 0.4rem; }
+      .hero p { font-size: 0.85rem; margin-bottom: 1rem; }
 
-      .search-bar { gap: 0.4rem; padding: 0 0.75rem; }
-      .search-input { padding: 8px 10px; font-size: 0.85rem; }
-      .search-btn { padding: 8px 12px; font-size: 0.75rem; }
+      .search-bar { gap: 0.5rem; padding: 0 1rem; }
+      .search-input { padding: 9px 12px; font-size: 0.9rem; }
+      .search-btn { padding: 9px 14px; font-size: 0.8rem; }
       
-      .faculty-bar { padding: 0.6rem 0.5rem; }
-      .faculty-bar-inner { gap: 5px; padding: 0; }
-      .faculty-label { font-size: 0.65rem; margin-right: 0; }
-      .faculty-chip { padding: 5px 9px; font-size: 0.7rem; }
+      .faculty-bar { padding: 0.7rem 0.7rem; }
+      .faculty-bar-inner { gap: 6px; padding: 0; }
+      .faculty-label { font-size: 0.7rem; margin-right: 0; }
+      .faculty-chip { padding: 6px 11px; font-size: 0.75rem; }
       
       /* Posts header */
-      .posts-header { flex-direction: column; align-items: flex-start; margin-bottom: 1rem; gap: 0.6rem; }
-      .posts-header h2 { font-size: 0.95rem; }
-      .posts-header-controls { gap: 0.5rem; }
+      .posts-header { flex-direction: column; align-items: flex-start; margin-bottom: 1.2rem; gap: 0.7rem; }
+      .posts-header h2 { font-size: 1rem; }
+      .posts-header-controls { gap: 0.6rem; }
       
       /* Sidebar more compact */
-      .sidebar { gap: 0.8rem; }
-      .sidebar-card { padding: 0.9rem; }
-      .sidebar-card-header { padding: 9px 11px; font-size: 0.8rem; }
-      .trend-text { font-size: 0.78rem; }
-      .trend-likes { font-size: 0.75rem; }
+      .sidebar { gap: 1rem; }
+      .sidebar-card { padding: 1rem; }
+      .sidebar-card-header { padding: 11px 13px; font-size: 0.85rem; }
+      .trend-text { font-size: 0.8rem; }
+      .trend-likes { font-size: 0.8rem; }
       
       /* Main content padding */
-      .main { padding: 0.875rem 0.6rem; gap: 0.9rem; }
-      .post-card { margin-bottom: 0.8rem; padding: 0.9rem; }
-      .post-meta { gap: 6px; margin-bottom: 0.6rem; }
-      .post-title { font-size: 0.95rem; margin-bottom: 0.5rem; }
-      .post-body { font-size: 0.82rem; }
-      .post-footer { gap: 0.8rem; margin-top: 0.7rem; padding-top: 0.7rem; }
-      .post-action { font-size: 0.78rem; }
-      .category-tag { font-size: 0.65rem; padding: 4px 9px; }
-      .faculty-tag { font-size: 0.65rem; padding: 4px 9px; }
+      .main { padding: 1.2rem 1rem; gap: 1rem; }
+      .post-card { margin-bottom: 1rem; padding: 1rem; }
+      .post-meta { gap: 7px; margin-bottom: 0.7rem; }
+      .post-title { font-size: 0.98rem; margin-bottom: 0.6rem; }
+      .post-body { font-size: 0.85rem; }
+      .post-footer { gap: 1rem; margin-top: 0.8rem; padding-top: 0.8rem; }
+      .post-action { font-size: 0.8rem; }
+      .category-tag { font-size: 0.7rem; padding: 5px 10px; }
+      .faculty-tag { font-size: 0.7rem; padding: 5px 10px; }
     }
     
     @media (max-width: 480px) {
-      .hero { padding: 2rem 1.5rem 1.5rem; }
-      .hero h1 { font-size: 0.95rem; }
-      .search-bar { gap: 6px; }
-      .search-input { padding: 10px 14px; font-size: 0.9rem; }
+      .hero { padding: 1.3rem 1rem 1rem; }
+      .hero h1 { font-size: 1rem; }
+      .search-bar { gap: 0.5rem; padding: 0 0.75rem; }
+      .search-input { padding: 8px 10px; font-size: 0.85rem; }
       
-      .main { padding: 1rem; }
-      .post-card { padding: 1rem; }
+      .main { padding: 1rem 0.8rem; }
+      .post-card { padding: 0.95rem; }
       .posts-footer { gap: 0.8rem; }
-      .post-action { font-size: 0.75rem; }
+      .post-action { font-size: 0.78rem; }
       
-      .modal-body { padding: 1.2rem; }
-      .form-label { font-size: 0.8rem; }
+      .modal-body { padding: 1.3rem; }
+      .form-label { font-size: 0.82rem; }
     }
   </style>
   </head>
