@@ -147,7 +147,7 @@
   }
 
 
-    .main { max-width: 1200px; margin: 0 auto; padding: 2.5rem 2rem; display: grid; grid-template-columns: 1fr 320px; gap: 2.5rem; }
+    .main { max-width: 1200px; margin: 0 auto; padding: 2.5rem 2rem; display: grid; grid-template-columns: 1fr 260px; gap: 2.5rem; }
 
     .search-banner { background: linear-gradient(135deg, rgba(139,0,0,0.08) 0%, rgba(200,169,81,0.08) 100%); border: 1.5px solid rgba(139,0,0,0.15); border-radius: 12px; padding: 14px 18px; margin-bottom: 1.5rem; font-size: 0.9rem; color: var(--crimson); display: none; align-items: center; justify-content: space-between; font-weight: 500; }
     .search-banner.show { display: flex; }
@@ -342,7 +342,7 @@
 
     /* stack sidebar above posts on tablets/phones up to ~992px */
     @media (max-width: 992px) {
-      .main { grid-template-columns: 1fr; }
+      .main { grid-template-columns: 1fr 240px; padding: 1.5rem 1.2rem; gap: 1.5rem; }
       
       .header-inner { height: 56px; padding: 0; }
       .logo-jp { font-size: 1rem; letter-spacing: 0.02em; }
@@ -399,13 +399,17 @@
       .faculty-tag { font-size: 0.7rem; padding: 5px 10px; }
     }
     
+    @media (max-width: 768px) {
+      .main { grid-template-columns: 1fr; gap: 1rem; padding: 1rem 0.8rem; }
+      .sidebar { margin-top: 1rem; }
+    }
+    
     @media (max-width: 480px) {
       .hero { padding: 1.3rem 1rem 1rem; }
       .hero h1 { font-size: 1rem; }
       .search-bar { gap: 0.5rem; padding: 0 0.75rem; }
       .search-input { padding: 8px 10px; font-size: 0.85rem; }
       
-      .main { padding: 1rem 0.8rem; }
       .post-card { padding: 1.1rem 1.2rem; }
       .posts-footer { gap: 0.8rem; }
       .post-action { font-size: 0.78rem; }
