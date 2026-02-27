@@ -25,6 +25,9 @@
   .logo-jp { font-size: 1.5rem; font-weight: 900; color: var(--white); letter-spacing: 0.06em; }
   .logo-en { font-family: 'Playfair Display', serif; font-size: 0.75rem; color: var(--gold-light); letter-spacing: 0.15em; }
   .header-right { display: flex; align-items: center; gap: 1rem; }
+    .btn-admin { background: white; color: #333; border: 1px solid #ccc; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
+    .btn-admin:hover { background: #f0f0f0; }
+    .announcement-banner { background: #fff8e1; color: #5d4037; padding: 10px 20px; text-align: center; font-weight: 600; }
   .nickname-badge { background: rgba(255,255,255,0.18); border: 1.5px solid rgba(255,255,255,0.4); color: white; padding: 7px 16px; border-radius: 25px; font-size: 0.82rem; cursor: pointer; transition: all 0.2s; font-weight: 500; }
   .nickname-badge:hover { background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.6); }
   .btn-post { background: var(--gold); color: var(--crimson); border: none; padding: 9px 22px; border-radius: 8px; font-weight: 700; font-size: 0.88rem; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; transition: all 0.2s; box-shadow: 0 2px 8px rgba(200, 169, 81, 0.25); }
@@ -81,6 +84,9 @@
     .post-card.circle { border-left-color: #2e7d32; }
     .post-card.campus { border-left-color: #1565c0; }
     .post-card.qa { border-left-color: #6a1b9a; }
+    .post-card.job { border-left-color: #ff9800; }
+
+    .cat-job { background: #fff3e0; color: #ff9800; }
     
     .post-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 0.9rem; flex-wrap: wrap; }
     .category-tag { font-size: 0.72rem; font-weight: 700; padding: 5px 12px; border-radius: 20px; letter-spacing: 0.05em; }
@@ -97,6 +103,7 @@
     .post-action { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--gray-light); cursor: pointer; transition: all 0.2s; font-weight: 500; }
     .post-action:hover { color: var(--crimson); }
     .post-action.liked { color: var(--crimson); font-weight: 700; }
+    .delete-btn { color: #d00; }
     .stars { color: var(--gold); font-size: 0.9rem; }
 
     .qa-card { background: white; border: 1.5px solid #e8d5f5; border-left: 4px solid #6a1b9a; border-radius: 12px; padding: 1.6rem 1.8rem; margin-bottom: 1.3rem; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; }
@@ -223,9 +230,11 @@
     .comment-meta { display: flex; gap: 8px; margin-bottom: 0.7rem; align-items: center; flex-wrap: wrap; }
     .comment-author { font-size: 0.82rem; font-weight: 700; color: var(--dark); }
     .comment-time { font-size: 0.75rem; color: var(--gray-light); }
+    .comment-delete { font-size: 0.85rem; color: #d00; cursor: pointer; margin-left: 0.5rem; }
     .comment-text { font-size: 0.9rem; color: var(--gray); line-height: 1.6; }
     .comment-input-area { margin-top: 1.5rem; border-top: 2px solid #f5f5f5; padding-top: 1.5rem; }
     .comment-input-area h5 { font-size: 0.9rem; font-weight: 700; margin-bottom: 0.8rem; color: var(--dark); }
+    .ann-item { padding: 6px 0; border-bottom: 1px solid #eee; }
 
     /* ニックネーム設定モーダル */
     .nickname-modal { max-width: 420px; }
@@ -295,10 +304,13 @@
       <a class="logo" href="#"><span class="logo-jp">ワセダノート</span><span class="logo-en">WASEDA NOTE</span></a>
       <div class="header-right">
         <div class="nickname-badge" id="nicknameBadge" onclick="openNicknameModal()">👤 設定中...</div>
+        <button class="btn-admin" id="adminBtn" style="display:none;margin-right:0.5rem;" onclick="openAdminModal()">⚙️ 管理</button>
         <button class="btn-post" onclick="openPostModal()">＋ 投稿する</button>
       </div>
     </div>
   </header>
+
+  <div id="announcementBanner" class="announcement-banner" style="display:none;"></div>
 
   <div class="hero">
     <h1>早稲田生のための、早稲田生による情報共有</h1>
@@ -432,6 +444,46 @@
     </div>
   </div>
 
+  <!-- 管理パネルモーダル -->
+  <div class="modal-overlay" id="adminModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>⚙️ 管理パネル</h3>
+        <button class="modal-close" onclick="closeAdminModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <h4>📢 お知らせ投稿</h4>
+        <div class="form-group">
+          <label class="form-label">タイトル</label>
+          <input class="form-input" type="text" id="announceTitle" placeholder="お知らせタイトル">
+        </div>
+        <div class="form-group">
+          <label class="form-label">内容</label>
+          <textarea class="form-textarea" id="announceBody" placeholder="お知らせ内容"></textarea>
+        </div>
+        <button class="btn-submit" onclick="submitAnnouncement()">送信</button>
+        <hr>
+        <h4>💼 求人掲載</h4>
+        <div class="form-group">
+          <label class="form-label">会社名</label>
+          <input class="form-input" type="text" id="jobCompany" placeholder="会社名">
+        </div>
+        <div class="form-group">
+          <label class="form-label">職種</label>
+          <input class="form-input" type="text" id="jobTitle" placeholder="職種タイトル">
+        </div>
+        <div class="form-group">
+          <label class="form-label">説明</label>
+          <textarea class="form-textarea" id="jobDesc" placeholder="求人の詳細"></textarea>
+        </div>
+        <button class="btn-submit" onclick="submitJob()">求人を作成</button>
+        <hr>
+        <h4>現在のお知らせ</h4>
+        <div id="announcementList"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- 投稿詳細モーダル（コメント表示用） -->
   <div class="modal-overlay" id="postDetailModal">
     <div class="modal modal-wide">
@@ -508,7 +560,7 @@
   function updateNicknameBadge() { document.getElementById('nicknameBadge').textContent = '👤 ' + currentUser; }
   function openNicknameModal() { document.getElementById('nicknameInput').value = currentUser; document.getElementById('nicknameModal').classList.add('open'); }
   function closeNicknameModal() { document.getElementById('nicknameModal').classList.remove('open'); }
-  function saveNickname() { const val = document.getElementById('nicknameInput').value.trim(); if (!val) { alert('ニックネームを入力してください'); return; } currentUser = val; localStorage.setItem('waseda_nickname', val); updateNicknameBadge(); closeNicknameModal(); }
+  function saveNickname() { const val = document.getElementById('nicknameInput').value.trim(); if (!val) { alert('ニックネームを入力してください'); return; } currentUser = val; localStorage.setItem('waseda_nickname', val); updateNicknameBadge(); checkAdmin(); closeNicknameModal(); }
 
   // 投稿取得
   async function loadPosts() {
@@ -647,12 +699,13 @@
   function renderPosts(posts) {
     const container = document.getElementById('posts-container');
     if (!posts.length) { container.innerHTML = '<div class="empty-tab"><div class="empty-icon">📭</div><div class="empty-title">まだ投稿がありません</div><div class="empty-text">このカテゴリで最初の投稿者になりませんか？<br/>あなたの経験やエピソードをシェアしてください。</div><button class="empty-action" onclick="openPostModalWithCategory()">+ 投稿を作成</button></div>'; return; }
-    const catMap = { lecture:['cat-lecture','📚 授業口コミ'], circle:['cat-circle','🎯 サークル'], campus:['cat-campus','🏫 キャンパスライフ'], qa:['cat-qa','❓ Q&A'] };
+    const catMap = { lecture:['cat-lecture','📚 授業口コミ'], circle:['cat-circle','🎯 サークル'], campus:['cat-campus','🏫 キャンパスライフ'], qa:['cat-qa','❓ Q&A'], job:['cat-job','💼 求人'] };
 
     container.innerHTML = posts.map(p => {
       const [cls, label] = catMap[p.category] || ['cat-campus','その他'];
       const fTag = p.faculty ? `<span class="faculty-tag">${FACULTIES[p.faculty]||p.faculty}</span>` : '';
       const timeStr = formatTime(p.created_at);
+      const deleteBtn = (p.author === currentUser || isAdmin) ? `<span class="post-action delete-btn" onclick='event.stopPropagation(); deletePost(${JSON.stringify(p.id)})'>🗑️</span>` : '';
 
       if (p.category === 'qa') {
         const ansCount = answersCountMap[p.id] || 0;
@@ -666,6 +719,7 @@
             <span class="post-action">💬 回答 ${ansCount}件</span>
             <span class="post-action" onclick='event.stopPropagation(); likePost(${JSON.stringify(p.id)}, this)'>❤️ <span class="like-count">${p.likes||0}</span></span>
             <span class="post-action">@${escHtml(p.author)}</span>
+            ${deleteBtn}
           </div></div>`;
       }
 
@@ -677,6 +731,7 @@
         <div class="post-footer">
           <span class="post-action" onclick='event.stopPropagation(); likePost(${JSON.stringify(p.id)}, this)'>❤️ <span class="like-count">${p.likes||0}</span></span>
           <span class="post-action">💬 ${p.comments||0}</span>
+          ${deleteBtn}
         </div></div>`;
     }).join('');
   }
@@ -694,6 +749,143 @@
       const { error } = await db.from('posts').update({ likes: newCount }).eq('id', id);
       if (error) { console.error('Like update error', error); if (countEl) countEl.textContent = cur; }
     } catch (e) { console.error(e); alert('いいねの更新に失敗しました'); }
+  }
+
+  // 投稿削除
+  async function deletePost(postId) {
+    if (!confirm('この投稿を削除してもよろしいですか？')) return;
+    try {
+      if (!db) throw new Error('Supabase client not initialized');
+      const { error } = await db.from('posts').delete().eq('id', postId);
+      if (error) throw error;
+      // update local cache and UI
+      allPosts = allPosts.filter(p => p.id !== postId);
+      loadPosts();
+      closePostDetailModal();
+      closeQaModal();
+    } catch (e) { console.error(e); alert('投稿の削除に失敗しました'); }
+  }
+
+  // コメント削除
+  async function deleteComment(commentId, postId) {
+    if (!confirm('このコメントを削除してもよろしいですか？')) return;
+    try {
+      if (!db) throw new Error('Supabase client not initialized');
+      const { error } = await db.from('comments').delete().eq('id', commentId);
+      if (error) throw error;
+      // decrement count on post
+      const post = allPosts.find(p => p.id === postId);
+      if (post) {
+        const newCount = (post.comments||0) - 1;
+        await db.from('posts').update({ comments: newCount }).eq('id', postId);
+        post.comments = newCount;
+        // update list view as well
+        renderPosts(allPosts);
+      }
+      await openPostDetail(postId);
+    } catch (e) { console.error(e); alert('コメントの削除に失敗しました'); }
+  }
+
+  // 管理者チェックとアナウンス関連
+  let isAdmin = false;
+
+  async function checkAdmin() {
+    try {
+      if (!db) throw new Error('Supabase client not initialized');
+      const { data, error } = await db.from('admins').select('nickname').eq('nickname', currentUser).limit(1);
+      if (!error && data && data.length) {
+        isAdmin = true;
+        const btn = document.getElementById('adminBtn');
+        if (btn) btn.style.display = 'inline-block';
+      }
+    } catch (e) { console.error('checkAdmin error', e); }
+  }
+
+  async function loadAnnouncements() {
+    try {
+      if (!db) throw new Error('Supabase client not initialized');
+      const { data, error } = await db.from('announcements').select('*').order('created_at', { ascending: false });
+      if (error) { console.error('loadAnnouncements error', error); return []; }
+      return Array.isArray(data) ? data : [];
+    } catch (e) { console.error(e); return []; }
+  }
+
+  async function refreshAnnouncements() {
+    const ann = await loadAnnouncements();
+    const banner = document.getElementById('announcementBanner');
+    if (banner) {
+      if (ann && ann.length) {
+        banner.innerHTML = ann.map(a => `<div class="ann-item"><strong>${escHtml(a.title)}</strong> ${escHtml(a.body)}</div>`).join('');
+        banner.style.display = 'block';
+      } else {
+        banner.style.display = 'none';
+      }
+    }
+  }
+
+  async function submitAnnouncement() {
+    const title = document.getElementById('announceTitle').value.trim();
+    const body = document.getElementById('announceBody').value.trim();
+    if (!title || !body) { alert('タイトルと内容を入力してください'); return; }
+    try {
+      if (!db) throw new Error('Supabase client not initialized');
+      const { error } = await db.from('announcements').insert([{ title, body, author: currentUser }]);
+      if (error) throw error;
+      document.getElementById('announceTitle').value = '';
+      document.getElementById('announceBody').value = '';
+      await refreshAnnouncements();
+      renderAdminAnnouncementList();
+      alert('お知らせを投稿しました');
+    } catch (e) { console.error(e); alert('お知らせの投稿に失敗しました'); }
+  }
+
+  async function submitJob() {
+    const company = document.getElementById('jobCompany').value.trim();
+    const title = document.getElementById('jobTitle').value.trim();
+    const desc = document.getElementById('jobDesc').value.trim();
+    if (!company || !title || !desc) { alert('すべてのフィールドを入力してください'); return; }
+    try {
+      if (!db) throw new Error('Supabase client not initialized');
+      const body = `${company} / ${desc}`;
+      const newPost = { category:'job', author: currentUser, title, body, likes:0, comments:0 };
+      const { error } = await db.from('posts').insert([newPost]);
+      if (error) throw error;
+      document.getElementById('jobCompany').value = '';
+      document.getElementById('jobTitle').value = '';
+      document.getElementById('jobDesc').value = '';
+      loadPosts();
+      alert('求人投稿を作成しました');
+    } catch (e) { console.error(e); alert('求人の投稿に失敗しました'); }
+  }
+
+  async function deleteAnnouncement(id) {
+    if (!confirm('このお知らせを削除してもよろしいですか？')) return;
+    try {
+      if (!db) throw new Error('Supabase client not initialized');
+      const { error } = await db.from('announcements').delete().eq('id', id);
+      if (error) throw error;
+      await refreshAnnouncements();
+      renderAdminAnnouncementList();
+    } catch (e) { console.error(e); alert('お知らせの削除に失敗しました'); }
+  }
+
+  function openAdminModal() {
+    if (!isAdmin) return;
+    document.getElementById('adminModal').classList.add('open');
+    renderAdminAnnouncementList();
+  }
+
+  function closeAdminModal() { document.getElementById('adminModal').classList.remove('open'); }
+
+  async function renderAdminAnnouncementList() {
+    const list = document.getElementById('announcementList');
+    if (!list) return;
+    const ann = await loadAnnouncements();
+    if (!ann.length) {
+      list.innerHTML = '<p style="color:#666;">現在お知らせはありません。</p>';
+      return;
+    }
+    list.innerHTML = ann.map(a => `<div class="ann-item" style="margin-bottom:0.8rem;"><strong>${escHtml(a.title)}</strong> <span>${escHtml(a.body)}</span> <span class="delete-btn" style="cursor:pointer;" onclick="deleteAnnouncement(${JSON.stringify(a.id)})">🗑️</span></div>`).join('');
   }
 
   // 検索
@@ -758,6 +950,7 @@
       if (error || !post) return;
 
       const answers = await loadAnswers(id);
+      const deleteQaIcon = (post.author === currentUser || isAdmin) ? `<span class="delete-btn" style="cursor:pointer;margin-left:10px;" onclick="deletePost(${JSON.stringify(post.id)})">🗑️</span>` : '';
       const ansHtml = !answers.length
         ? '<p style="color:#aaa;font-size:0.85rem;text-align:center;padding:1rem 0;">まだ回答がありません。最初に回答しよう！</p>'
         : answers.map(a => { const time = a.created_at ? formatTime(a.created_at) : (a.time || ''); return `<div class="answer-item"><div class="answer-meta"><span class="answer-author">@${escHtml(a.author)}</span>${a.best?'<span class="best-badge">✅ ベストアンサー</span>':''}<span class="answer-time">${time}</span></div><div class="answer-text">${escHtml(a.text)}</div></div>`; }).join('');
@@ -768,7 +961,7 @@
             <div class="q-label">❓ 質問</div>
             <div class="q-text">${escHtml(post.title)}</div>
             <div style="font-size:0.85rem;color:var(--gray);margin-top:0.6rem;line-height:1.7">${escHtml(post.body)}</div>
-            <div style="font-size:0.75rem;color:#aaa;margin-top:0.5rem">@${escHtml(post.author)} · ${formatTime(post.created_at)}${post.faculty?' · '+FACULTIES[post.faculty]:''}</div>
+            <div style="font-size:0.75rem;color:#aaa;margin-top:0.5rem">@${escHtml(post.author)} · ${formatTime(post.created_at)}${post.faculty?' · '+FACULTIES[post.faculty]:''}${deleteQaIcon}</div>
           </div>
           <div class="answers-section"><h4>💬 回答 ${answers.length}件</h4>${ansHtml}</div>
           <div class="answer-input-area">
@@ -791,22 +984,26 @@
       if (error || !post || post.category === 'qa') return;
 
       const comments = await loadComments(postId);
-      const catMap = { lecture: ['📚 授業口コミ', 'cat-lecture'], circle: ['🎯 サークル情報', 'cat-circle'], campus: ['🏫 キャンパスライフ', 'cat-campus'] };
+      const catMap = { lecture: ['📚 授業口コミ', 'cat-lecture'], circle: ['🎯 サークル情報', 'cat-circle'], campus: ['🏫 キャンパスライフ', 'cat-campus'], job:['💼 求人', 'cat-job'] };
       const [catLabel, catCls] = catMap[post.category] || ['その他', 'cat-campus'];
       const fTag = post.faculty ? `<span class="faculty-tag">${FACULTIES[post.faculty]||post.faculty}</span>` : '';
       const stars = post.stars ? '⭐'.repeat(post.stars) : '';
       const timeStr = formatTime(post.created_at);
+      const deletePostIcon = (post.author === currentUser || isAdmin) ? `<span class="delete-btn" style="cursor:pointer;margin-left:10px;" onclick="deletePost(${JSON.stringify(post.id)})">🗑️</span>` : '';
 
       const cmtHtml = !comments.length
         ? '<p style="color:#aaa;font-size:0.9rem;text-align:center;padding:2rem 0;">コメントがまだありません。最初のコメントを書いてみませんか？</p>'
-        : comments.map(c => `<div class="comment-item"><div class="comment-meta"><span class="comment-author">@${escHtml(c.author)}</span><span class="comment-time">${formatTime(c.created_at)}</span></div><div class="comment-text">${escHtml(c.text)}</div></div>`).join('');
+        : comments.map(c => {
+            const delIcon = (c.author === currentUser || isAdmin) ? `<span class="comment-delete" onclick="deleteComment(${JSON.stringify(c.id)}, ${JSON.stringify(postId)})">🗑️</span>` : '';
+            return `<div class="comment-item"><div class="comment-meta"><span class="comment-author">@${escHtml(c.author)}</span><span class="comment-time">${formatTime(c.created_at)}</span>${delIcon}</div><div class="comment-text">${escHtml(c.text)}</div></div>`;
+          }).join('');
 
       const catHtml = `<span class="category-tag ${catCls}">${catLabel}</span>`;
       document.getElementById('detailModalTitle').textContent = post.title;
       document.getElementById('post-detail-content').innerHTML = `
         <div class="post-detail">
           <div class="post-detail-header">
-            ${catHtml}${fTag}<span class="post-detail-meta">@${escHtml(post.author)}</span>${stars?`<span>${stars}</span>`:''}<span class="post-detail-time">${timeStr}</span>
+            ${catHtml}${fTag}<span class="post-detail-meta">@${escHtml(post.author)}</span>${stars?`<span>${stars}</span>`:''}<span class="post-detail-time">${timeStr}</span>${deletePostIcon}
           </div>
           <div class="post-detail-title">${escHtml(post.title)}</div>
           <div class="post-detail-body">${escHtml(post.body)}</div>
@@ -884,11 +1081,14 @@
   document.getElementById('postDetailModal').addEventListener('click', e => { if (e.target===document.getElementById('postDetailModal')) closePostDetailModal(); });
   document.getElementById('qaModal').addEventListener('click', e => { if (e.target===document.getElementById('qaModal')) closeQaModal(); });
   document.getElementById('nicknameModal').addEventListener('click', e => { if (e.target===document.getElementById('nicknameModal')) closeNicknameModal(); });
+  document.getElementById('adminModal').addEventListener('click', e => { if (e.target===document.getElementById('adminModal')) closeAdminModal(); });
 
   // 初期化
   updateNicknameBadge();
+  checkAdmin();
   setupTrendTabs();
   loadPosts();
+  refreshAnnouncements();
   </script>
   </body>
   </html>
