@@ -340,7 +340,7 @@
           <label class="post-auth-option"><input type="radio" name="postAuthMode-qa" id="qaAuthGuest" value="guest" checked onchange="updateAuthModeSelectors()"> ログインせず投稿（追跡不可）</label>
         </div>
         <div class="post-auth-login-actions" id="authLoginActionsQa">
-          <button type="button" class="post-auth-login-btn" onclick="handleGoogleAuthClick()">このままGoogleでログイン</button>
+          <button type="button" class="post-auth-login-btn" onclick="handleGoogleAuthClick('post-form')">このままGoogleでログイン</button>
         </div>
         <div class="form-group">
           <label class="form-label">ニックネーム <span style="color:#e74c3c">*</span></label>
@@ -395,7 +395,7 @@
           <label class="post-auth-option"><input type="radio" name="postAuthMode-qaLife" id="qaLifeAuthGuest" value="guest" checked onchange="updateAuthModeSelectors()"> ログインせず投稿（追跡不可）</label>
         </div>
         <div class="post-auth-login-actions" id="authLoginActionsQaLife">
-          <button type="button" class="post-auth-login-btn" onclick="handleGoogleAuthClick()">このままGoogleでログイン</button>
+          <button type="button" class="post-auth-login-btn" onclick="handleGoogleAuthClick('post-form')">このままGoogleでログイン</button>
         </div>
         <div class="form-group">
           <label class="form-label">ニックネーム <span style="color:#e74c3c">*</span></label>
@@ -461,7 +461,7 @@
             <label class="post-auth-option"><input type="radio" name="postAuthMode-board" id="boardAuthGuest" value="guest" checked onchange="updateAuthModeSelectors()"> ログインせず投稿（追跡不可）</label>
           </div>
           <div class="post-auth-login-actions" id="authLoginActionsBoard">
-            <button type="button" class="post-auth-login-btn" onclick="handleGoogleAuthClick()">このままGoogleでログイン</button>
+            <button type="button" class="post-auth-login-btn" onclick="handleGoogleAuthClick('post-form')">このままGoogleでログイン</button>
           </div>
           <div class="form-group">
             <label class="form-label">ニックネーム <span style="color:#e74c3c">*</span></label>
@@ -618,6 +618,9 @@ const SUPABASE_URL = 'https://hazntivymzywhowtdtcc.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_Mr1wt5ZOoLtmYqPEoIKeUw_cM4ZPSbN';
 const AUTH_REDIRECT_URL = 'https://waseda-ten.vercel.app/juken.html';
 const TRUSTED_AUTH_HOSTS = ['waseda-ten.vercel.app'];
+const JUKEN_AUTH_RETURN_KEY = 'waseda_juken_auth_return';
+const JUKEN_AUTH_DRAFT_KEY = 'waseda_juken_auth_draft';
+const JUKEN_AUTH_DRAFT_TS_KEY = 'waseda_juken_auth_draft_ts';
 let db;
 try {
   const supabaseOptions = { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } };
@@ -705,6 +708,92 @@ function getPreferredNickname() {
   if (googleAuthUser) return getGoogleDisplayName(googleAuthUser).trim().slice(0, 20);
   return '';
 }
+function saveJukenDraftBeforeAuth() {
+  const draft = {
+    tab: currentTab,
+    fields: {},
+    authModes: {
+      qa: getSelectedAuthMode('qa'),
+      qaLife: getSelectedAuthMode('qaLife'),
+      board: getSelectedAuthMode('board')
+    }
+  };
+  const ids = [
+    'qa-author', 'qa-faculty', 'qa-title', 'qa-body',
+    'qa-life-author', 'qa-life-faculty', 'qa-life-title', 'qa-life-body',
+    'boardNickname', 'boardFaculty', 'boardType', 'boardBody'
+  ];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) draft.fields[id] = el.value;
+  });
+  const draftStr = JSON.stringify(draft);
+  const nowTs = String(Date.now());
+  sessionStorage.setItem(JUKEN_AUTH_DRAFT_KEY, draftStr);
+  sessionStorage.setItem(JUKEN_AUTH_RETURN_KEY, '1');
+  sessionStorage.setItem(JUKEN_AUTH_DRAFT_TS_KEY, nowTs);
+  localStorage.setItem(JUKEN_AUTH_DRAFT_KEY, draftStr);
+  localStorage.setItem(JUKEN_AUTH_RETURN_KEY, '1');
+  localStorage.setItem(JUKEN_AUTH_DRAFT_TS_KEY, nowTs);
+}
+function restoreJukenDraftAfterAuthIfNeeded() {
+  const shouldReturn = sessionStorage.getItem(JUKEN_AUTH_RETURN_KEY) === '1' || localStorage.getItem(JUKEN_AUTH_RETURN_KEY) === '1';
+  if (!shouldReturn) return;
+
+  const tsRaw = sessionStorage.getItem(JUKEN_AUTH_DRAFT_TS_KEY) || localStorage.getItem(JUKEN_AUTH_DRAFT_TS_KEY) || '0';
+  const ageMs = Date.now() - Number(tsRaw || 0);
+  if (Number.isFinite(ageMs) && ageMs > 10 * 60 * 1000) {
+    sessionStorage.removeItem(JUKEN_AUTH_RETURN_KEY);
+    sessionStorage.removeItem(JUKEN_AUTH_DRAFT_KEY);
+    sessionStorage.removeItem(JUKEN_AUTH_DRAFT_TS_KEY);
+    localStorage.removeItem(JUKEN_AUTH_RETURN_KEY);
+    localStorage.removeItem(JUKEN_AUTH_DRAFT_KEY);
+    localStorage.removeItem(JUKEN_AUTH_DRAFT_TS_KEY);
+    return;
+  }
+
+  let draft = null;
+  try {
+    const draftStr = sessionStorage.getItem(JUKEN_AUTH_DRAFT_KEY) || localStorage.getItem(JUKEN_AUTH_DRAFT_KEY) || '{}';
+    draft = JSON.parse(draftStr);
+  } catch {
+    draft = null;
+  }
+
+  sessionStorage.removeItem(JUKEN_AUTH_RETURN_KEY);
+  sessionStorage.removeItem(JUKEN_AUTH_DRAFT_KEY);
+  sessionStorage.removeItem(JUKEN_AUTH_DRAFT_TS_KEY);
+  localStorage.removeItem(JUKEN_AUTH_RETURN_KEY);
+  localStorage.removeItem(JUKEN_AUTH_DRAFT_KEY);
+  localStorage.removeItem(JUKEN_AUTH_DRAFT_TS_KEY);
+
+  if (!draft) return;
+
+  if (draft.tab && typeof switchTab === 'function') switchTab(draft.tab);
+  if (draft.fields) {
+    Object.entries(draft.fields).forEach(([id, value]) => {
+      const el = document.getElementById(id);
+      if (el && typeof value === 'string') el.value = value;
+    });
+  }
+
+  if (!googleAuthUser?.id && draft.authModes) {
+    if (draft.authModes.qa === 'login') {
+      const radio = document.getElementById('qaAuthLogin');
+      if (radio) radio.checked = true;
+    }
+    if (draft.authModes.qaLife === 'login') {
+      const radio = document.getElementById('qaLifeAuthLogin');
+      if (radio) radio.checked = true;
+    }
+    if (draft.authModes.board === 'login') {
+      const radio = document.getElementById('boardAuthLogin');
+      if (radio) radio.checked = true;
+    }
+  }
+
+  updateAuthModeSelectors();
+}
 function syncNicknameFromGoogle() {
   if (!googleAuthUser) return;
   const saved = (localStorage.getItem('waseda_nickname') || '').trim();
@@ -779,7 +868,7 @@ async function resolvePostAuthMode(formKey = null) {
   const selectedMode = getSelectedAuthMode(formKey);
   if (selectedMode === 'login') {
     alert('Googleログイン後に、もう一度投稿してください。');
-    await handleGoogleAuthClick();
+    await handleGoogleAuthClick('post-form');
     return null;
   }
   return { mode: 'guest', user: null };
@@ -841,13 +930,14 @@ function updateAuthHints() {
   });
   updateAuthModeSelectors();
 }
-async function handleGoogleAuthClick() {
+async function handleGoogleAuthClick(source = 'header') {
   if (!db?.auth) { alert('ログイン機能を初期化できませんでした'); return; }
   if (googleAuthUser) {
     const { error } = await db.auth.signOut();
     if (error) alert('ログアウトに失敗しました: ' + error.message);
     return;
   }
+  if (source === 'post-form') saveJukenDraftBeforeAuth();
   const redirectTo = getAuthRedirectUrl();
   const { error } = await db.auth.signInWithOAuth({
     provider: 'google',
@@ -865,12 +955,14 @@ async function initGoogleAuth() {
   currentUser = localStorage.getItem('waseda_nickname') || 'ゲスト';
   renderGoogleAuthButton();
   fillNicknameInputs();
+  restoreJukenDraftAfterAuthIfNeeded();
   db.auth.onAuthStateChange((_event, session) => {
     googleAuthUser = session?.user || null;
     syncNicknameFromGoogle();
     currentUser = localStorage.getItem('waseda_nickname') || 'ゲスト';
     renderGoogleAuthButton();
     fillNicknameInputs();
+    restoreJukenDraftAfterAuthIfNeeded();
     if (document.getElementById('myPageModal')?.classList.contains('open')) loadMyPagePosts();
   });
 }
