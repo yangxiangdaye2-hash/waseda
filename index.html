@@ -499,8 +499,10 @@
   .juken-qa-grid { display: flex; flex-direction: column; gap: 0.7rem; }
   .juken-qa-card { background: var(--white); border: 1.5px solid var(--border); border-radius: 10px; padding: 1rem 1.1rem; cursor: pointer; transition: border-color 0.2s; }
   .juken-qa-card:hover { border-color: var(--crimson); }
+  .juken-qa-card.my-question { border-color: var(--gold-dark); box-shadow: 0 2px 10px rgba(200,169,81,0.18); }
   .juken-qa-card-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 0.4rem; }
   .juken-qa-faculty { font-size: 0.68rem; background: var(--crimson-pale); color: var(--crimson); padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+  .juken-qa-my-badge { font-size: 0.68rem; background: #fff8e1; color: #8a5d00; padding: 2px 8px; border-radius: 4px; font-weight: 700; }
   .juken-qa-title { font-size: 0.92rem; font-weight: 700; color: var(--dark); margin-bottom: 0.25rem; }
   .juken-qa-body { font-size: 0.8rem; color: var(--gray); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; }
   .juken-qa-footer { margin-top: 0.5rem; display: flex; gap: 1rem; font-size: 0.75rem; color: var(--gray-light); }
@@ -2295,11 +2297,19 @@
           <div style="font-size:0.82rem;">受験生ページの「${isLife ? '大学生活Q&A' : '勉強Q&A'}」タブから投稿できます。</div></div>`;
         return;
       }
-      el.innerHTML = data.map(p => {
+      const sorted = [...data].sort((a, b) => {
+        const mineA = (a.device_id === getDeviceId() || (a.author && a.author === currentUser)) ? 1 : 0;
+        const mineB = (b.device_id === getDeviceId() || (b.author && b.author === currentUser)) ? 1 : 0;
+        if (mineA !== mineB) return mineB - mineA;
+        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+      });
+      el.innerHTML = sorted.map(p => {
+        const isMine = (p.device_id === getDeviceId() || (p.author && p.author === currentUser));
+        const myTag = isMine ? '<span class="juken-qa-my-badge">🧷 あなたの質問</span>' : '';
         const fTag = p.faculty ? `<span class="juken-qa-faculty">${escHtml(FACULTIES[p.faculty]||p.faculty)}</span>` : '';
         const ans = answersCountMap[p.id] || 0;
-        return `<div class="juken-qa-card" onclick="openQaDetail(${JSON.stringify(p.id)})">
-          <div class="juken-qa-card-meta">${fTag}<span style="font-size:0.7rem;color:var(--gray-light)">@${escHtml(p.author)} · ${formatTime(p.created_at)}</span></div>
+        return `<div class="juken-qa-card${isMine ? ' my-question' : ''}" onclick="openQaDetail(${JSON.stringify(p.id)})">
+          <div class="juken-qa-card-meta">${myTag}${fTag}<span style="font-size:0.7rem;color:var(--gray-light)">@${escHtml(p.author)} · ${formatTime(p.created_at)}</span></div>
           <div class="juken-qa-title">${escHtml(p.title)}</div>
           <div class="juken-qa-body">${escHtml(p.body)}</div>
           <div class="juken-qa-footer"><span>💬 回答 ${ans}件</span><span>❤️ ${p.likes||0}</span></div>
