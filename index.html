@@ -1201,29 +1201,12 @@
   // Supabase初期化（CDNのエクスポートの違いに対応する）
   const SUPABASE_URL = 'https://hazntivymzywhowtdtcc.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_Mr1wt5ZOoLtmYqPEoIKeUw_cM4ZPSbN';
-  const AUTH_SESSION_BACKUP_KEY = 'waseda_auth_session_backup';
   let db;
   try {
     if (typeof createClient === 'function') {
-      db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        auth: {
-          persistSession: true,
-          storageKey: 'waseda-auth',
-          storage: window.localStorage,
-          autoRefreshToken: true,
-          detectSessionInUrl: true
-        }
-      });
+      db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     } else if (window.supabase && typeof window.supabase.createClient === 'function') {
-      db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        auth: {
-          persistSession: true,
-          storageKey: 'waseda-auth',
-          storage: window.localStorage,
-          autoRefreshToken: true,
-          detectSessionInUrl: true
-        }
-      });
+      db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     } else {
       throw new Error('Supabase client not found');
     }
@@ -1245,8 +1228,6 @@
   let searchQuery = '';
   let currentUser = localStorage.getItem('waseda_nickname') || 'ゲスト';
   let googleAuthUser = null;
-  const AUTH_REDIRECT_URL = 'https://waseda-ten.vercel.app/index.html';
-  const TRUSTED_AUTH_HOSTS = ['waseda-ten.vercel.app'];
   const POST_AUTH_RETURN_KEY = 'waseda_post_auth_return';
   const POST_AUTH_DRAFT_KEY = 'waseda_post_auth_draft';
   const POST_AUTH_DRAFT_TS_KEY = 'waseda_post_auth_draft_ts';
@@ -1256,74 +1237,7 @@
   }
 
   function getAuthRedirectUrl() {
-    try {
-      const url = new URL(window.location.href);
-      const isHttp = url.protocol === 'http:' || url.protocol === 'https:';
-      const isTrustedHost = TRUSTED_AUTH_HOSTS.includes(url.hostname);
-      if (isHttp && isTrustedHost) return `${url.origin}${url.pathname}`;
-    } catch (e) {
-      console.warn('redirect URL parse failed:', e);
-    }
-    return AUTH_REDIRECT_URL;
-  }
-
-  async function bootstrapAuthSessionFromUrlIfNeeded() {
-    if (!db?.auth) return;
-    try {
-      await db.auth.getSession();
-    } catch (e) {
-      console.warn('bootstrapAuthSessionFromUrlIfNeeded failed:', e);
-    }
-  }
-
-  function saveAuthSessionBackup(session) {
-    try {
-      if (!session?.access_token || !session?.refresh_token) return;
-      localStorage.setItem(AUTH_SESSION_BACKUP_KEY, JSON.stringify({
-        access_token: session.access_token,
-        refresh_token: session.refresh_token,
-        expires_at: session.expires_at || null,
-        saved_at: Date.now()
-      }));
-    } catch {}
-  }
-
-  function clearAuthSessionBackup() {
-    try { localStorage.removeItem(AUTH_SESSION_BACKUP_KEY); } catch {}
-  }
-
-  function readAuthSessionBackup() {
-    try {
-      const raw = localStorage.getItem(AUTH_SESSION_BACKUP_KEY);
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      if (!parsed?.access_token || !parsed?.refresh_token) return null;
-      return parsed;
-    } catch {
-      return null;
-    }
-  }
-
-  async function restoreAuthSessionFromBackupIfNeeded() {
-    if (!db?.auth) return null;
-    try {
-      const { data: cur } = await db.auth.getSession();
-      if (cur?.session?.user) return cur.session;
-      const backup = readAuthSessionBackup();
-      if (!backup) return null;
-      const { data, error } = await db.auth.setSession({
-        access_token: backup.access_token,
-        refresh_token: backup.refresh_token
-      });
-      if (error || !data?.session?.user) {
-        clearAuthSessionBackup();
-        return null;
-      }
-      saveAuthSessionBackup(data.session);
-      return data.session;
-    } catch {
-      return null;
-    }
+    return `${window.location.origin}${window.location.pathname}`;
   }
 
   function schedulePostDraftRestoreChecks() {
@@ -1454,7 +1368,6 @@
     if (!db?.auth) { alert('ログイン機能を初期化できませんでした'); return; }
     if (googleAuthUser) {
       const { error } = await db.auth.signOut();
-      clearAuthSessionBackup();
       if (error) alert('ログアウトに失敗しました: ' + error.message);
       return;
     }
@@ -1474,15 +1387,12 @@
 
     const { data } = await db.auth.getSession();
     googleAuthUser = data?.session?.user || null;
-    if (data?.session) saveAuthSessionBackup(data.session);
     syncNicknameFromGoogle();
     renderGoogleAuthButton();
     restorePostDraftAfterAuthIfNeeded();
 
     db.auth.onAuthStateChange((_event, session) => {
       googleAuthUser = session?.user || null;
-      if (session) saveAuthSessionBackup(session);
-      else clearAuthSessionBackup();
       syncNicknameFromGoogle();
       renderGoogleAuthButton();
       restorePostDraftAfterAuthIfNeeded();
