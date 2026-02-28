@@ -465,6 +465,29 @@
       .announcement-title { font-size: 0.95rem; }
       .announcement-body { font-size: 0.82rem; }
     }
+
+  /* ─── 受験生サポートパネル ─── */
+  #juken-panel { display: none; max-width: 1100px; margin: 0 auto; padding: 40px 1.2rem 64px; }
+  .juken-sections { display: flex; flex-direction: column; gap: 3rem; }
+  .juken-section-head { margin-bottom: 1.2rem; }
+  .juken-section-head h2 { font-size: 1.2rem; font-weight: 900; color: var(--dark); }
+  .juken-section-head p { font-size: 0.85rem; color: var(--gray); margin-top: 0.25rem; }
+  .juken-section-divider { width: 32px; height: 3px; background: var(--crimson); border-radius: 2px; margin: 0.4rem 0 0; }
+
+  /* Q&A list in juken panel */
+  .juken-qa-grid { display: flex; flex-direction: column; gap: 0.7rem; }
+  .juken-qa-card { background: var(--white); border: 1.5px solid var(--border); border-radius: 10px; padding: 1rem 1.1rem; cursor: pointer; transition: border-color 0.2s; }
+  .juken-qa-card:hover { border-color: var(--crimson); }
+  .juken-qa-card-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 0.4rem; }
+  .juken-qa-faculty { font-size: 0.68rem; background: var(--crimson-pale); color: var(--crimson); padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+  .juken-qa-title { font-size: 0.92rem; font-weight: 700; color: var(--dark); margin-bottom: 0.25rem; }
+  .juken-qa-body { font-size: 0.8rem; color: var(--gray); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; }
+  .juken-qa-footer { margin-top: 0.5rem; display: flex; gap: 1rem; font-size: 0.75rem; color: var(--gray-light); }
+
+  /* Taikenki / faculty-comment forms */
+  .juken-form-box { background: var(--white); border: 1.5px solid var(--border); border-radius: 12px; padding: 1.4rem; max-width: 640px; }
+  .juken-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+  @media (max-width: 600px) { .juken-form-row { grid-template-columns: 1fr; } }
   </style>
   </head>
   <body>
@@ -529,6 +552,7 @@
       <div class="tab" onclick="switchTab('circle',this)" data-label="circle">🎯 サークル</div>
       <div class="tab" onclick="switchTab('campus',this)" data-label="campus">🏫 キャンパス</div>
       <div class="tab" onclick="switchTab('qa',this)" data-label="qa">❓ Q&amp;A</div>
+      <div class="tab" onclick="switchTab('juken',this)" data-label="juken">🎓 受験生サポート</div>
     </div>
   </div>
 
@@ -562,6 +586,130 @@
         </div>
       </div>
     </aside>
+  </div>
+
+  <!-- 受験生サポートパネル -->
+  <div id="juken-panel">
+    <div class="juken-sections">
+
+      <!-- ① 受験生からの質問 -->
+      <div>
+        <div class="juken-section-head">
+          <h2>❓ 受験生からの質問</h2>
+          <div class="juken-section-divider"></div>
+          <p>早稲田在学生に受験のことを直接聞けます。あなたの経験で受験生を助けましょう。</p>
+        </div>
+        <div id="juken-qa-list" class="juken-qa-grid"><div class="loading">読み込み中...</div></div>
+      </div>
+
+      <!-- ② 合格体験記を書く -->
+      <div>
+        <div class="juken-section-head">
+          <h2>🏆 合格体験記を書く</h2>
+          <div class="juken-section-divider"></div>
+          <p>あなたの受験体験を後輩に伝えてください。</p>
+        </div>
+        <div class="juken-form-box">
+          <div class="juken-form-row">
+            <div class="form-group">
+              <label class="form-label">ニックネーム <span style="color:#e74c3c">*</span></label>
+              <input class="form-input" type="text" id="tk-author" placeholder="匿名OK" maxlength="20">
+            </div>
+            <div class="form-group">
+              <label class="form-label">合格学部 <span style="color:#e74c3c">*</span></label>
+              <select class="form-select" id="tk-faculty">
+                <option value="">選択してください</option>
+                <option value="seikei">政治経済学部</option><option value="ho">法学部</option>
+                <option value="shogaku">商学部</option><option value="kyoiku">教育学部</option>
+                <option value="bun">文学部</option><option value="bunkagaku">文化構想学部</option>
+                <option value="kiso">基幹理工学部</option><option value="sozo">創造理工学部</option>
+                <option value="sentan">先進理工学部</option><option value="ningen">人間科学部</option>
+                <option value="sports">スポーツ科学部</option><option value="kokusai">国際教養学部</option>
+                <option value="shakou">社会科学部</option>
+              </select>
+            </div>
+          </div>
+          <div class="juken-form-row">
+            <div class="form-group">
+              <label class="form-label">受験方式</label>
+              <select class="form-select" id="tk-exam-type">
+                <option value="">選択（任意）</option>
+                <option value="一般">一般</option><option value="共テ利用">共テ利用</option>
+                <option value="AO">AO</option><option value="推薦">推薦</option>
+                <option value="その他">その他</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">勉強開始時期</label>
+              <select class="form-select" id="tk-study-start">
+                <option value="">選択（任意）</option>
+                <option value="中学生以前">中学生以前</option><option value="高1">高1</option>
+                <option value="高2">高2</option><option value="高3春">高3春</option>
+                <option value="高3夏">高3夏</option><option value="高3秋以降">高3秋以降</option>
+              </select>
+            </div>
+          </div>
+          <div class="juken-form-row">
+            <div class="form-group">
+              <label class="form-label">1日の平均勉強時間</label>
+              <select class="form-select" id="tk-daily-hours">
+                <option value="">選択（任意）</option>
+                <option value="1時間未満">1時間未満</option><option value="1-3時間">1〜3時間</option>
+                <option value="3-5時間">3〜5時間</option><option value="5-8時間">5〜8時間</option>
+                <option value="8時間以上">8時間以上</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">一番大変だった科目</label>
+              <input class="form-input" type="text" id="tk-hard-subject" placeholder="例：英語">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">使った参考書・サービス</label>
+            <input class="form-input" type="text" id="tk-references" placeholder="例：ターゲット1900、スタディサプリ">
+          </div>
+          <div class="form-group">
+            <label class="form-label">後輩へのアドバイス <span style="color:#e74c3c">*</span></label>
+            <textarea class="form-textarea" id="tk-advice" placeholder="受験生へ伝えたいことを自由に書いてください..." style="min-height:100px"></textarea>
+          </div>
+          <button class="btn-submit" onclick="submitTaikenki()">体験記を投稿する</button>
+        </div>
+      </div>
+
+      <!-- ③ 学部コメントを書く -->
+      <div>
+        <div class="juken-section-head">
+          <h2>💬 学部コメントを書く</h2>
+          <div class="juken-section-divider"></div>
+          <p>受験生へ、あなたの学部のリアルを教えてあげよう</p>
+        </div>
+        <div class="juken-form-box">
+          <div class="form-group">
+            <label class="form-label">ニックネーム <span style="color:#e74c3c">*</span></label>
+            <input class="form-input" type="text" id="fc-author" placeholder="匿名OK" maxlength="20">
+          </div>
+          <div class="form-group">
+            <label class="form-label">学部 <span style="color:#e74c3c">*</span></label>
+            <select class="form-select" id="fc-faculty">
+              <option value="">選択してください</option>
+              <option value="seikei">政治経済学部</option><option value="ho">法学部</option>
+              <option value="shogaku">商学部</option><option value="kyoiku">教育学部</option>
+              <option value="bun">文学部</option><option value="bunkagaku">文化構想学部</option>
+              <option value="kiso">基幹理工学部</option><option value="sozo">創造理工学部</option>
+              <option value="sentan">先進理工学部</option><option value="ningen">人間科学部</option>
+              <option value="sports">スポーツ科学部</option><option value="kokusai">国際教養学部</option>
+              <option value="shakou">社会科学部</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">コメント <span style="color:#e74c3c">*</span></label>
+            <textarea class="form-textarea" id="fc-comment" placeholder="授業の雰囲気・就職・男女比など、受験生に伝えたいことを..." style="min-height:90px"></textarea>
+          </div>
+          <button class="btn-submit" onclick="submitFacultyComment()">コメントを投稿する</button>
+        </div>
+      </div>
+
+    </div>
   </div>
 
   <!-- 投稿モーダル -->
@@ -1653,11 +1801,21 @@
     currentTab = tab;
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
-    const titles = { all:'新着投稿', lecture:'授業口コミ', circle:'サークル情報', campus:'キャンパスライフ', qa:'Q&A' };
-    document.getElementById('section-title').textContent = titles[tab];
-    loadPosts();
-    const sidebar = document.querySelector('.sidebar');
-    if (sidebar) sidebar.style.display = (tab === 'all' ? 'flex' : 'none');
+    const mainArea = document.querySelector('.main');
+    const jukenPanel = document.getElementById('juken-panel');
+    if (tab === 'juken') {
+      if (mainArea) mainArea.style.display = 'none';
+      jukenPanel.style.display = 'block';
+      loadJukenQa();
+    } else {
+      if (mainArea) mainArea.style.display = '';
+      jukenPanel.style.display = 'none';
+      const titles = { all:'新着投稿', lecture:'授業口コミ', circle:'サークル情報', campus:'キャンパスライフ', qa:'Q&A' };
+      document.getElementById('section-title').textContent = titles[tab] || tab;
+      loadPosts();
+      const sidebar = document.querySelector('.sidebar');
+      if (sidebar) sidebar.style.display = (tab === 'all' ? 'flex' : 'none');
+    }
   }
   function selectFaculty(f, el) { currentFaculty = f; document.querySelectorAll('.faculty-chip').forEach(c => c.classList.remove('active')); el.classList.add('active'); loadPosts(); }
 
@@ -2028,6 +2186,83 @@
   document.getElementById('nicknameModal').addEventListener('click', e => { if (e.target===document.getElementById('nicknameModal')) closeNicknameModal(); });
   document.getElementById('adminModal').addEventListener('click', e => { if (e.target===document.getElementById('adminModal')) closeAdminModal(); });
   document.getElementById('reportModal').addEventListener('click', e => { if (e.target===document.getElementById('reportModal')) closeReportModal(); });
+
+  // ─── 受験生サポートパネル ───
+
+  // juken_qa 質問一覧
+  async function loadJukenQa() {
+    const el = document.getElementById('juken-qa-list');
+    if (!db) { el.innerHTML = '<div class="loading">DB未接続</div>'; return; }
+    try {
+      const { data, error } = await db.from('posts').select('*')
+        .eq('category','juken_qa').order('created_at',{ascending:false}).limit(20);
+      if (error) throw error;
+      if (!data || !data.length) {
+        el.innerHTML = `<div style="text-align:center;padding:2rem;border:1.5px dashed var(--border);border-radius:10px;color:var(--gray)">
+          <div style="font-size:2rem;margin-bottom:.5rem">❓</div>
+          <div style="font-weight:700;margin-bottom:.3rem">まだ質問がありません</div>
+          <div style="font-size:0.82rem;">受験生からの質問を募集しています。juken.html の掲示板から投稿できます。</div></div>`;
+        return;
+      }
+      el.innerHTML = data.map(p => {
+        const fTag = p.faculty ? `<span class="juken-qa-faculty">${escHtml(FACULTIES[p.faculty]||p.faculty)}</span>` : '';
+        const ans = answersCountMap[p.id] || 0;
+        return `<div class="juken-qa-card" onclick="openQaDetail(${JSON.stringify(p.id)})">
+          <div class="juken-qa-card-meta">${fTag}<span style="font-size:0.7rem;color:var(--gray-light)">@${escHtml(p.author)} · ${formatTime(p.created_at)}</span></div>
+          <div class="juken-qa-title">${escHtml(p.title)}</div>
+          <div class="juken-qa-body">${escHtml(p.body)}</div>
+          <div class="juken-qa-footer"><span>💬 回答 ${ans}件</span><span>❤️ ${p.likes||0}</span></div>
+        </div>`;
+      }).join('');
+    } catch(e) { console.error(e); el.innerHTML = '<div class="loading">読み込みエラー</div>'; }
+  }
+
+  // 合格体験記投稿
+  async function submitTaikenki() {
+    const author  = document.getElementById('tk-author').value.trim();
+    const faculty = document.getElementById('tk-faculty').value;
+    const advice  = document.getElementById('tk-advice').value.trim();
+    if (!author)  { alert('ニックネームを入力してください'); return; }
+    if (!faculty) { alert('合格学部を選択してください'); return; }
+    if (!advice)  { alert('後輩へのアドバイスを入力してください'); return; }
+    if (!db) { alert('DB未接続'); return; }
+    const btn = event.target; btn.disabled = true; btn.textContent = '投稿中...';
+    try {
+      const { error } = await db.from('taikenki').insert([{
+        author, faculty,
+        exam_type:    document.getElementById('tk-exam-type').value || null,
+        study_start:  document.getElementById('tk-study-start').value || null,
+        daily_hours:  document.getElementById('tk-daily-hours').value || null,
+        references:   document.getElementById('tk-references').value.trim() || null,
+        hard_subject: document.getElementById('tk-hard-subject').value.trim() || null,
+        advice, likes: 0
+      }]);
+      if (error) throw error;
+      ['tk-author','tk-faculty','tk-exam-type','tk-study-start','tk-daily-hours','tk-references','tk-hard-subject','tk-advice']
+        .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      alert('体験記を投稿しました！ありがとうございます。');
+    } catch(e) { console.error(e); alert('投稿に失敗しました。'); }
+    finally { btn.disabled = false; btn.textContent = '体験記を投稿する'; }
+  }
+
+  // 学部コメント投稿
+  async function submitFacultyComment() {
+    const author  = document.getElementById('fc-author').value.trim();
+    const faculty = document.getElementById('fc-faculty').value;
+    const comment = document.getElementById('fc-comment').value.trim();
+    if (!author)  { alert('ニックネームを入力してください'); return; }
+    if (!faculty) { alert('学部を選択してください'); return; }
+    if (!comment) { alert('コメントを入力してください'); return; }
+    if (!db) { alert('DB未接続'); return; }
+    const btn = event.target; btn.disabled = true; btn.textContent = '投稿中...';
+    try {
+      const { error } = await db.from('faculty_comments').insert([{ author, faculty, comment, likes: 0 }]);
+      if (error) throw error;
+      ['fc-author','fc-faculty','fc-comment'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      alert('コメントを投稿しました！ありがとうございます。');
+    } catch(e) { console.error(e); alert('投稿に失敗しました。'); }
+    finally { btn.disabled = false; btn.textContent = 'コメントを投稿する'; }
+  }
 
   // 初期化
   updateNicknameBadge();
