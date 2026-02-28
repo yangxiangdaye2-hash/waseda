@@ -834,6 +834,21 @@ let qaAllPosts = [];
 let qaLifeAllPosts = [];
 let qaFacultyFilter = 'all';
 let qaLifeFacultyFilter = 'all';
+let qaAnswerCountMap = {};
+
+async function fetchAnswerCountsByPostIds(postIds) {
+  const map = {};
+  const ids = (postIds || []).filter(Boolean);
+  if (!ids.length || !db) return map;
+  try {
+    const { data, error } = await db.from('answers').select('post_id').in('post_id', ids);
+    if (error) throw error;
+    (data || []).forEach(r => { map[r.post_id] = (map[r.post_id] || 0) + 1; });
+  } catch (e) {
+    console.warn('answer count fetch failed', e);
+  }
+  return map;
+}
 
 async function loadQaList(kind='study') {
   const isLife = kind === 'life';
@@ -845,6 +860,11 @@ async function loadQaList(kind='study') {
     if (error) throw error;
     if (isLife) qaLifeAllPosts = data || [];
     else qaAllPosts = data || [];
+
+    const ids = (data || []).map(p => p.id).filter(Boolean);
+    const counts = await fetchAnswerCountsByPostIds(ids);
+    qaAnswerCountMap = { ...qaAnswerCountMap, ...counts };
+
     renderQaList(kind);
   } catch(e) { console.error(e); el.innerHTML = emptyState('⚠️','読み込みエラー','',false); }
 }
@@ -874,11 +894,12 @@ function renderQaList(kind='study') {
     const isMine = isMyContent(p, myIds);
     const myTag = isMine ? '<span class="qa-my-badge">🧷 あなたの質問</span>' : '';
     const fTag = p.faculty ? `<span class="qa-faculty-tag">${escHtml(FACULTIES[p.faculty]||p.faculty)}</span>` : '';
+    const ansCount = qaAnswerCountMap[p.id] ?? p.comments ?? 0;
     return `<div class="qa-card${isMine ? ' my-question' : ''}" onclick="openQaDetail(${JSON.stringify(p.id)})">
       <div class="qa-card-meta">${myTag}${fTag}<span class="qa-open-badge">🔓 回答募集中</span><span style="font-size:.69rem;color:var(--gray-light)">@${escHtml(p.author)} · ${formatTime(p.created_at)}</span></div>
       <div class="qa-card-title">${escHtml(p.title)}</div>
       <div class="qa-card-body">${escHtml(p.body)}</div>
-      <div class="qa-card-footer"><span>💬 回答 ${p.comments||0}件</span><span>❤️ ${p.likes||0}</span></div>
+      <div class="qa-card-footer"><span>💬 回答 ${ansCount}件</span><span>❤️ ${p.likes||0}</span></div>
     </div>`;
   };
 
