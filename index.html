@@ -1459,6 +1459,36 @@
     localStorage.setItem('waseda_my_question_ids', JSON.stringify(arr));
   }
 
+  function getOwnedPostIdsKey(userId) {
+    return `waseda_owned_post_ids_${userId}`;
+  }
+
+  function getOwnedPostIds(userId) {
+    if (!userId) return [];
+    try {
+      const parsed = JSON.parse(localStorage.getItem(getOwnedPostIdsKey(userId)) || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function rememberOwnedPostId(postId, userId) {
+    if (!postId || !userId) return;
+    const set = new Set(getOwnedPostIds(userId).map(String));
+    set.add(String(postId));
+    const arr = [...set];
+    if (arr.length > 500) arr.splice(0, arr.length - 500);
+    localStorage.setItem(getOwnedPostIdsKey(userId), JSON.stringify(arr));
+  }
+
+  function removeOwnedPostId(postId, userId) {
+    if (!postId || !userId) return;
+    const set = new Set(getOwnedPostIds(userId).map(String));
+    set.delete(String(postId));
+    localStorage.setItem(getOwnedPostIdsKey(userId), JSON.stringify([...set]));
+  }
+
   function canManagePost(post) {
     return isAdmin || isMyContent(post);
   }
@@ -1529,6 +1559,23 @@
       }
 
       if (byOwnerErr && !isOwnerKeyColumnError(byOwnerErr)) throw byOwnerErr;
+
+      // フェイルセーフ: owner_key が使えない環境でも、ログイン投稿時にローカル記録した投稿IDから補完
+      const localOwnedIds = getOwnedPostIds(resolvedUser.id);
+      if (localOwnedIds.length) {
+        const { data: localRows, error: localErr } = await db
+          .from('posts')
+          .select('*')
+          .in('id', localOwnedIds)
+          .limit(200);
+        if (!localErr && Array.isArray(localRows) && localRows.length) {
+          const merged = new Map();
+          (byOwner || []).forEach(p => merged.set(String(p.id), p));
+          localRows.forEach(p => merged.set(String(p.id), p));
+          byOwner = [...merged.values()];
+        }
+      }
+
       const rows = (byOwner || []).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
       summaryEl.textContent = `Google連携追跡 | ニックネーム: @${currentUser} | 投稿数: ${rows.length}`;
 
@@ -1844,6 +1891,7 @@
       }
       const { error } = await db.from('posts').delete().eq('id', postId);
       if (error) throw error;
+      if (googleAuthUser?.id) removeOwnedPostId(postId, googleAuthUser.id);
       // update local cache and UI
       allPosts = allPosts.filter(p => p.id !== postId);
       loadPosts();
@@ -2517,10 +2565,10 @@
     let payload = authMode === 'login'
       ? { ...newPost, device_id: getDeviceId(), owner_key: getOwnerKey(resolvedUser) }
       : { ...newPost, device_id: getDeviceId(), owner_key: null };
-    let { error } = await db.from('posts').insert([payload]);
+    let { data: insertedPost, error } = await db.from('posts').insert([payload]).select('*').single();
     if (error && isOwnerKeyColumnError(error)) {
       delete payload.owner_key;
-      ({ error } = await db.from('posts').insert([payload]));
+      ({ data: insertedPost, error } = await db.from('posts').insert([payload]).select('*').single());
     }
     btn.disabled = false;
     btn.textContent = '投稿する';
@@ -2528,6 +2576,10 @@
     if (error) {
       alert('投稿に失敗しました: ' + error.message);
       return;
+    }
+
+    if (authMode === 'login' && resolvedUser?.id && insertedPost?.id) {
+      rememberOwnedPostId(insertedPost.id, resolvedUser.id);
     }
 
     closePostModal();
