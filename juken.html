@@ -116,6 +116,8 @@
   .qa-form-box { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 1.3rem; margin-bottom: 1.4rem; }
   .qa-form-title { font-size: .95rem; font-weight: 700; margin-bottom: 1rem; }
   .auth-hint { font-size: .74rem; color: var(--gray); line-height: 1.6; margin: -.25rem 0 .9rem; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: .45rem .6rem; }
+  .post-auth-options { display: flex; gap: .6rem; flex-wrap: wrap; margin-bottom: .8rem; }
+  .post-auth-option { display: inline-flex; align-items: center; gap: 6px; font-size: .78rem; color: var(--dark); background: #fff; border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; }
   .qa-layout { display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; align-items: start; }
 
   /* Q&A detail modal */
@@ -330,6 +332,10 @@
       <div class="qa-form-box">
         <div class="qa-form-title">❓ 質問を投稿する</div>
         <div class="auth-hint" id="authHintQa">ログインして投稿すると追跡・削除・マイページが使えます。未ログイン投稿は追跡不可です。</div>
+        <div class="post-auth-options" id="authOptionsQa">
+          <label class="post-auth-option"><input type="radio" name="postAuthMode-qa" id="qaAuthLogin" value="login"> ログインして投稿（追跡・削除・マイページ対応）</label>
+          <label class="post-auth-option"><input type="radio" name="postAuthMode-qa" id="qaAuthGuest" value="guest" checked> ログインせず投稿（追跡不可）</label>
+        </div>
         <div class="form-group">
           <label class="form-label">ニックネーム <span style="color:#e74c3c">*</span></label>
           <input class="form-input" type="text" id="qa-author" placeholder="例：早大志望高3" maxlength="20">
@@ -378,6 +384,10 @@
       <div class="qa-form-box">
         <div class="qa-form-title">🏫 大学生活について質問する</div>
         <div class="auth-hint" id="authHintQaLife">ログインして投稿すると追跡・削除・マイページが使えます。未ログイン投稿は追跡不可です。</div>
+        <div class="post-auth-options" id="authOptionsQaLife">
+          <label class="post-auth-option"><input type="radio" name="postAuthMode-qaLife" id="qaLifeAuthLogin" value="login"> ログインして投稿（追跡・削除・マイページ対応）</label>
+          <label class="post-auth-option"><input type="radio" name="postAuthMode-qaLife" id="qaLifeAuthGuest" value="guest" checked> ログインせず投稿（追跡不可）</label>
+        </div>
         <div class="form-group">
           <label class="form-label">ニックネーム <span style="color:#e74c3c">*</span></label>
           <input class="form-input" type="text" id="qa-life-author" placeholder="例：早大志望高3" maxlength="20">
@@ -437,6 +447,10 @@
         </div>
         <div class="post-form-body">
           <div class="auth-hint" id="authHintBoard">ログインして投稿すると追跡・削除・マイページが使えます。未ログイン投稿は追跡不可です。</div>
+          <div class="post-auth-options" id="authOptionsBoard">
+            <label class="post-auth-option"><input type="radio" name="postAuthMode-board" id="boardAuthLogin" value="login"> ログインして投稿（追跡・削除・マイページ対応）</label>
+            <label class="post-auth-option"><input type="radio" name="postAuthMode-board" id="boardAuthGuest" value="guest" checked> ログインせず投稿（追跡不可）</label>
+          </div>
           <div class="form-group">
             <label class="form-label">ニックネーム <span style="color:#e74c3c">*</span></label>
             <input class="form-input" type="text" id="boardNickname" placeholder="例：早稲田志望19歳" maxlength="20">
@@ -708,11 +722,47 @@ async function getResolvedAuthUser() {
     return null;
   }
 }
-async function resolvePostAuthMode() {
+function getSelectedAuthMode(formKey) {
+  const checked = document.querySelector(`input[name="postAuthMode-${formKey}"]:checked`);
+  return checked?.value || 'guest';
+}
+function updateAuthModeSelectors() {
+  const pairs = [
+    { key: 'qa', container: 'authOptionsQa', login: 'qaAuthLogin', guest: 'qaAuthGuest' },
+    { key: 'qaLife', container: 'authOptionsQaLife', login: 'qaLifeAuthLogin', guest: 'qaLifeAuthGuest' },
+    { key: 'board', container: 'authOptionsBoard', login: 'boardAuthLogin', guest: 'boardAuthGuest' }
+  ];
+  pairs.forEach(({ container, login, guest }) => {
+    const wrap = document.getElementById(container);
+    const loginRadio = document.getElementById(login);
+    const guestRadio = document.getElementById(guest);
+    if (!wrap || !loginRadio || !guestRadio) return;
+    if (googleAuthUser?.id) {
+      loginRadio.checked = true;
+      guestRadio.checked = false;
+      wrap.style.display = 'none';
+    } else {
+      wrap.style.display = 'flex';
+      if (!loginRadio.checked && !guestRadio.checked) guestRadio.checked = true;
+    }
+  });
+}
+async function resolvePostAuthMode(formKey = null) {
   const resolvedUser = await getResolvedAuthUser();
   if (resolvedUser?.id) return { mode: 'login', user: resolvedUser };
-  const useLogin = confirm('投稿方法を選択してください。\nOK: ログインして投稿（追跡・削除・マイページ対応）\nキャンセル: ログインせず投稿（追跡不可）');
-  if (useLogin) {
+
+  if (!formKey) {
+    const useLogin = confirm('投稿方法を選択してください。\nOK: ログインして投稿（追跡・削除・マイページ対応）\nキャンセル: ログインせず投稿（追跡不可）');
+    if (useLogin) {
+      alert('Googleログイン後に、もう一度投稿してください。');
+      await handleGoogleAuthClick();
+      return null;
+    }
+    return { mode: 'guest', user: null };
+  }
+
+  const selectedMode = getSelectedAuthMode(formKey);
+  if (selectedMode === 'login') {
     alert('Googleログイン後に、もう一度投稿してください。');
     await handleGoogleAuthClick();
     return null;
@@ -769,11 +819,12 @@ function renderAccountSummary() {
 function updateAuthHints() {
   const msg = googleAuthUser
     ? '現在はログイン投稿モードです。投稿は自動で追跡・削除・マイページ対応になります。'
-    : '未ログインでは投稿できますが追跡・削除はできません。ログイン投稿を選ぶと追跡できます。';
+    : 'ゲスト投稿: ニックネーム投稿はできますが、追跡・削除・マイページ表示はできません。';
   ['authHintQa', 'authHintQaLife', 'authHintBoard'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = msg;
   });
+  updateAuthModeSelectors();
 }
 async function handleGoogleAuthClick() {
   if (!db?.auth) { alert('ログイン機能を初期化できませんでした'); return; }
@@ -1137,7 +1188,7 @@ function filterQa(kind, fac, el) {
 
 async function submitJukenQa(btn, kind='study') {
   const isLife = kind === 'life';
-  const auth = await resolvePostAuthMode();
+  const auth = await resolvePostAuthMode(isLife ? 'qaLife' : 'qa');
   if (!auth) return;
   const authorInput = document.getElementById(isLife ? 'qa-life-author' : 'qa-author');
   const author = authorInput.value.trim() || getPreferredNickname();
@@ -1302,7 +1353,7 @@ function toggleBoardForm() {
 }
 
 async function submitBoardPost(btn) {
-  const auth = await resolvePostAuthMode();
+  const auth = await resolvePostAuthMode('board');
   if (!auth) return;
   const nickname = document.getElementById('boardNickname').value.trim();
   const faculty  = document.getElementById('boardFaculty').value;
