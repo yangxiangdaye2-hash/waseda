@@ -1396,8 +1396,26 @@
     return id;
   }
 
-  function getOwnerKey() {
-    return googleAuthUser?.id ? `auth:${googleAuthUser.id}` : null;
+  function getOwnerKey(user = googleAuthUser) {
+    return user?.id ? `auth:${user.id}` : null;
+  }
+
+  async function getResolvedAuthUser() {
+    if (googleAuthUser?.id) return googleAuthUser;
+    if (!db?.auth) return null;
+    try {
+      const { data, error } = await db.auth.getSession();
+      if (error) return null;
+      const sessionUser = data?.session?.user || null;
+      if (sessionUser?.id) {
+        googleAuthUser = sessionUser;
+        syncNicknameFromGoogle();
+        renderGoogleAuthButton();
+      }
+      return sessionUser;
+    } catch {
+      return null;
+    }
   }
 
   function isOwnerKeyColumnError(error) {
@@ -1485,19 +1503,31 @@
     const summaryEl = document.getElementById('myPageSummary');
     const listEl = document.getElementById('myPageList');
     if (!summaryEl || !listEl) return;
+    const resolvedUser = await getResolvedAuthUser();
     if (!db) {
       summaryEl.textContent = 'DB未接続';
       listEl.innerHTML = '';
       return;
     }
-    if (!googleAuthUser?.id) {
+    if (!resolvedUser?.id) {
       summaryEl.textContent = 'マイページはログインユーザー向け機能です';
       listEl.innerHTML = '<div style="text-align:center;color:var(--gray);padding:1.2rem 0;">投稿追跡・削除・一覧表示を使うにはGoogleログインして投稿してください。<br><span style="font-size:0.78rem;">未ログインの投稿は追跡・削除できません。</span></div>';
       return;
     }
     try {
       summaryEl.textContent = '読み込み中...';
-      const { data: byOwner, error: byOwnerErr } = await db.from('posts').select('*').eq('owner_key', getOwnerKey()).order('created_at', { ascending: false }).limit(80);
+      const ownerKey = getOwnerKey(resolvedUser);
+      let byOwner = [];
+      let byOwnerErr = null;
+
+      ({ data: byOwner, error: byOwnerErr } = await db.from('posts').select('*').eq('owner_key', ownerKey).order('created_at', { ascending: false }).limit(80));
+
+      // 旧データ互換: owner_key に auth: プレフィックスなしで保存されている可能性を考慮
+      if (!byOwnerErr && (!byOwner || byOwner.length === 0)) {
+        const { data: legacyRows, error: legacyErr } = await db.from('posts').select('*').eq('owner_key', resolvedUser.id).order('created_at', { ascending: false }).limit(80);
+        if (!legacyErr && Array.isArray(legacyRows) && legacyRows.length) byOwner = legacyRows;
+      }
+
       if (byOwnerErr && !isOwnerKeyColumnError(byOwnerErr)) throw byOwnerErr;
       const rows = (byOwner || []).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
       summaryEl.textContent = `Google連携追跡 | ニックネーム: @${currentUser} | 投稿数: ${rows.length}`;
@@ -2355,13 +2385,14 @@
 
   // 投稿送信
   async function submitPost() {
-    const authMode = getPostAuthMode();
+    const resolvedUser = await getResolvedAuthUser();
+    const authMode = resolvedUser?.id ? 'login' : getPostAuthMode();
     const nickname = (document.getElementById('postNickname')?.value || '').trim();
     if (!nickname) {
       alert('ニックネームを入力してください');
       return;
     }
-    if (authMode === 'login' && !googleAuthUser) {
+    if (authMode === 'login' && !resolvedUser) {
       alert('ログイン投稿を選択したため、先にGoogleログインしてください。');
       return;
     }
@@ -2484,7 +2515,7 @@
     };
 
     let payload = authMode === 'login'
-      ? createOwnerPayload(newPost)
+      ? { ...newPost, device_id: getDeviceId(), owner_key: getOwnerKey(resolvedUser) }
       : { ...newPost, device_id: getDeviceId(), owner_key: null };
     let { error } = await db.from('posts').insert([payload]);
     if (error && isOwnerKeyColumnError(error)) {
