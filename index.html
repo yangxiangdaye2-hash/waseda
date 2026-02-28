@@ -295,9 +295,10 @@
     .post-auth-options { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.45rem; }
     .post-auth-option { display: inline-flex; align-items: center; gap: 6px; font-size: 0.84rem; color: var(--dark); }
     .post-auth-note { font-size: 0.76rem; color: var(--gray); margin-top: 0.5rem; line-height: 1.6; }
-    .post-auth-actions { margin-top: 0.5rem; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
-    .btn-login-inline { background: #fff; border: 1.5px solid #dadce0; border-radius: 16px; padding: 5px 11px; font-size: 0.75rem; font-weight: 700; cursor: pointer; }
-    .btn-login-inline:hover { border-color: #c4c7cc; }
+    .post-auth-actions { margin-top: 0.65rem; display: flex; gap: 0.5rem; align-items: stretch; flex-wrap: wrap; padding: 0.7rem; border: 1.5px solid rgba(139, 0, 0, 0.16); border-radius: 10px; background: linear-gradient(135deg, rgba(139,0,0,0.04) 0%, rgba(200,169,81,0.08) 100%); }
+    .btn-login-inline { width: 100%; background: linear-gradient(135deg, var(--crimson) 0%, var(--crimson-dark) 100%); color: #fff; border: none; border-radius: 10px; padding: 10px 12px; font-size: 0.82rem; font-weight: 800; cursor: pointer; box-shadow: 0 3px 10px rgba(139,0,0,0.22); }
+    .btn-login-inline:hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(139,0,0,0.28); }
+    .post-auth-hint { display: block; width: 100%; font-size: 0.76rem; color: var(--gray); line-height: 1.5; }
     .form-label { display: block; font-size: 0.85rem; font-weight: 700; color: var(--dark); margin-bottom: 0.55rem; letter-spacing: 0.02em; }
     .form-input, .form-select, .form-textarea { width: 100%; border: 1.5px solid var(--border); border-radius: 10px; padding: 11px 14px; font-size: 0.95rem; font-family: 'Noto Sans JP', sans-serif; color: var(--dark); outline: none; background: white; transition: all 0.2s; }
     .form-input:hover, .form-select:hover, .form-textarea:hover { border-color: var(--gray-lighter); }
@@ -799,8 +800,8 @@
             <label class="post-auth-option"><input type="radio" name="postAuthMode" value="guest" onchange="onPostAuthModeChange()"> ログインせず投稿（追跡不可）</label>
           </div>
           <div class="post-auth-actions" id="postAuthActions" style="display:none;">
-            <button type="button" class="btn-login-inline" onclick="handleGoogleAuthClick()">Googleでログイン</button>
-            <span style="font-size:0.74rem;color:var(--gray);">ログイン後、投稿を追跡できます</span>
+            <button type="button" class="btn-login-inline" onclick="handleGoogleAuthClick('post-modal')">この画面のままGoogleでログイン</button>
+            <span class="post-auth-hint">ログイン完了後は投稿画面に自動で戻ります。</span>
           </div>
           <div class="post-auth-note" id="postAuthNote"></div>
         </div>
@@ -1228,6 +1229,8 @@
   let currentUser = localStorage.getItem('waseda_nickname') || 'ゲスト';
   let googleAuthUser = null;
   const AUTH_REDIRECT_URL = 'https://waseda-ten.vercel.app';
+  const POST_AUTH_RETURN_KEY = 'waseda_post_auth_return';
+  const POST_AUTH_DRAFT_KEY = 'waseda_post_auth_draft';
 
   function getGoogleDisplayName(user) {
     return user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'ログイン中ユーザー';
@@ -1247,13 +1250,77 @@
     }
   }
 
-  async function handleGoogleAuthClick() {
+  function savePostDraftBeforeAuth() {
+    const modal = document.getElementById('postModal');
+    if (!modal?.classList.contains('open')) return;
+    const draft = {
+      authMode: getPostAuthMode(),
+      category: document.getElementById('postCategory')?.value || 'lecture',
+      fields: {}
+    };
+    const fieldIds = [
+      'postNickname', 'postCategory',
+      'lectureName', 'lectureBody', 'lectureFaculty', 'lectureTeacher', 'lectureSemester', 'lectureDay', 'lecturePeriod', 'lectureExamType', 'lectureAttendance', 'lectureCredits',
+      'circleName', 'circleType', 'circleBody',
+      'campusTitle', 'campusLocation', 'campusDateTime', 'campusFaculty', 'campusBody',
+      'qaTitle', 'qaFaculty', 'qaBody'
+    ];
+    fieldIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) draft.fields[id] = el.value;
+    });
+    const selectedStar = document.querySelector('input[name="lectureStars"]:checked');
+    if (selectedStar) draft.fields.lectureStars = selectedStar.value;
+    sessionStorage.setItem(POST_AUTH_DRAFT_KEY, JSON.stringify(draft));
+    sessionStorage.setItem(POST_AUTH_RETURN_KEY, '1');
+  }
+
+  function restorePostDraftAfterAuthIfNeeded() {
+    const shouldReturn = sessionStorage.getItem(POST_AUTH_RETURN_KEY) === '1';
+    if (!shouldReturn || !googleAuthUser) return;
+
+    sessionStorage.removeItem(POST_AUTH_RETURN_KEY);
+    let draft = null;
+    try {
+      draft = JSON.parse(sessionStorage.getItem(POST_AUTH_DRAFT_KEY) || '{}');
+    } catch {
+      draft = null;
+    }
+    sessionStorage.removeItem(POST_AUTH_DRAFT_KEY);
+
+    openPostModal();
+    const loginRadio = document.querySelector('input[name="postAuthMode"][value="login"]');
+    const guestRadio = document.querySelector('input[name="postAuthMode"][value="guest"]');
+    if (loginRadio) loginRadio.checked = true;
+    if (guestRadio) guestRadio.checked = false;
+
+    if (draft?.fields) {
+      Object.entries(draft.fields).forEach(([id, value]) => {
+        if (id === 'lectureStars') return;
+        const el = document.getElementById(id);
+        if (el && typeof value === 'string') el.value = value;
+      });
+      if (draft.fields.lectureStars) {
+        const starRadio = document.querySelector(`input[name="lectureStars"][value="${draft.fields.lectureStars}"]`);
+        if (starRadio) starRadio.checked = true;
+      }
+    }
+
+    const category = draft?.category || document.getElementById('postCategory')?.value || 'lecture';
+    const categorySelect = document.getElementById('postCategory');
+    if (categorySelect) categorySelect.value = category;
+    onCategoryChange(category);
+    onPostAuthModeChange();
+  }
+
+  async function handleGoogleAuthClick(source = 'header') {
     if (!db?.auth) { alert('ログイン機能を初期化できませんでした'); return; }
     if (googleAuthUser) {
       const { error } = await db.auth.signOut();
       if (error) alert('ログアウトに失敗しました: ' + error.message);
       return;
     }
+    if (source === 'post-modal') savePostDraftBeforeAuth();
     const redirectTo = AUTH_REDIRECT_URL;
     const { error } = await db.auth.signInWithOAuth({
       provider: 'google',
@@ -1270,6 +1337,7 @@
     if (!error) googleAuthUser = data?.session?.user || null;
     syncNicknameFromGoogle();
     renderGoogleAuthButton();
+    restorePostDraftAfterAuthIfNeeded();
     if (document.getElementById('postModal')?.classList.contains('open')) {
       fillPostNickname();
       onPostAuthModeChange();
@@ -2141,7 +2209,7 @@
       actions.style.display = googleAuthUser ? 'none' : 'flex';
       note.textContent = googleAuthUser
         ? 'ログイン投稿: あなたの投稿は追跡・削除でき、マイページに表示されます。'
-        : 'ログイン投稿を選択中です。投稿前にGoogleログインしてください。';
+        : 'ログイン投稿を選択中です。下のボタンからログインすると、この投稿画面に戻って続きから投稿できます。';
     } else {
       actions.style.display = 'none';
       note.textContent = 'ゲスト投稿: ニックネーム投稿はできますが、追跡・削除・マイページ表示はできません。';
