@@ -1459,14 +1459,10 @@
       return;
     }
     if (source === 'post-modal') savePostDraftBeforeAuth();
+    const redirectTo = getAuthRedirectUrl();
     const { error } = await db.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        skipBrowserRedirect: false,
-        queryParams: {
-          prompt: 'select_account'
-        }
-      }
+      options: { redirectTo }
     });
     if (error) {
       alert('Googleログインに失敗しました: ' + error.message + '\n\n確認事項:\n1) SupabaseでGoogleプロバイダ有効化\n2) Redirect URLに ' + redirectTo + ' を登録\n3) ネット接続とブラウザ拡張のブロック確認\n4) VS Codeプレビューではなく通常ブラウザで開いて実行');
@@ -1481,14 +1477,21 @@
       renderGoogleAuthButton();
     });
 
-    if (location.hash.includes('access_token')) {
-      history.replaceState(null, '', location.pathname);
-    }
+    const hadOAuthHash = location.hash.includes('access_token');
 
     const { data } = await db.auth.getSession();
     if (data?.session?.user) {
       googleAuthUser = data.session.user;
       renderGoogleAuthButton();
+    }
+
+    if (hadOAuthHash) {
+      setTimeout(async () => {
+        const { data: retryData } = await db.auth.getSession();
+        googleAuthUser = retryData?.session?.user || googleAuthUser;
+        renderGoogleAuthButton();
+        history.replaceState(null, '', location.pathname + location.search);
+      }, 250);
     }
   }
 
