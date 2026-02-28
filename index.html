@@ -1185,12 +1185,6 @@
   let googleAuthUser = null;
   const AUTH_REDIRECT_URL = 'https://waseda-ten.vercel.app';
 
-  function getAuthRedirectUrl() {
-    const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
-    if (isHttp) return location.origin + location.pathname;
-    return AUTH_REDIRECT_URL;
-  }
-
   function getGoogleDisplayName(user) {
     return user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'ログイン中ユーザー';
   }
@@ -1216,7 +1210,7 @@
       if (error) alert('ログアウトに失敗しました: ' + error.message);
       return;
     }
-    const redirectTo = getAuthRedirectUrl();
+    const redirectTo = AUTH_REDIRECT_URL;
     const { error } = await db.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo }

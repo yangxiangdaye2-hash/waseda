@@ -552,11 +552,6 @@
 const SUPABASE_URL = 'https://hazntivymzywhowtdtcc.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_Mr1wt5ZOoLtmYqPEoIKeUw_cM4ZPSbN';
 const AUTH_REDIRECT_URL = 'https://waseda-ten.vercel.app';
-function getAuthRedirectUrl() {
-  const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
-  if (isHttp) return location.origin + location.pathname;
-  return AUTH_REDIRECT_URL;
-}
 let db;
 try {
   if (typeof createClient === 'function') db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -623,7 +618,7 @@ async function handleGoogleAuthClick() {
     if (error) alert('ログアウトに失敗しました: ' + error.message);
     return;
   }
-  const redirectTo = getAuthRedirectUrl();
+  const redirectTo = AUTH_REDIRECT_URL;
   const { error } = await db.auth.signInWithOAuth({
     provider: 'google',
     options: { redirectTo }
