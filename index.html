@@ -1203,6 +1203,7 @@
   const SUPABASE_ANON_KEY = 'sb_publishable_Mr1wt5ZOoLtmYqPEoIKeUw_cM4ZPSbN';
   const AUTH_STORAGE_KEY = 'waseda_auth_token_v1';
   const LEGACY_AUTH_STORAGE_KEY = 'sb-hazntivymzywhowtdtcc-auth-token';
+  const AUTH_SESSION_BACKUP_KEY = 'waseda_auth_session_backup';
   let db;
   try {
     try {
@@ -1249,7 +1250,6 @@
   const POST_AUTH_RETURN_KEY = 'waseda_post_auth_return';
   const POST_AUTH_DRAFT_KEY = 'waseda_post_auth_draft';
   const POST_AUTH_DRAFT_TS_KEY = 'waseda_post_auth_draft_ts';
-  const AUTH_SESSION_BACKUP_KEY = 'waseda_auth_session_backup';
 
   function getGoogleDisplayName(user) {
     return user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'ログイン中ユーザー';
@@ -1277,7 +1277,15 @@
   }
 
   function saveAuthSessionBackup(session) {
-    return;
+    try {
+      if (!session?.access_token || !session?.refresh_token) return;
+      localStorage.setItem(AUTH_SESSION_BACKUP_KEY, JSON.stringify({
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+        expires_at: session.expires_at || null,
+        saved_at: Date.now()
+      }));
+    } catch {}
   }
 
   function clearAuthSessionBackup() {
@@ -1285,11 +1293,37 @@
   }
 
   function readAuthSessionBackup() {
-    return null;
+    try {
+      const raw = localStorage.getItem(AUTH_SESSION_BACKUP_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed?.access_token || !parsed?.refresh_token) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
   }
 
   async function restoreAuthSessionFromBackupIfNeeded() {
-    return null;
+    if (!db?.auth) return null;
+    try {
+      const { data: cur } = await db.auth.getSession();
+      if (cur?.session?.user) return cur.session;
+      const backup = readAuthSessionBackup();
+      if (!backup) return null;
+      const { data, error } = await db.auth.setSession({
+        access_token: backup.access_token,
+        refresh_token: backup.refresh_token
+      });
+      if (error || !data?.session?.user) {
+        clearAuthSessionBackup();
+        return null;
+      }
+      saveAuthSessionBackup(data.session);
+      return data.session;
+    } catch {
+      return null;
+    }
   }
 
   function schedulePostDraftRestoreChecks() {
@@ -1438,6 +1472,7 @@
   async function initGoogleAuth() {
     if (!db?.auth) return;
     await bootstrapAuthSessionFromUrlIfNeeded();
+    await restoreAuthSessionFromBackupIfNeeded();
     const resolved = await getResolvedAuthUser();
     googleAuthUser = resolved || null;
     syncNicknameFromGoogle();
@@ -1449,7 +1484,7 @@
     }
     db.auth.onAuthStateChange((event, session) => {
       googleAuthUser = session?.user || null;
-      if (event === 'SIGNED_OUT') clearAuthSessionBackup();
+      if (session?.access_token && session?.refresh_token) saveAuthSessionBackup(session);
       syncNicknameFromGoogle();
       renderGoogleAuthButton();
       schedulePostDraftRestoreChecks();
@@ -1497,6 +1532,10 @@
       const { data, error } = await db.auth.getSession();
       if (error) return null;
       let sessionUser = data?.session?.user || null;
+      if (!sessionUser?.id) {
+        const restored = await restoreAuthSessionFromBackupIfNeeded();
+        sessionUser = restored?.user || null;
+      }
       if (!sessionUser?.id) {
         try {
           const { data: userData, error: userError } = await db.auth.getUser();

@@ -852,6 +852,10 @@ async function getResolvedAuthUser() {
     if (error) return null;
     let user = data?.session?.user || null;
     if (!user?.id) {
+      const restored = await restoreAuthSessionFromBackupIfNeeded();
+      user = restored?.user || null;
+    }
+    if (!user?.id) {
       try {
         const { data: userData, error: userError } = await db.auth.getUser();
         if (!userError && userData?.user?.id) user = userData.user;
@@ -943,16 +947,50 @@ async function bootstrapAuthSessionFromUrlIfNeeded() {
   }
 }
 function saveAuthSessionBackup(session) {
-  return;
+  try {
+    if (!session?.access_token || !session?.refresh_token) return;
+    localStorage.setItem(AUTH_SESSION_BACKUP_KEY, JSON.stringify({
+      access_token: session.access_token,
+      refresh_token: session.refresh_token,
+      expires_at: session.expires_at || null,
+      saved_at: Date.now()
+    }));
+  } catch {}
 }
 function clearAuthSessionBackup() {
   try { localStorage.removeItem(AUTH_SESSION_BACKUP_KEY); } catch {}
 }
 function readAuthSessionBackup() {
-  return null;
+  try {
+    const raw = localStorage.getItem(AUTH_SESSION_BACKUP_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.access_token || !parsed?.refresh_token) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
 }
 async function restoreAuthSessionFromBackupIfNeeded() {
-  return null;
+  if (!db?.auth) return null;
+  try {
+    const { data: cur } = await db.auth.getSession();
+    if (cur?.session?.user) return cur.session;
+    const backup = readAuthSessionBackup();
+    if (!backup) return null;
+    const { data, error } = await db.auth.setSession({
+      access_token: backup.access_token,
+      refresh_token: backup.refresh_token
+    });
+    if (error || !data?.session?.user) {
+      clearAuthSessionBackup();
+      return null;
+    }
+    saveAuthSessionBackup(data.session);
+    return data.session;
+  } catch {
+    return null;
+  }
 }
 function scheduleJukenDraftRestoreChecks() {
   [0, 250, 800, 1500].forEach(ms => setTimeout(() => restoreJukenDraftAfterAuthIfNeeded(), ms));
@@ -1014,6 +1052,7 @@ async function handleGoogleAuthClick(source = 'header') {
 async function initGoogleAuth() {
   if (!db?.auth) return;
   await bootstrapAuthSessionFromUrlIfNeeded();
+  await restoreAuthSessionFromBackupIfNeeded();
   const resolved = await getResolvedAuthUser();
   googleAuthUser = resolved || null;
   syncNicknameFromGoogle();
@@ -1023,7 +1062,7 @@ async function initGoogleAuth() {
   scheduleJukenDraftRestoreChecks();
   db.auth.onAuthStateChange((event, session) => {
     googleAuthUser = session?.user || null;
-    if (event === 'SIGNED_OUT') clearAuthSessionBackup();
+    if (session?.access_token && session?.refresh_token) saveAuthSessionBackup(session);
     syncNicknameFromGoogle();
     currentUser = localStorage.getItem('waseda_nickname') || 'ゲスト';
     renderGoogleAuthButton();
