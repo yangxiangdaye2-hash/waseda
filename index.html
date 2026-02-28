@@ -1472,27 +1472,21 @@
   async function initGoogleAuth() {
     if (!db?.auth) return;
 
+    const { data } = await db.auth.getSession();
+    googleAuthUser = data?.session?.user || null;
+    if (data?.session) saveAuthSessionBackup(data.session);
+    syncNicknameFromGoogle();
+    renderGoogleAuthButton();
+    restorePostDraftAfterAuthIfNeeded();
+
     db.auth.onAuthStateChange((_event, session) => {
       googleAuthUser = session?.user || null;
+      if (session) saveAuthSessionBackup(session);
+      else clearAuthSessionBackup();
+      syncNicknameFromGoogle();
       renderGoogleAuthButton();
+      restorePostDraftAfterAuthIfNeeded();
     });
-
-    const hadOAuthHash = location.hash.includes('access_token');
-
-    const { data } = await db.auth.getSession();
-    if (data?.session?.user) {
-      googleAuthUser = data.session.user;
-      renderGoogleAuthButton();
-    }
-
-    if (hadOAuthHash) {
-      setTimeout(async () => {
-        const { data: retryData } = await db.auth.getSession();
-        googleAuthUser = retryData?.session?.user || googleAuthUser;
-        renderGoogleAuthButton();
-        history.replaceState(null, '', location.pathname + location.search);
-      }, 250);
-    }
   }
 
   // デバイスID（本人確認用・自動生成）
@@ -1516,10 +1510,6 @@
       const { data, error } = await db.auth.getSession();
       if (error) return null;
       let sessionUser = data?.session?.user || null;
-      if (!sessionUser?.id) {
-        const restored = await restoreAuthSessionFromBackupIfNeeded();
-        sessionUser = restored?.user || null;
-      }
       if (!sessionUser?.id) {
         try {
           const { data: userData, error: userError } = await db.auth.getUser();

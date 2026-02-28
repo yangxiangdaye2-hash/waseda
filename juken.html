@@ -852,10 +852,6 @@ async function getResolvedAuthUser() {
     if (error) return null;
     let user = data?.session?.user || null;
     if (!user?.id) {
-      const restored = await restoreAuthSessionFromBackupIfNeeded();
-      user = restored?.user || null;
-    }
-    if (!user?.id) {
       try {
         const { data: userData, error: userError } = await db.auth.getUser();
         if (!userError && userData?.user?.id) user = userData.user;
@@ -1052,27 +1048,21 @@ async function handleGoogleAuthClick(source = 'header') {
 async function initGoogleAuth() {
   if (!db?.auth) return;
 
+  const { data } = await db.auth.getSession();
+  googleAuthUser = data?.session?.user || null;
+  if (data?.session) saveAuthSessionBackup(data.session);
+  syncNicknameFromGoogle();
+  renderGoogleAuthButton();
+  restoreJukenDraftAfterAuthIfNeeded();
+
   db.auth.onAuthStateChange((_event, session) => {
     googleAuthUser = session?.user || null;
+    if (session) saveAuthSessionBackup(session);
+    else clearAuthSessionBackup();
+    syncNicknameFromGoogle();
     renderGoogleAuthButton();
+    restoreJukenDraftAfterAuthIfNeeded();
   });
-
-  const hadOAuthHash = location.hash.includes('access_token');
-
-  const { data } = await db.auth.getSession();
-  if (data?.session?.user) {
-    googleAuthUser = data.session.user;
-    renderGoogleAuthButton();
-  }
-
-  if (hadOAuthHash) {
-    setTimeout(async () => {
-      const { data: retryData } = await db.auth.getSession();
-      googleAuthUser = retryData?.session?.user || googleAuthUser;
-      renderGoogleAuthButton();
-      history.replaceState(null, '', location.pathname + location.search);
-    }, 250);
-  }
 }
 function updateNicknameBadge() { renderAccountSummary(); }
 function openNicknameModal() {
