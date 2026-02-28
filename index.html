@@ -469,12 +469,14 @@
   /* ─── 受験生サポートパネル ─── */
   #juken-panel { display: none; max-width: 1100px; margin: 0 auto; padding: 0 1.2rem 64px; }
 
-  /* Sub-tabs — underline style, visually distinct from main pill tabs */
-  .juken-subtabs { display: flex; gap: 0; overflow-x: auto; scroll-behavior: smooth; border-bottom: 2px solid var(--border); margin-bottom: 2rem; padding-top: 1.4rem; }
-  .juken-subtabs::-webkit-scrollbar { height: 0; }
-  .juken-subtab { flex-shrink: 0; padding: 8px 20px; font-size: 0.83rem; font-weight: 600; background: transparent; color: var(--gray); border: none; border-bottom: 2.5px solid transparent; margin-bottom: -2px; cursor: pointer; white-space: nowrap; transition: color 0.18s, border-color 0.18s; font-family: 'Noto Sans JP', sans-serif; }
-  .juken-subtab:hover { color: var(--crimson); }
-  .juken-subtab.active { color: var(--crimson); border-bottom-color: var(--crimson); font-weight: 700; }
+  /* Sub-tabs — pill style matching main tabs */
+  .juken-subtabs { display: flex; flex-wrap: nowrap; gap: 0.6rem; overflow-x: auto; scroll-behavior: smooth; padding: 1.4rem 0 1.2rem; }
+  .juken-subtabs::-webkit-scrollbar { height: 3px; }
+  .juken-subtabs::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); }
+  .juken-subtabs::-webkit-scrollbar-thumb { background: rgba(139,0,0,0.2); border-radius: 2px; }
+  .juken-subtab { flex-shrink: 0; display: inline-block; padding: 7px 16px; font-size: 0.82rem; font-weight: 600; background: var(--white); color: var(--crimson); border: 1.5px solid var(--crimson); border-radius: 18px; cursor: pointer; transition: all 0.2s; white-space: nowrap; font-family: 'Noto Sans JP', sans-serif; user-select: none; }
+  .juken-subtab:hover { background: var(--crimson); color: var(--white); }
+  .juken-subtab.active { background: linear-gradient(135deg, var(--crimson) 0%, var(--crimson-dark) 100%); color: var(--white); border-color: var(--crimson-dark); font-weight: 700; box-shadow: 0 2px 8px rgba(139,0,0,0.2); }
   .juken-subpanel { display: none; }
   .juken-subpanel.active { display: block; }
 
