@@ -477,7 +477,8 @@
   #juken-panel { display: none; max-width: 1100px; margin: 0 auto; padding: 0 1.2rem 64px; }
 
   /* メニューカード — 3つ常時表示 */
-  .juken-menu { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8rem; padding: 1.4rem 0 1.6rem; }
+  .juken-menu { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.8rem; padding: 1.4rem 0 1.6rem; }
+  @media (max-width: 900px) { .juken-menu { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 600px) { .juken-menu { grid-template-columns: 1fr; } }
   .juken-menu-card { display: flex; align-items: center; gap: 0.8rem; padding: 1rem 1.1rem; background: var(--white); border: 1.5px solid var(--border); border-radius: 12px; cursor: pointer; transition: all 0.2s; text-align: left; font-family: 'Noto Sans JP', sans-serif; user-select: none; }
   .juken-menu-card:hover { border-color: var(--crimson); box-shadow: 0 2px 10px rgba(139,0,0,0.1); transform: translateY(-1px); }
@@ -614,9 +615,13 @@
 
     <!-- メニューカード -->
     <div class="juken-menu">
-      <button class="juken-menu-card active" onclick="switchJukenSubTab('qa', this)">
+      <button class="juken-menu-card active" onclick="switchJukenSubTab('qa-study', this)">
         <span class="juken-menu-icon">❓</span>
-        <div><div class="juken-menu-label">受験生の質問に答える</div><div class="juken-menu-desc">在学生の経験を共有</div></div>
+        <div><div class="juken-menu-label">勉強の質問に答える</div><div class="juken-menu-desc">受験対策の経験を共有</div></div>
+      </button>
+      <button class="juken-menu-card" onclick="switchJukenSubTab('qa-life', this)">
+        <span class="juken-menu-icon">🏫</span>
+        <div><div class="juken-menu-label">大学生活の質問に答える</div><div class="juken-menu-desc">キャンパス・生活の実情を共有</div></div>
       </button>
       <button class="juken-menu-card" onclick="switchJukenSubTab('taikenki', this)">
         <span class="juken-menu-icon">🏆</span>
@@ -628,17 +633,27 @@
       </button>
     </div>
 
-    <!-- Sub-panel ①: 受験生の質問に答える -->
-    <div class="juken-subpanel active" id="juken-sub-qa">
+    <!-- Sub-panel ①: 勉強の質問に答える -->
+    <div class="juken-subpanel active" id="juken-sub-qa-study">
       <div class="juken-section-head">
-        <h2>❓ 受験生からの質問</h2>
+        <h2>❓ 受験生からの質問（勉強）</h2>
         <div class="juken-section-divider"></div>
-        <p>早稲田在学生に受験のことを直接聞けます。あなたの経験で受験生を助けましょう。</p>
+        <p>受験勉強・科目対策・過去問などの質問一覧です。あなたの経験で受験生を助けましょう。</p>
       </div>
-      <div id="juken-qa-list" class="juken-qa-grid"><div class="loading">読み込み中...</div></div>
+      <div id="juken-qa-study-list" class="juken-qa-grid"><div class="loading">読み込み中...</div></div>
     </div>
 
-    <!-- Sub-panel ②: 合格体験記を書く -->
+    <!-- Sub-panel ②: 大学生活の質問に答える -->
+    <div class="juken-subpanel" id="juken-sub-qa-life">
+      <div class="juken-section-head">
+        <h2>🏫 受験生からの質問（大学生活）</h2>
+        <div class="juken-section-divider"></div>
+        <p>キャンパスの雰囲気・通学・一人暮らし・時間割など、大学生活に関する質問一覧です。</p>
+      </div>
+      <div id="juken-qa-life-list" class="juken-qa-grid"><div class="loading">読み込み中...</div></div>
+    </div>
+
+    <!-- Sub-panel ③: 合格体験記を書く -->
     <div class="juken-subpanel" id="juken-sub-taikenki">
       <div class="juken-section-head">
         <h2>🏆 合格体験記を書く</h2>
@@ -712,7 +727,7 @@
         </div>
     </div>
 
-    <!-- Sub-panel ③: 学部コメントを書く -->
+    <!-- Sub-panel ④: 学部コメントを書く -->
     <div class="juken-subpanel" id="juken-sub-fc">
       <div class="juken-section-head">
         <h2>💬 学部コメントを書く</h2>
@@ -1865,7 +1880,7 @@
     if (tab === 'juken') {
       if (mainArea) mainArea.style.display = 'none';
       jukenPanel.style.display = 'block';
-      switchJukenSubTab('qa', jukenPanel.querySelector('.juken-menu-card'));
+      switchJukenSubTab('qa-study', jukenPanel.querySelector('.juken-menu-card'));
     } else {
       if (mainArea) mainArea.style.display = '';
       jukenPanel.style.display = 'none';
@@ -2258,23 +2273,26 @@
     if (panel) panel.classList.add('active');
     if (!jukenSubLoaded.has(tab)) {
       jukenSubLoaded.add(tab);
-      if (tab === 'qa') loadJukenQa();
+      if (tab === 'qa-study') loadJukenQa('study');
+      if (tab === 'qa-life') loadJukenQa('life');
     }
   }
 
-  // juken_qa 質問一覧
-  async function loadJukenQa() {
-    const el = document.getElementById('juken-qa-list');
+  // 受験生質問一覧（勉強 / 大学生活）
+  async function loadJukenQa(kind = 'study') {
+    const isLife = kind === 'life';
+    const el = document.getElementById(isLife ? 'juken-qa-life-list' : 'juken-qa-study-list');
     if (!db) { el.innerHTML = '<div class="loading">DB未接続</div>'; return; }
     try {
+      const categories = isLife ? ['juken_life_qa'] : ['juken_qa'];
       const { data, error } = await db.from('posts').select('*')
-        .eq('category','juken_qa').order('created_at',{ascending:false}).limit(20);
+        .in('category', categories).order('created_at',{ascending:false}).limit(30);
       if (error) throw error;
       if (!data || !data.length) {
         el.innerHTML = `<div style="text-align:center;padding:2rem;border:1.5px dashed var(--border);border-radius:10px;color:var(--gray)">
-          <div style="font-size:2rem;margin-bottom:.5rem">❓</div>
+          <div style="font-size:2rem;margin-bottom:.5rem">${isLife ? '🏫' : '❓'}</div>
           <div style="font-weight:700;margin-bottom:.3rem">まだ質問がありません</div>
-          <div style="font-size:0.82rem;">受験生からの質問を募集しています。juken.html の掲示板から投稿できます。</div></div>`;
+          <div style="font-size:0.82rem;">受験生ページの「${isLife ? '大学生活Q&A' : '勉強Q&A'}」タブから投稿できます。</div></div>`;
         return;
       }
       el.innerHTML = data.map(p => {

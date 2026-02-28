@@ -278,7 +278,8 @@
 <div class="tabs">
   <div class="tabs-inner" id="tabsInner">
     <span class="tab active" data-tab="faculties-tab" onclick="switchTab('faculties-tab')">🏫 学部紹介</span>
-    <span class="tab" data-tab="qa-tab"        onclick="switchTab('qa-tab')">❓ 勉強アドバイス</span>
+    <span class="tab" data-tab="qa-tab"        onclick="switchTab('qa-tab')">❓ 勉強Q&A</span>
+    <span class="tab" data-tab="qa-life-tab"   onclick="switchTab('qa-life-tab')">🏫 大学生活Q&A</span>
     <span class="tab" data-tab="board-tab"     onclick="switchTab('board-tab')">💬 受験生掲示板</span>
     <span class="tab" data-tab="taikenki-tab"  onclick="switchTab('taikenki-tab')">🏆 合格体験記</span>
     <span class="tab" data-tab="after-tab"     onclick="switchTab('after-tab')">🎓 合格後の準備</span>
@@ -298,7 +299,7 @@
   </div>
 </div>
 
-<!-- ═══ PANEL: 勉強アドバイス (Q&A) ═══ -->
+<!-- ═══ PANEL: 勉強Q&A ═══ -->
 <div id="panel-qa-tab" class="tab-panel">
   <div class="panel-inner">
     <div class="sec-eye">在学生への質問</div>
@@ -334,13 +335,59 @@
           <label class="form-label">本文 <span style="color:#e74c3c">*</span></label>
           <textarea class="form-textarea" id="qa-body" placeholder="質問の詳細を書いてください..."></textarea>
         </div>
-        <button class="btn-submit" onclick="submitJukenQa(this)">質問を投稿する</button>
+        <button class="btn-submit" onclick="submitJukenQa(this, 'study')">質問を投稿する</button>
         <p class="form-notice">良識ある投稿をお願いします。</p>
       </div>
       <!-- Q&A一覧 -->
       <div>
         <div class="filter-bar" id="qa-faculty-filter"><!-- JS --></div>
         <div id="qa-list" class="qa-grid"><div class="loading">読み込み中...</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PANEL: 大学生活Q&A ═══ -->
+<div id="panel-qa-life-tab" class="tab-panel">
+  <div class="panel-inner">
+    <div class="sec-eye">在学生への質問</div>
+    <h2 class="sec-title">大学生活 Q&A</h2>
+    <div class="sec-div"></div>
+    <p class="sec-sub">キャンパスの雰囲気、時間割、通学、一人暮らし、サークル参加など大学生活について質問できます。</p>
+    <div class="qa-layout">
+      <div class="qa-form-box">
+        <div class="qa-form-title">🏫 大学生活について質問する</div>
+        <div class="form-group">
+          <label class="form-label">ニックネーム <span style="color:#e74c3c">*</span></label>
+          <input class="form-input" type="text" id="qa-life-author" placeholder="例：早大志望高3" maxlength="20">
+        </div>
+        <div class="form-group">
+          <label class="form-label">志望学部</label>
+          <select class="form-select" id="qa-life-faculty">
+            <option value="">選択（任意）</option>
+            <option value="seikei">政治経済</option><option value="ho">法</option>
+            <option value="shogaku">商</option><option value="kyoiku">教育</option>
+            <option value="bun">文</option><option value="bunkagaku">文化構想</option>
+            <option value="kiso">基幹理工</option><option value="sozo">創造理工</option>
+            <option value="sentan">先進理工</option><option value="ningen">人間科学</option>
+            <option value="sports">スポーツ科学</option><option value="kokusai">国際教養</option>
+            <option value="shakou">社会科学</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">質問タイトル <span style="color:#e74c3c">*</span></label>
+          <input class="form-input" type="text" id="qa-life-title" placeholder="例：1年生の時間割はどれくらい忙しいですか？" maxlength="60">
+        </div>
+        <div class="form-group">
+          <label class="form-label">本文 <span style="color:#e74c3c">*</span></label>
+          <textarea class="form-textarea" id="qa-life-body" placeholder="質問の詳細を書いてください..."></textarea>
+        </div>
+        <button class="btn-submit" onclick="submitJukenQa(this, 'life')">質問を投稿する</button>
+        <p class="form-notice">良識ある投稿をお願いします。</p>
+      </div>
+      <div>
+        <div class="filter-bar" id="qa-life-faculty-filter"><!-- JS --></div>
+        <div id="qa-life-list" class="qa-grid"><div class="loading">読み込み中...</div></div>
       </div>
     </div>
   </div>
@@ -564,7 +611,8 @@ function updateScrollBtn() {
 
 function loadTab(tab) {
   if (tab==='faculties-tab') { renderFacultyGrid(); loadFacultyComments(); }
-  if (tab==='qa-tab')        { loadQaList(); buildFacultyFilter('qa-faculty-filter', filterQa); }
+  if (tab==='qa-tab')        { loadQaList('study'); buildFacultyFilter('qa-faculty-filter', (fac, el) => filterQa('study', fac, el)); }
+  if (tab==='qa-life-tab')   { loadQaList('life'); buildFacultyFilter('qa-life-faculty-filter', (fac, el) => filterQa('life', fac, el)); }
   if (tab==='board-tab')     { loadBoardPosts(); buildFacultyFilter('board-faculty-filter', filterBoard2); }
   if (tab==='taikenki-tab')  { loadTaikenki(); buildFacultyFilter('tk-faculty-filter', filterTk); }
 }
@@ -659,22 +707,30 @@ function focusBoardWithFaculty(key) {
 
 // ════ 勉強アドバイス Q&A ════
 let qaAllPosts = [];
+let qaLifeAllPosts = [];
 let qaFacultyFilter = 'all';
+let qaLifeFacultyFilter = 'all';
 
-async function loadQaList() {
-  const el = document.getElementById('qa-list');
+async function loadQaList(kind='study') {
+  const isLife = kind === 'life';
+  const el = document.getElementById(isLife ? 'qa-life-list' : 'qa-list');
   if (!db) { el.innerHTML = emptyState('❓','DB未接続','',false); return; }
   try {
-    const { data, error } = await db.from('posts').select('*').eq('category','juken_qa').order('created_at',{ascending:false}).limit(50);
+    const category = isLife ? 'juken_life_qa' : 'juken_qa';
+    const { data, error } = await db.from('posts').select('*').eq('category', category).order('created_at',{ascending:false}).limit(50);
     if (error) throw error;
-    qaAllPosts = data || [];
-    renderQaList();
+    if (isLife) qaLifeAllPosts = data || [];
+    else qaAllPosts = data || [];
+    renderQaList(kind);
   } catch(e) { console.error(e); el.innerHTML = emptyState('⚠️','読み込みエラー','',false); }
 }
 
-function renderQaList() {
-  const el = document.getElementById('qa-list');
-  const posts = qaFacultyFilter==='all' ? qaAllPosts : qaAllPosts.filter(p=>p.faculty===qaFacultyFilter);
+function renderQaList(kind='study') {
+  const isLife = kind === 'life';
+  const el = document.getElementById(isLife ? 'qa-life-list' : 'qa-list');
+  const basePosts = isLife ? qaLifeAllPosts : qaAllPosts;
+  const facFilter = isLife ? qaLifeFacultyFilter : qaFacultyFilter;
+  const posts = facFilter==='all' ? basePosts : basePosts.filter(p=>p.faculty===facFilter);
   if (!posts.length) { el.innerHTML = emptyState('❓','まだ質問がありません','最初に質問を投稿してみましょう！',false); return; }
   el.innerHTML = posts.map(p => {
     const fTag = p.faculty ? `<span class="qa-faculty-tag">${escHtml(FACULTIES[p.faculty]||p.faculty)}</span>` : '';
@@ -687,13 +743,24 @@ function renderQaList() {
   }).join('');
 }
 
-function filterQa(fac, el) { setActiveChip('qa-faculty-filter', el); qaFacultyFilter=fac; renderQaList(); }
+function filterQa(kind, fac, el) {
+  if (kind === 'life') {
+    setActiveChip('qa-life-faculty-filter', el);
+    qaLifeFacultyFilter = fac;
+    renderQaList('life');
+    return;
+  }
+  setActiveChip('qa-faculty-filter', el);
+  qaFacultyFilter = fac;
+  renderQaList('study');
+}
 
-async function submitJukenQa(btn) {
-  const author = document.getElementById('qa-author').value.trim();
-  const faculty = document.getElementById('qa-faculty').value;
-  const title  = document.getElementById('qa-title').value.trim();
-  const body   = document.getElementById('qa-body').value.trim();
+async function submitJukenQa(btn, kind='study') {
+  const isLife = kind === 'life';
+  const author = document.getElementById(isLife ? 'qa-life-author' : 'qa-author').value.trim();
+  const faculty = document.getElementById(isLife ? 'qa-life-faculty' : 'qa-faculty').value;
+  const title  = document.getElementById(isLife ? 'qa-life-title' : 'qa-title').value.trim();
+  const body   = document.getElementById(isLife ? 'qa-life-body' : 'qa-body').value.trim();
   if (!author) { alert('ニックネームを入力してください'); return; }
   if (!title)  { alert('質問タイトルを入力してください'); return; }
   if (!body)   { alert('本文を入力してください'); return; }
@@ -701,12 +768,13 @@ async function submitJukenQa(btn) {
   btn.disabled=true; btn.textContent='投稿中...';
   try {
     const { error } = await db.from('posts').insert([{
-      category:'juken_qa', author, title, body, faculty:faculty||null,
+      category: isLife ? 'juken_life_qa' : 'juken_qa', author, title, body, faculty:faculty||null,
       likes:0, comments:0, device_id:getDeviceId()
     }]);
     if (error) throw error;
-    ['qa-author','qa-faculty','qa-title','qa-body'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
-    await loadQaList();
+    (isLife ? ['qa-life-author','qa-life-faculty','qa-life-title','qa-life-body'] : ['qa-author','qa-faculty','qa-title','qa-body'])
+      .forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+    await loadQaList(kind);
   } catch(e) { console.error(e); alert('投稿に失敗しました: ' + (e?.message || e?.code || JSON.stringify(e))); }
   finally { btn.disabled=false; btn.textContent='質問を投稿する'; }
 }
@@ -748,8 +816,10 @@ async function submitJukenAnswer(postId) {
   try {
     const { error } = await db.from('answers').insert([{ post_id:postId, author:nick, text, device_id:getDeviceId() }]);
     if (error) throw error;
-    const cur = qaAllPosts.find(p=>p.id===postId);
+    const cur = qaAllPosts.find(p=>p.id===postId) || qaLifeAllPosts.find(p=>p.id===postId);
     if (cur) await db.from('posts').update({comments:(cur.comments||0)+1}).eq('id',postId);
+    if (cur && cur.category === 'juken_life_qa') await loadQaList('life');
+    else await loadQaList('study');
     await openQaDetail(postId);
   } catch(e) { console.error(e); alert('投稿に失敗しました'); }
   finally { btn.disabled=false; btn.textContent='回答を投稿'; }
