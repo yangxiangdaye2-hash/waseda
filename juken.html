@@ -551,7 +551,8 @@
 // ── Supabase ──
 const SUPABASE_URL = 'https://hazntivymzywhowtdtcc.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_Mr1wt5ZOoLtmYqPEoIKeUw_cM4ZPSbN';
-const AUTH_REDIRECT_URL = 'https://waseda-ten.vercel.app';
+const AUTH_REDIRECT_URL = 'https://waseda-ten.vercel.app/juken.html';
+const TRUSTED_AUTH_HOSTS = ['waseda-ten.vercel.app'];
 let db;
 try {
   if (typeof createClient === 'function') db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -638,6 +639,17 @@ function isMyContent(item, myIds) {
 function getGoogleDisplayName(user) {
   return user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'ログイン中ユーザー';
 }
+function getAuthRedirectUrl() {
+  try {
+    const url = new URL(window.location.href);
+    const isHttp = url.protocol === 'http:' || url.protocol === 'https:';
+    const isTrustedHost = TRUSTED_AUTH_HOSTS.includes(url.hostname);
+    if (isHttp && isTrustedHost) return `${url.origin}${url.pathname}`;
+  } catch (e) {
+    console.warn('redirect URL parse failed:', e);
+  }
+  return AUTH_REDIRECT_URL;
+}
 function renderGoogleAuthButton() {
   const btn = document.getElementById('googleAuthBtn');
   if (!btn) return;
@@ -658,13 +670,13 @@ async function handleGoogleAuthClick() {
     if (error) alert('ログアウトに失敗しました: ' + error.message);
     return;
   }
-  const redirectTo = AUTH_REDIRECT_URL;
+  const redirectTo = getAuthRedirectUrl();
   const { error } = await db.auth.signInWithOAuth({
     provider: 'google',
     options: { redirectTo }
   });
   if (error) {
-    alert('Googleログインに失敗しました: ' + error.message + '\n\n確認事項:\n1) SupabaseでGoogleプロバイダ有効化\n2) Redirect URLに ' + redirectTo + ' を登録\n3) ネット接続とブラウザ拡張のブロック確認');
+    alert('Googleログインに失敗しました: ' + error.message + '\n\n確認事項:\n1) SupabaseでGoogleプロバイダ有効化\n2) Redirect URLに ' + redirectTo + ' を登録\n3) ネット接続とブラウザ拡張のブロック確認\n4) VS Codeプレビューではなく通常ブラウザで開いて実行');
   }
 }
 async function initGoogleAuth() {

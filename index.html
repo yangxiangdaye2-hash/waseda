@@ -1230,6 +1230,7 @@
   let currentUser = localStorage.getItem('waseda_nickname') || 'ゲスト';
   let googleAuthUser = null;
   const AUTH_REDIRECT_URL = 'https://waseda-ten.vercel.app/index.html';
+  const TRUSTED_AUTH_HOSTS = ['waseda-ten.vercel.app'];
   const POST_AUTH_RETURN_KEY = 'waseda_post_auth_return';
   const POST_AUTH_DRAFT_KEY = 'waseda_post_auth_draft';
 
@@ -1241,7 +1242,8 @@
     try {
       const url = new URL(window.location.href);
       const isHttp = url.protocol === 'http:' || url.protocol === 'https:';
-      if (isHttp) return `${url.origin}${url.pathname}`;
+      const isTrustedHost = TRUSTED_AUTH_HOSTS.includes(url.hostname);
+      if (isHttp && isTrustedHost) return `${url.origin}${url.pathname}`;
     } catch (e) {
       console.warn('redirect URL parse failed:', e);
     }
@@ -1375,6 +1377,7 @@
       googleAuthUser = session?.user || null;
       syncNicknameFromGoogle();
       renderGoogleAuthButton();
+      restorePostDraftAfterAuthIfNeeded();
       if (document.getElementById('myPageModal')?.classList.contains('open')) loadMyPagePosts();
       if (document.getElementById('postModal')?.classList.contains('open')) {
         fillPostNickname();
