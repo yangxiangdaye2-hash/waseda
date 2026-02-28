@@ -1233,6 +1233,7 @@
   const TRUSTED_AUTH_HOSTS = ['waseda-ten.vercel.app'];
   const POST_AUTH_RETURN_KEY = 'waseda_post_auth_return';
   const POST_AUTH_DRAFT_KEY = 'waseda_post_auth_draft';
+  const POST_AUTH_DRAFT_TS_KEY = 'waseda_post_auth_draft_ts';
 
   function getGoogleDisplayName(user) {
     return user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'ログイン中ユーザー';
@@ -1302,22 +1303,47 @@
     });
     const selectedStar = document.querySelector('input[name="lectureStars"]:checked');
     if (selectedStar) draft.fields.lectureStars = selectedStar.value;
-    sessionStorage.setItem(POST_AUTH_DRAFT_KEY, JSON.stringify(draft));
+    const nowTs = String(Date.now());
+    const draftStr = JSON.stringify(draft);
+    sessionStorage.setItem(POST_AUTH_DRAFT_KEY, draftStr);
     sessionStorage.setItem(POST_AUTH_RETURN_KEY, '1');
+    sessionStorage.setItem(POST_AUTH_DRAFT_TS_KEY, nowTs);
+    localStorage.setItem(POST_AUTH_DRAFT_KEY, draftStr);
+    localStorage.setItem(POST_AUTH_RETURN_KEY, '1');
+    localStorage.setItem(POST_AUTH_DRAFT_TS_KEY, nowTs);
   }
 
   function restorePostDraftAfterAuthIfNeeded() {
-    const shouldReturn = sessionStorage.getItem(POST_AUTH_RETURN_KEY) === '1';
-    if (!shouldReturn || !googleAuthUser) return;
+    const sessionReturn = sessionStorage.getItem(POST_AUTH_RETURN_KEY) === '1';
+    const localReturn = localStorage.getItem(POST_AUTH_RETURN_KEY) === '1';
+    const shouldReturn = sessionReturn || localReturn;
+    if (!shouldReturn) return;
+
+    const tsRaw = sessionStorage.getItem(POST_AUTH_DRAFT_TS_KEY) || localStorage.getItem(POST_AUTH_DRAFT_TS_KEY) || '0';
+    const ageMs = Date.now() - Number(tsRaw || 0);
+    if (Number.isFinite(ageMs) && ageMs > 10 * 60 * 1000) {
+      sessionStorage.removeItem(POST_AUTH_RETURN_KEY);
+      sessionStorage.removeItem(POST_AUTH_DRAFT_KEY);
+      sessionStorage.removeItem(POST_AUTH_DRAFT_TS_KEY);
+      localStorage.removeItem(POST_AUTH_RETURN_KEY);
+      localStorage.removeItem(POST_AUTH_DRAFT_KEY);
+      localStorage.removeItem(POST_AUTH_DRAFT_TS_KEY);
+      return;
+    }
 
     sessionStorage.removeItem(POST_AUTH_RETURN_KEY);
+    localStorage.removeItem(POST_AUTH_RETURN_KEY);
     let draft = null;
     try {
-      draft = JSON.parse(sessionStorage.getItem(POST_AUTH_DRAFT_KEY) || '{}');
+      const draftStr = sessionStorage.getItem(POST_AUTH_DRAFT_KEY) || localStorage.getItem(POST_AUTH_DRAFT_KEY) || '{}';
+      draft = JSON.parse(draftStr);
     } catch {
       draft = null;
     }
     sessionStorage.removeItem(POST_AUTH_DRAFT_KEY);
+    sessionStorage.removeItem(POST_AUTH_DRAFT_TS_KEY);
+    localStorage.removeItem(POST_AUTH_DRAFT_KEY);
+    localStorage.removeItem(POST_AUTH_DRAFT_TS_KEY);
 
     openPostModal();
     const loginRadio = document.querySelector('input[name="postAuthMode"][value="login"]');
