@@ -1201,29 +1201,29 @@
   // Supabase初期化（CDNのエクスポートの違いに対応する）
   const SUPABASE_URL = 'https://hazntivymzywhowtdtcc.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_Mr1wt5ZOoLtmYqPEoIKeUw_cM4ZPSbN';
-  const AUTH_STORAGE_KEY = 'waseda_auth_token_v1';
-  const LEGACY_AUTH_STORAGE_KEY = 'sb-hazntivymzywhowtdtcc-auth-token';
   const AUTH_SESSION_BACKUP_KEY = 'waseda_auth_session_backup';
   let db;
   try {
-    try {
-      const current = localStorage.getItem(AUTH_STORAGE_KEY);
-      const legacy = localStorage.getItem(LEGACY_AUTH_STORAGE_KEY);
-      if (!current && legacy) localStorage.setItem(AUTH_STORAGE_KEY, legacy);
-    } catch {}
-    const supabaseOptions = {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-        flowType: 'pkce',
-        storageKey: AUTH_STORAGE_KEY
-      }
-    };
     if (typeof createClient === 'function') {
-      db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, supabaseOptions);
+      db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: {
+          persistSession: true,
+          storageKey: 'waseda-auth',
+          storage: window.localStorage,
+          autoRefreshToken: true,
+          detectSessionInUrl: true
+        }
+      });
     } else if (window.supabase && typeof window.supabase.createClient === 'function') {
-      db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, supabaseOptions);
+      db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: {
+          persistSession: true,
+          storageKey: 'waseda-auth',
+          storage: window.localStorage,
+          autoRefreshToken: true,
+          detectSessionInUrl: true
+        }
+      });
     } else {
       throw new Error('Supabase client not found');
     }

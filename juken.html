@@ -616,8 +616,6 @@
 // ── Supabase ──
 const SUPABASE_URL = 'https://hazntivymzywhowtdtcc.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_Mr1wt5ZOoLtmYqPEoIKeUw_cM4ZPSbN';
-const AUTH_STORAGE_KEY = 'waseda_auth_token_v1';
-const LEGACY_AUTH_STORAGE_KEY = 'sb-hazntivymzywhowtdtcc-auth-token';
 const AUTH_REDIRECT_URL = 'https://waseda-ten.vercel.app/juken.html';
 const TRUSTED_AUTH_HOSTS = ['waseda-ten.vercel.app'];
 const JUKEN_AUTH_RETURN_KEY = 'waseda_juken_auth_return';
@@ -626,22 +624,24 @@ const JUKEN_AUTH_DRAFT_TS_KEY = 'waseda_juken_auth_draft_ts';
 const AUTH_SESSION_BACKUP_KEY = 'waseda_auth_session_backup';
 let db;
 try {
-  try {
-    const current = localStorage.getItem(AUTH_STORAGE_KEY);
-    const legacy = localStorage.getItem(LEGACY_AUTH_STORAGE_KEY);
-    if (!current && legacy) localStorage.setItem(AUTH_STORAGE_KEY, legacy);
-  } catch {}
-  const supabaseOptions = {
+  if (typeof createClient === 'function') db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
       persistSession: true,
+      storageKey: 'waseda-auth',
+      storage: window.localStorage,
       autoRefreshToken: true,
-      detectSessionInUrl: true,
-      flowType: 'pkce',
-      storageKey: AUTH_STORAGE_KEY
+      detectSessionInUrl: true
     }
-  };
-  if (typeof createClient === 'function') db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, supabaseOptions);
-  else if (window.supabase?.createClient) db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, supabaseOptions);
+  });
+  else if (window.supabase?.createClient) db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      persistSession: true,
+      storageKey: 'waseda-auth',
+      storage: window.localStorage,
+      autoRefreshToken: true,
+      detectSessionInUrl: true
+    }
+  });
 } catch(e) { console.error('Supabase init:', e); }
 let googleAuthUser = null;
 let currentUser = localStorage.getItem('waseda_nickname') || 'ゲスト';
