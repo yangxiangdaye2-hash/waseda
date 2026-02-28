@@ -2277,20 +2277,28 @@
     if (!db) { alert('DB未接続'); return; }
     const btn = event.target; btn.disabled = true; btn.textContent = '投稿中...';
     try {
-      const { error } = await db.from('taikenki').insert([{
-        author, faculty,
-        exam_type:    document.getElementById('tk-exam-type').value || null,
-        study_start:  document.getElementById('tk-study-start').value || null,
-        daily_hours:  document.getElementById('tk-daily-hours').value || null,
-        references:   document.getElementById('tk-references').value.trim() || null,
-        hard_subject: document.getElementById('tk-hard-subject').value.trim() || null,
-        advice, likes: 0
+      const ef = {};
+      const examType    = document.getElementById('tk-exam-type').value;
+      const studyStart  = document.getElementById('tk-study-start').value;
+      const dailyHours  = document.getElementById('tk-daily-hours').value;
+      const references  = document.getElementById('tk-references').value.trim();
+      const hardSubject = document.getElementById('tk-hard-subject').value.trim();
+      if (examType)    ef.exam_type    = examType;
+      if (studyStart)  ef.study_start  = studyStart;
+      if (dailyHours)  ef.daily_hours  = dailyHours;
+      if (references)  ef.references   = references;
+      if (hardSubject) ef.hard_subject = hardSubject;
+      const { error } = await db.from('posts').insert([{
+        category: 'taikenki', author, faculty,
+        title: advice.slice(0, 40), body: advice,
+        extra_fields: Object.keys(ef).length ? JSON.stringify(ef) : null,
+        likes: 0, comments: 0, device_id: getDeviceId()
       }]);
       if (error) throw error;
       ['tk-author','tk-faculty','tk-exam-type','tk-study-start','tk-daily-hours','tk-references','tk-hard-subject','tk-advice']
         .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
       alert('体験記を投稿しました！ありがとうございます。');
-    } catch(e) { console.error(e); alert('投稿に失敗しました。'); }
+    } catch(e) { console.error(e); alert('投稿に失敗しました: ' + (e?.message || e?.code || JSON.stringify(e))); }
     finally { btn.disabled = false; btn.textContent = '体験記を投稿する'; }
   }
 
@@ -2305,11 +2313,15 @@
     if (!db) { alert('DB未接続'); return; }
     const btn = event.target; btn.disabled = true; btn.textContent = '投稿中...';
     try {
-      const { error } = await db.from('faculty_comments').insert([{ author, faculty, comment, likes: 0 }]);
+      const { error } = await db.from('posts').insert([{
+        category: 'faculty_comment', author, faculty,
+        title: comment.slice(0, 40), body: comment,
+        likes: 0, comments: 0, device_id: getDeviceId()
+      }]);
       if (error) throw error;
       ['fc-author','fc-faculty','fc-comment'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
       alert('コメントを投稿しました！ありがとうございます。');
-    } catch(e) { console.error(e); alert('投稿に失敗しました。'); }
+    } catch(e) { console.error(e); alert('投稿に失敗しました: ' + (e?.message || e?.code || JSON.stringify(e))); }
     finally { btn.disabled = false; btn.textContent = 'コメントを投稿する'; }
   }
 

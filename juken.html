@@ -598,7 +598,7 @@ function renderFacultyGrid(filterFac='all') {
   grid.innerHTML = list.map(f => {
     const comments = (facultyCommentsData[f.key]||[]).slice(0,3);
     const cmtHtml = comments.length
-      ? comments.map(c => `<div class="faculty-comment-item">${escHtml(c.comment)}<div class="faculty-comment-meta">@${escHtml(c.author)} · ${formatTime(c.created_at)}</div></div>`).join('')
+      ? comments.map(c => `<div class="faculty-comment-item">${escHtml(c.body)}<div class="faculty-comment-meta">@${escHtml(c.author)} · ${formatTime(c.created_at)}</div></div>`).join('')
       : `<div style="font-size:.78rem;color:var(--gray-light);padding:.3rem 0">まだコメントがありません</div>`;
     return `<div class="faculty-card">
       <div class="faculty-card-head" onclick="focusBoardWithFaculty('${f.key}')">
@@ -639,7 +639,7 @@ function renderFacultyGrid(filterFac='all') {
 async function loadFacultyComments() {
   if (!db) return;
   try {
-    const { data } = await db.from('faculty_comments').select('*').order('created_at',{ascending:false}).limit(100);
+    const { data } = await db.from('posts').select('*').eq('category','faculty_comment').order('created_at',{ascending:false}).limit(100);
     if (data) {
       facultyCommentsData = {};
       data.forEach(c => { if (!facultyCommentsData[c.faculty]) facultyCommentsData[c.faculty]=[]; facultyCommentsData[c.faculty].push(c); });
@@ -707,7 +707,7 @@ async function submitJukenQa() {
     if (error) throw error;
     ['qa-author','qa-faculty','qa-title','qa-body'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
     await loadQaList();
-  } catch(e) { console.error(e); alert('投稿に失敗しました'); }
+  } catch(e) { console.error(e); alert('投稿に失敗しました: ' + (e?.message || e?.code || JSON.stringify(e))); }
   finally { btn.disabled=false; btn.textContent='質問を投稿する'; }
 }
 
@@ -848,13 +848,18 @@ async function submitBoardPost() {
 let tkAllData = [];
 let tkFacFilter = 'all';
 
+function parseTk(t) {
+  const ef = t.extra_fields ? (typeof t.extra_fields === 'string' ? JSON.parse(t.extra_fields) : t.extra_fields) : {};
+  return { ...t, advice: t.body, exam_type: ef.exam_type, study_start: ef.study_start, daily_hours: ef.daily_hours, references: ef.references, hard_subject: ef.hard_subject };
+}
+
 async function loadTaikenki() {
   const el = document.getElementById('taikenki-list');
   if (!db) { el.innerHTML = emptyState('🏆','DB未接続','',false); return; }
   try {
-    const { data, error } = await db.from('taikenki').select('*').order('created_at',{ascending:false}).limit(50);
+    const { data, error } = await db.from('posts').select('*').eq('category','taikenki').order('created_at',{ascending:false}).limit(50);
     if (error) throw error;
-    tkAllData = data || [];
+    tkAllData = (data || []).map(parseTk);
     renderTaikenki();
   } catch(e) { console.error(e); el.innerHTML = emptyState('⚠️','読み込みエラー','',false); }
 }
