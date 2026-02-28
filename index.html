@@ -1603,6 +1603,8 @@
       }
 
       const rows = (byOwner || []).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      const qaIds = rows.filter(p => p.category === 'qa' || p.category === 'juken_qa' || p.category === 'juken_life_qa').map(p => p.id).filter(Boolean);
+      const myPageAnswerMap = await fetchAnswerCountsByPostIds(qaIds);
       summaryEl.textContent = `Google連携追跡 | ニックネーム: @${currentUser} | 投稿数: ${rows.length}`;
 
       if (!rows.length) {
@@ -1612,6 +1614,7 @@
 
       listEl.innerHTML = rows.map(p => {
         const isQa = p.category === 'qa' || p.category === 'juken_qa' || p.category === 'juken_life_qa';
+        const ans = isQa ? (myPageAnswerMap[p.id] || 0) : 0;
         const openFn = isQa ? `openQaDetail(${JSON.stringify(p.id)})` : `openPostDetail(${JSON.stringify(p.id)})`;
         return `<div style="border:1px solid var(--border);border-radius:8px;padding:0.8rem;margin-bottom:0.7rem;">
           <div style="display:flex;justify-content:space-between;gap:0.6rem;align-items:center;flex-wrap:wrap;">
@@ -1621,7 +1624,7 @@
           <div style="margin-top:0.4rem;font-size:0.9rem;font-weight:700;color:var(--dark);">${escHtml(p.title || '(タイトルなし)')}</div>
           <div style="margin-top:0.2rem;font-size:0.8rem;color:var(--gray);">${escHtml((p.body || '').slice(0, 110))}</div>
           <div style="margin-top:0.5rem;display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-size:0.73rem;color:var(--gray-light);">❤️ ${p.likes || 0} / 💬 ${p.comments || 0}</span>
+            <span style="font-size:0.73rem;color:var(--gray-light);">❤️ ${p.likes || 0} / ${isQa ? `💬 回答 ${ans}件` : `💬 ${p.comments || 0}`}</span>
             <button class="btn-submit" style="margin-top:0;padding:6px 10px;font-size:0.74rem;" onclick="closeMyPageModal();${openFn}">詳細を見る</button>
           </div>
         </div>`;
@@ -1634,6 +1637,19 @@
   }
 
   // 投稿取得
+  async function fetchAnswerCountsByPostIds(postIds) {
+    const map = {};
+    const ids = (postIds || []).filter(Boolean);
+    if (!ids.length || !db) return map;
+    try {
+      const { data: ansRows, error: ansErr } = await db.from('answers').select('post_id').in('post_id', ids);
+      if (!ansErr && Array.isArray(ansRows)) ansRows.forEach(r => { map[r.post_id] = (map[r.post_id] || 0) + 1; });
+    } catch (e) {
+      console.warn('answers count fetch failed', e);
+    }
+    return map;
+  }
+
   async function loadPosts() {
     const container = document.getElementById('posts-container');
     container.innerHTML = '<div class="loading">読み込み中...</div>';
@@ -1668,14 +1684,8 @@
       }
 
       // answers 件数を別テーブルから取得
-      answersCountMap = {};
-      try {
-        const ids = allPosts.map(p => p.id).filter(Boolean);
-        if (ids.length && db) {
-          const { data: ansRows, error: ansErr } = await db.from('answers').select('post_id').in('post_id', ids);
-          if (!ansErr && Array.isArray(ansRows)) ansRows.forEach(r => { answersCountMap[r.post_id] = (answersCountMap[r.post_id] || 0) + 1; });
-        }
-      } catch (e) { console.warn('answers count fetch failed', e); }
+      const ids = allPosts.map(p => p.id).filter(Boolean);
+      answersCountMap = await fetchAnswerCountsByPostIds(ids);
 
       renderPosts(allPosts);
       if (currentTab === 'all') loadTrendingPosts(currentTrendCategory);
@@ -1718,6 +1728,9 @@
       }
 
       const posts = Array.isArray(postsData) ? postsData : [];
+      const trendAnswerMap = category === 'qa'
+        ? await fetchAnswerCountsByPostIds(posts.map(p => p.id).filter(Boolean))
+        : {};
 
       if (!posts || posts.length === 0) {
         container.innerHTML = '<div style="color: var(--gray); font-size: 0.9rem; text-align: center; padding: 1rem;">投稿がまだありません</div>';
@@ -1726,11 +1739,13 @@
 
       container.innerHTML = posts.map((p, idx) => {
         const title = escHtml(p.title);
+        const qaAnswerLabel = category === 'qa' ? `<span class="trend-likes">💬 回答 ${trendAnswerMap[p.id] || 0}件</span>` : '';
         return `<div class="trend-item" onclick="scrollToPost(${JSON.stringify(p.id)})">
           <span class="trend-num">${idx + 1}</span>
           <div class="trend-item-content">
             <span class="trend-text">${title}</span>
             <span class="trend-likes">❤️ ${p.likes || 0}</span>
+            ${qaAnswerLabel}
           </div>
         </div>`;
       }).join('');
@@ -2816,6 +2831,7 @@
       const { data, error } = await db.from('posts').select('*')
         .in('category', categories).order('created_at',{ascending:false}).limit(30);
       if (error) throw error;
+      const jukenAnswerMap = await fetchAnswerCountsByPostIds((data || []).map(p => p.id));
       if (!data || !data.length) {
         el.innerHTML = `<div style="text-align:center;padding:2rem;border:1.5px dashed var(--border);border-radius:10px;color:var(--gray)">
           <div style="font-size:2rem;margin-bottom:.5rem">${isLife ? '🏫' : '❓'}</div>
@@ -2840,7 +2856,7 @@
         const isMine = isMyContent(p, myIds);
         const myTag = isMine ? '<span class="juken-qa-my-badge">🧷 あなたの質問</span>' : '';
         const fTag = p.faculty ? `<span class="juken-qa-faculty">${escHtml(FACULTIES[p.faculty]||p.faculty)}</span>` : '';
-        const ans = answersCountMap[p.id] || 0;
+        const ans = jukenAnswerMap[p.id] || answersCountMap[p.id] || 0;
         return `<div class="juken-qa-card${isMine ? ' my-question' : ''}" onclick="openQaDetail(${JSON.stringify(p.id)})">
           <div class="juken-qa-card-meta">${myTag}${fTag}<span style="font-size:0.7rem;color:var(--gray-light)">@${escHtml(p.author)} · ${formatTime(p.created_at)}</span></div>
           <div class="juken-qa-title">${escHtml(p.title)}</div>
