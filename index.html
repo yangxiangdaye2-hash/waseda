@@ -1471,75 +1471,17 @@
 
   async function initGoogleAuth() {
     if (!db?.auth) return;
-
-    // URLにアクセストークンがあればセッションを復元
-    if (window.location.hash.includes('access_token')) {
-      await db.auth.getSession();
-    }
-
-    // Register listener FIRST so the initial INITIAL_SESSION/SIGNED_IN event is captured
-    // (Supabase v2 fires this event when getSession() is first called — if the listener
-    // isn't registered yet, that event is missed and the session won't restore on reload)
-    db.auth.onAuthStateChange((event, session) => {
+    
+    db.auth.onAuthStateChange((_event, session) => {
       googleAuthUser = session?.user || null;
-      if (session?.access_token && session?.refresh_token) saveAuthSessionBackup(session);
-      if (event === 'SIGNED_IN' && session?.user?.id) {
-        localStorage.setItem('waseda_google_user_id', session.user.id);
-      }
-      if (event === 'SIGNED_OUT') clearAuthSessionBackup();
-      if (event === 'SIGNED_OUT') localStorage.removeItem('waseda_google_user_id');
-      syncNicknameFromGoogle();
       renderGoogleAuthButton();
-      schedulePostDraftRestoreChecks();
-      if (document.getElementById('myPageModal')?.classList.contains('open')) loadMyPagePosts();
-      if (document.getElementById('postModal')?.classList.contains('open')) {
-        fillPostNickname();
-        onPostAuthModeChange();
-      }
     });
 
-    // These calls trigger getSession() internally, which fires the listener above
-    await bootstrapAuthSessionFromUrlIfNeeded();
-    await restoreAuthSessionFromBackupIfNeeded();
-
-    const { data: sessionData, error: sessionErr } = await db.auth.getSession();
-    if (!sessionErr) googleAuthUser = sessionData?.session?.user || null;
-
-    if (!googleAuthUser) {
-      try {
-        const { data: refreshed, error: refreshError } = await db.auth.refreshSession();
-        if (!refreshError) googleAuthUser = refreshed?.session?.user || null;
-      } catch {}
-    }
-
-    // Fallback: if onAuthStateChange hasn't fired yet, resolve manually
-    if (!googleAuthUser) {
-      const resolved = await getResolvedAuthUser();
-      googleAuthUser = resolved || null;
-      syncNicknameFromGoogle();
+    const { data, error } = await db.auth.getSession();
+    if (!error && data?.session?.user) {
+      googleAuthUser = data.session.user;
       renderGoogleAuthButton();
     }
-
-    schedulePostDraftRestoreChecks();
-    if (document.getElementById('postModal')?.classList.contains('open')) {
-      fillPostNickname();
-      onPostAuthModeChange();
-    }
-
-    const resyncAuthState = async () => {
-      const user = await getResolvedAuthUser();
-      googleAuthUser = user || null;
-      syncNicknameFromGoogle();
-      renderGoogleAuthButton();
-      if (document.getElementById('postModal')?.classList.contains('open')) {
-        fillPostNickname();
-        onPostAuthModeChange();
-      }
-    };
-    window.addEventListener('focus', () => { setTimeout(() => resyncAuthState(), 0); });
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') setTimeout(() => resyncAuthState(), 0);
-    });
   }
 
   // デバイスID（本人確認用・自動生成）
