@@ -24,6 +24,11 @@
   .logo-jp { font-size: 1.35rem; font-weight: 900; color: var(--white); letter-spacing: 0.05em; white-space: nowrap; line-height: 1; }
   .logo-en { font-family: 'Playfair Display', serif; font-size: 0.65rem; color: var(--gold-light); letter-spacing: 0.12em; white-space: nowrap; }
   .header-right { display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0; }
+  .btn-google-auth { background: #fff; color: #333; border: 1.5px solid #dadce0; border-radius: 18px; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+  .btn-google-auth:hover { border-color: #c4c7cc; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+  .btn-google-auth.logged-in { background: #f8f9fa; }
+  .google-g { width: 18px; height: 18px; border-radius: 50%; background: conic-gradient(#4285f4 0 25%, #34a853 25% 50%, #fbbc05 50% 75%, #ea4335 75% 100%); color: #fff; font-size: 11px; line-height: 18px; text-align: center; font-weight: 900; display: inline-block; }
+  .google-user-name { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .btn-admin { background: white; color: #333; border: 1px solid #ccc; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
     .btn-admin:hover { background: #f0f0f0; }
     
@@ -520,6 +525,7 @@
     <div class="header-inner">
       <a class="logo" href="#"><span class="logo-jp">ワセダノート</span><span class="logo-en">WASEDA NOTE</span></a>
       <div class="header-right">
+        <button class="btn-google-auth" id="googleAuthBtn" onclick="handleGoogleAuthClick()">Googleでログイン</button>
         <div class="nickname-badge" id="nicknameBadge" onclick="openNicknameModal()">👤 設定中...</div>
         <button class="btn-admin" id="adminBtn" style="display:none;margin-right:0.5rem;" onclick="openAdminModal()">⚙️ 管理</button>
         <button class="btn-post" onclick="openPostModal()">＋ 投稿する</button>
@@ -1176,6 +1182,51 @@
   let currentTrendCategory = 'lecture';
   let searchQuery = '';
   let currentUser = localStorage.getItem('waseda_nickname') || 'ゲスト';
+  let googleAuthUser = null;
+  const AUTH_REDIRECT_URL = 'https://waseda-ten.vercel.app';
+
+  function getGoogleDisplayName(user) {
+    return user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'ログイン中ユーザー';
+  }
+
+  function renderGoogleAuthButton() {
+    const btn = document.getElementById('googleAuthBtn');
+    if (!btn) return;
+    if (googleAuthUser) {
+      btn.classList.add('logged-in');
+      btn.innerHTML = `<span class="google-g">G</span><span class="google-user-name">${escHtml(getGoogleDisplayName(googleAuthUser))}</span>`;
+      btn.title = 'クリックでログアウト';
+    } else {
+      btn.classList.remove('logged-in');
+      btn.textContent = 'Googleでログイン';
+      btn.title = '';
+    }
+  }
+
+  async function handleGoogleAuthClick() {
+    if (!db?.auth) { alert('ログイン機能を初期化できませんでした'); return; }
+    if (googleAuthUser) {
+      const { error } = await db.auth.signOut();
+      if (error) alert('ログアウトに失敗しました: ' + error.message);
+      return;
+    }
+    const { error } = await db.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: AUTH_REDIRECT_URL }
+    });
+    if (error) alert('Googleログインに失敗しました: ' + error.message);
+  }
+
+  async function initGoogleAuth() {
+    if (!db?.auth) return;
+    const { data, error } = await db.auth.getSession();
+    if (!error) googleAuthUser = data?.session?.user || null;
+    renderGoogleAuthButton();
+    db.auth.onAuthStateChange((_event, session) => {
+      googleAuthUser = session?.user || null;
+      renderGoogleAuthButton();
+    });
+  }
 
   // デバイスID（本人確認用・自動生成）
   function getDeviceId() {
@@ -2415,6 +2466,7 @@
   window.addEventListener('resize', updateScrollBtn);
 
   // 初期化
+  initGoogleAuth();
   updateNicknameBadge();
   checkAdmin();
   setupTrendTabs();

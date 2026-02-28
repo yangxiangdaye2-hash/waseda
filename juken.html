@@ -23,6 +23,12 @@
   .logo { display: flex; align-items: center; gap: 8px; text-decoration: none; flex-shrink: 0; }
   .logo-jp { font-size: 1.2rem; font-weight: 900; color: #fff; white-space: nowrap; }
   .logo-badge { font-size: .68rem; background: var(--gold); color: #1a1000; padding: 3px 9px; border-radius: 20px; font-weight: 700; white-space: nowrap; }
+  .header-actions { display: flex; align-items: center; gap: .55rem; min-width: 0; }
+  .btn-google-auth { background: #fff; color: #333; border: 1.5px solid #dadce0; border-radius: 18px; padding: 6px 12px; font-size: .76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: all .2s; white-space: nowrap; }
+  .btn-google-auth:hover { border-color: #c4c7cc; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+  .btn-google-auth.logged-in { background: #f8f9fa; }
+  .google-g { width: 18px; height: 18px; border-radius: 50%; background: conic-gradient(#4285f4 0 25%, #34a853 25% 50%, #fbbc05 50% 75%, #ea4335 75% 100%); color: #fff; font-size: 11px; line-height: 18px; text-align: center; font-weight: 900; display: inline-block; }
+  .google-user-name { max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .header-back { color: rgba(255,255,255,.75); font-size: .82rem; text-decoration: none; display: flex; align-items: center; gap: 4px; white-space: nowrap; transition: color .2s; flex-shrink: 0; }
   .header-back:hover { color: #fff; }
 
@@ -260,7 +266,10 @@
       <span class="logo-jp">ワセダノート</span>
       <span class="logo-badge">受験生サポート</span>
     </a>
-    <a href="https://waseda-ten.vercel.app/" class="header-back">← 在学生掲示板へ</a>
+    <div class="header-actions">
+      <button class="btn-google-auth" id="googleAuthBtn" onclick="handleGoogleAuthClick()">Googleでログイン</button>
+      <a href="https://waseda-ten.vercel.app/" class="header-back">← 在学生掲示板へ</a>
+    </div>
   </div>
 </header>
 
@@ -542,11 +551,13 @@
 // ── Supabase ──
 const SUPABASE_URL = 'https://hazntivymzywhowtdtcc.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_Mr1wt5ZOoLtmYqPEoIKeUw_cM4ZPSbN';
+const AUTH_REDIRECT_URL = 'https://waseda-ten.vercel.app';
 let db;
 try {
   if (typeof createClient === 'function') db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   else if (window.supabase?.createClient) db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 } catch(e) { console.error('Supabase init:', e); }
+let googleAuthUser = null;
 
 // ── 定数 ──
 const FACULTIES = {
@@ -583,6 +594,45 @@ function getDeviceId() {
   let id = localStorage.getItem('waseda_device_id');
   if (!id) { id='dev_'+Math.random().toString(36).substr(2,9)+'_'+Date.now().toString(36); localStorage.setItem('waseda_device_id',id); }
   return id;
+}
+function getGoogleDisplayName(user) {
+  return user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'ログイン中ユーザー';
+}
+function renderGoogleAuthButton() {
+  const btn = document.getElementById('googleAuthBtn');
+  if (!btn) return;
+  if (googleAuthUser) {
+    btn.classList.add('logged-in');
+    btn.innerHTML = `<span class="google-g">G</span><span class="google-user-name">${escHtml(getGoogleDisplayName(googleAuthUser))}</span>`;
+    btn.title = 'クリックでログアウト';
+  } else {
+    btn.classList.remove('logged-in');
+    btn.textContent = 'Googleでログイン';
+    btn.title = '';
+  }
+}
+async function handleGoogleAuthClick() {
+  if (!db?.auth) { alert('ログイン機能を初期化できませんでした'); return; }
+  if (googleAuthUser) {
+    const { error } = await db.auth.signOut();
+    if (error) alert('ログアウトに失敗しました: ' + error.message);
+    return;
+  }
+  const { error } = await db.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: AUTH_REDIRECT_URL }
+  });
+  if (error) alert('Googleログインに失敗しました: ' + error.message);
+}
+async function initGoogleAuth() {
+  if (!db?.auth) return;
+  const { data, error } = await db.auth.getSession();
+  if (!error) googleAuthUser = data?.session?.user || null;
+  renderGoogleAuthButton();
+  db.auth.onAuthStateChange((_event, session) => {
+    googleAuthUser = session?.user || null;
+    renderGoogleAuthButton();
+  });
 }
 function getMyQuestionIds() {
   try { return new Set(JSON.parse(localStorage.getItem('waseda_my_question_ids') || '[]')); }
@@ -1033,6 +1083,7 @@ document.getElementById('tkModal').addEventListener('click', e => { if(e.target=
 
 // ── 初期ロード ──
 document.addEventListener('DOMContentLoaded', () => {
+  initGoogleAuth();
   loaded.add('faculties-tab');
   renderFacultyGrid();
   loadFacultyComments();
