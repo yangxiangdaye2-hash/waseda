@@ -129,9 +129,10 @@
   .faculty-chip:hover { border-color: var(--crimson); color: var(--crimson); background: var(--crimson-pale); }
   .faculty-chip.active { background: var(--crimson); color: white; border-color: var(--crimson); font-weight: 700; box-shadow: 0 2px 8px rgba(139, 0, 0, 0.2); }
 
-  .tabs { background: var(--white); border-bottom: 2px solid #f0ede0; position: sticky; top: 60px; z-index: 90; box-shadow: 0 2px 12px rgba(0,0,0,0.08); overflow: hidden; }
-  /* 右端フェード — スクロール可能であることを示す */
-  .tabs::after { content: ''; position: absolute; right: 0; top: 0; bottom: 2px; width: 56px; background: linear-gradient(to left, var(--white) 30%, transparent); pointer-events: none; z-index: 1; }
+  .tabs { background: var(--white); border-bottom: 2px solid #f0ede0; position: sticky; top: 60px; z-index: 90; box-shadow: 0 2px 12px rgba(0,0,0,0.08); display: flex; align-items: center; }
+  .tabs-scroll-btn { flex-shrink: 0; width: 32px; height: 32px; margin-right: 0.5rem; border: 1.5px solid var(--border); border-radius: 50%; background: var(--white); color: var(--gray); font-size: 1rem; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .tabs-scroll-btn:hover { border-color: var(--crimson); color: var(--crimson); }
+  .tabs-scroll-btn.hidden { opacity: 0; pointer-events: none; }
   .tabs-inner { padding: 0.6rem 1rem; display: flex; flex-wrap: nowrap; justify-content: flex-start; gap: 0.6rem; max-width: 1000px; margin: 0 auto; overflow-x: auto; scroll-behavior: smooth; }
   .tabs-inner::-webkit-scrollbar { height: 3px; }
   .tabs-inner::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); }
@@ -565,7 +566,7 @@
   </div>
 
   <div class="tabs">
-    <div class="tabs-inner">
+    <div class="tabs-inner" id="tabsInner">
       <div class="tab active" onclick="switchTab('all',this)" data-label="all">📋 すべて</div>
       <div class="tab" onclick="switchTab('lecture',this)" data-label="lecture">📚 授業</div>
       <div class="tab" onclick="switchTab('circle',this)" data-label="circle">🎯 サークル</div>
@@ -573,6 +574,7 @@
       <div class="tab" onclick="switchTab('qa',this)" data-label="qa">❓ Q&amp;A</div>
       <div class="tab" onclick="switchTab('juken',this)" data-label="juken">🎓 受験生サポート</div>
     </div>
+    <button class="tabs-scroll-btn" id="tabsScrollBtn" onclick="scrollTabsRight()" aria-label="もっと見る">›</button>
   </div>
 
   <div class="main">
@@ -2311,12 +2313,27 @@
     finally { btn.disabled = false; btn.textContent = 'コメントを投稿する'; }
   }
 
+  // タブスクロールボタン
+  function scrollTabsRight() {
+    document.getElementById('tabsInner').scrollBy({ left: 140, behavior: 'smooth' });
+  }
+  function updateScrollBtn() {
+    const inner = document.getElementById('tabsInner');
+    const btn = document.getElementById('tabsScrollBtn');
+    if (!inner || !btn) return;
+    const atEnd = inner.scrollLeft + inner.clientWidth >= inner.scrollWidth - 4;
+    btn.classList.toggle('hidden', atEnd);
+  }
+  document.getElementById('tabsInner').addEventListener('scroll', updateScrollBtn);
+  window.addEventListener('resize', updateScrollBtn);
+
   // 初期化
   updateNicknameBadge();
   checkAdmin();
   setupTrendTabs();
   loadPosts();
   refreshAnnouncements();
+  updateScrollBtn();
   </script>
   </body>
   </html>
