@@ -130,9 +130,9 @@
   .faculty-chip.active { background: var(--crimson); color: white; border-color: var(--crimson); font-weight: 700; box-shadow: 0 2px 8px rgba(139, 0, 0, 0.2); }
 
   .tabs { background: var(--white); border-bottom: 2px solid #f0ede0; position: sticky; top: 60px; z-index: 90; box-shadow: 0 2px 12px rgba(0,0,0,0.08); display: flex; align-items: center; }
-  .tabs-scroll-btn { flex-shrink: 0; width: 32px; height: 32px; margin-right: 0.5rem; border: 1.5px solid var(--border); border-radius: 50%; background: var(--white); color: var(--gray); font-size: 1rem; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
-  .tabs-scroll-btn:hover { border-color: var(--crimson); color: var(--crimson); }
-  .tabs-scroll-btn.hidden { opacity: 0; pointer-events: none; }
+  .tabs-scroll-btn { flex-shrink: 0; width: 28px; height: 28px; margin-right: 0.75rem; border: 1.5px solid var(--gray-lighter); border-radius: 50%; background: var(--white); color: var(--gray-light); font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: color 0.2s, border-color 0.2s, box-shadow 0.2s, opacity 0.2s, transform 0.2s; box-shadow: 0 1px 4px rgba(0,0,0,0.08); user-select: none; }
+  .tabs-scroll-btn:hover { border-color: var(--crimson); color: var(--crimson); box-shadow: 0 2px 8px rgba(139,0,0,0.15); }
+  .tabs-scroll-btn.hidden { opacity: 0; pointer-events: none; transform: scale(0.7); }
   .tabs-inner { padding: 0.6rem 1rem; display: flex; flex-wrap: nowrap; justify-content: flex-start; gap: 0.6rem; max-width: 1000px; margin: 0 auto; overflow-x: auto; scroll-behavior: smooth; }
   .tabs-inner::-webkit-scrollbar { height: 3px; }
   .tabs-inner::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); }

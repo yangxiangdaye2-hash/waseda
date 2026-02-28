@@ -40,7 +40,10 @@
   .btn-hero-outline:hover { background: rgba(255,255,255,.12); border-color: #fff; }
 
   /* TABS */
-  .tabs { background: #fff; border-bottom: 2px solid #f0ede0; position: sticky; top: 58px; z-index: 90; box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+  .tabs { background: #fff; border-bottom: 2px solid #f0ede0; position: sticky; top: 58px; z-index: 90; box-shadow: 0 2px 12px rgba(0,0,0,.08); display: flex; align-items: center; }
+  .tabs-scroll-btn { flex-shrink: 0; width: 28px; height: 28px; margin-right: 0.75rem; border: 1.5px solid var(--gray-lighter); border-radius: 50%; background: #fff; color: var(--gray-light); font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: color 0.2s, border-color 0.2s, box-shadow 0.2s, opacity 0.2s, transform 0.2s; box-shadow: 0 1px 4px rgba(0,0,0,0.08); user-select: none; }
+  .tabs-scroll-btn:hover { border-color: var(--crimson); color: var(--crimson); box-shadow: 0 2px 8px rgba(139,0,0,0.15); }
+  .tabs-scroll-btn.hidden { opacity: 0; pointer-events: none; transform: scale(0.7); }
   .tabs-inner { padding: .6rem 1rem; display: flex; flex-wrap: nowrap; gap: .6rem; max-width: 1100px; margin: 0 auto; overflow-x: auto; scroll-behavior: smooth; }
   .tabs-inner::-webkit-scrollbar { height: 3px; }
   .tabs-inner::-webkit-scrollbar-track { background: rgba(0,0,0,.05); }
@@ -260,13 +263,14 @@
 
 <!-- TABS -->
 <div class="tabs">
-  <div class="tabs-inner">
+  <div class="tabs-inner" id="tabsInner">
     <span class="tab active" data-tab="faculties-tab" onclick="switchTab('faculties-tab')">🏫 学部紹介</span>
     <span class="tab" data-tab="qa-tab"        onclick="switchTab('qa-tab')">❓ 勉強アドバイス</span>
     <span class="tab" data-tab="board-tab"     onclick="switchTab('board-tab')">💬 受験生掲示板</span>
     <span class="tab" data-tab="taikenki-tab"  onclick="switchTab('taikenki-tab')">🏆 合格体験記</span>
     <span class="tab" data-tab="after-tab"     onclick="switchTab('after-tab')">🎓 合格後の準備</span>
   </div>
+  <button class="tabs-scroll-btn" id="tabsScrollBtn" onclick="scrollTabsRight()" aria-label="もっと見る">›</button>
 </div>
 
 <!-- ═══ PANEL: 学部紹介 ═══ -->
@@ -527,6 +531,17 @@ function switchTab(tab) {
   document.querySelector('.tabs').scrollIntoView({behavior:'smooth', block:'nearest'});
   // 遅延ロード
   if (!loaded.has(tab)) { loaded.add(tab); loadTab(tab); }
+}
+
+function scrollTabsRight() {
+  document.getElementById('tabsInner').scrollBy({ left: 140, behavior: 'smooth' });
+}
+function updateScrollBtn() {
+  const inner = document.getElementById('tabsInner');
+  const btn   = document.getElementById('tabsScrollBtn');
+  if (!inner || !btn) return;
+  const atEnd = inner.scrollLeft + inner.clientWidth >= inner.scrollWidth - 4;
+  btn.classList.toggle('hidden', atEnd);
 }
 
 function loadTab(tab) {
@@ -878,6 +893,9 @@ document.addEventListener('DOMContentLoaded', () => {
   loaded.add('faculties-tab');
   renderFacultyGrid();
   loadFacultyComments();
+  document.getElementById('tabsInner').addEventListener('scroll', updateScrollBtn);
+  window.addEventListener('resize', updateScrollBtn);
+  updateScrollBtn();
 });
 </script>
 </body>
