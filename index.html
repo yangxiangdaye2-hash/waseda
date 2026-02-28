@@ -1201,9 +1201,24 @@
   // Supabase初期化（CDNのエクスポートの違いに対応する）
   const SUPABASE_URL = 'https://hazntivymzywhowtdtcc.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_Mr1wt5ZOoLtmYqPEoIKeUw_cM4ZPSbN';
+  const AUTH_STORAGE_KEY = 'waseda_auth_token_v1';
+  const LEGACY_AUTH_STORAGE_KEY = 'sb-hazntivymzywhowtdtcc-auth-token';
   let db;
   try {
-    const supabaseOptions = { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } };
+    try {
+      const current = localStorage.getItem(AUTH_STORAGE_KEY);
+      const legacy = localStorage.getItem(LEGACY_AUTH_STORAGE_KEY);
+      if (!current && legacy) localStorage.setItem(AUTH_STORAGE_KEY, legacy);
+    } catch {}
+    const supabaseOptions = {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        flowType: 'pkce',
+        storageKey: AUTH_STORAGE_KEY
+      }
+    };
     if (typeof createClient === 'function') {
       db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, supabaseOptions);
     } else if (window.supabase && typeof window.supabase.createClient === 'function') {
@@ -1285,10 +1300,7 @@
 
   function saveAuthSessionBackup(session) {
     try {
-      if (!session?.access_token || !session?.refresh_token) {
-        localStorage.removeItem(AUTH_SESSION_BACKUP_KEY);
-        return;
-      }
+      if (!session?.access_token || !session?.refresh_token) return;
       localStorage.setItem(AUTH_SESSION_BACKUP_KEY, JSON.stringify({
         access_token: session.access_token,
         refresh_token: session.refresh_token,
@@ -1296,6 +1308,10 @@
         saved_at: Date.now()
       }));
     } catch {}
+  }
+
+  function clearAuthSessionBackup() {
+    try { localStorage.removeItem(AUTH_SESSION_BACKUP_KEY); } catch {}
   }
 
   function readAuthSessionBackup() {
@@ -1456,7 +1472,7 @@
     if (!db?.auth) { alert('ログイン機能を初期化できませんでした'); return; }
     if (googleAuthUser) {
       const { error } = await db.auth.signOut();
-      localStorage.removeItem(AUTH_SESSION_BACKUP_KEY);
+      clearAuthSessionBackup();
       if (error) alert('ログアウトに失敗しました: ' + error.message);
       return;
     }
@@ -1485,9 +1501,10 @@
       fillPostNickname();
       onPostAuthModeChange();
     }
-    db.auth.onAuthStateChange((_event, session) => {
+    db.auth.onAuthStateChange((event, session) => {
       googleAuthUser = session?.user || null;
-      saveAuthSessionBackup(session || null);
+      if (event === 'SIGNED_OUT') clearAuthSessionBackup();
+      else if (session?.access_token && session?.refresh_token) saveAuthSessionBackup(session);
       syncNicknameFromGoogle();
       renderGoogleAuthButton();
       schedulePostDraftRestoreChecks();
