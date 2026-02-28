@@ -1229,7 +1229,7 @@
   let searchQuery = '';
   let currentUser = localStorage.getItem('waseda_nickname') || 'ゲスト';
   let googleAuthUser = null;
-  const AUTH_REDIRECT_URL = 'https://waseda-ten.vercel.app';
+  const AUTH_REDIRECT_URL = 'https://waseda-ten.vercel.app/index.html';
   const POST_AUTH_RETURN_KEY = 'waseda_post_auth_return';
   const POST_AUTH_DRAFT_KEY = 'waseda_post_auth_draft';
 
@@ -1238,7 +1238,13 @@
   }
 
   function getAuthRedirectUrl() {
-    if (location.origin && location.origin !== 'null') return `${location.origin}${location.pathname}`;
+    try {
+      const url = new URL(window.location.href);
+      const isHttp = url.protocol === 'http:' || url.protocol === 'https:';
+      if (isHttp) return `${url.origin}${url.pathname}`;
+    } catch (e) {
+      console.warn('redirect URL parse failed:', e);
+    }
     return AUTH_REDIRECT_URL;
   }
 
@@ -1350,7 +1356,7 @@
       options: { redirectTo }
     });
     if (error) {
-      alert('Googleログインに失敗しました: ' + error.message + '\n\n確認事項:\n1) SupabaseでGoogleプロバイダ有効化\n2) Redirect URLに ' + redirectTo + ' を登録\n3) ネット接続とブラウザ拡張のブロック確認');
+      alert('Googleログインに失敗しました: ' + error.message + '\n\n確認事項:\n1) SupabaseでGoogleプロバイダ有効化\n2) Redirect URLに ' + redirectTo + ' を登録\n3) ネット接続とブラウザ拡張のブロック確認\n4) VS Codeプレビューではなく通常ブラウザで開いて実行');
     }
   }
 
