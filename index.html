@@ -291,6 +291,13 @@
     .modal-close:hover { background: rgba(255,255,255,0.35); }
     .modal-body { padding: 2rem; }
     .form-group { margin-bottom: 1.4rem; }
+    .post-auth-box { border: 1.5px solid var(--border); border-radius: 10px; padding: 0.9rem; margin-bottom: 1.1rem; background: #fcfbfb; }
+    .post-auth-options { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.45rem; }
+    .post-auth-option { display: inline-flex; align-items: center; gap: 6px; font-size: 0.84rem; color: var(--dark); }
+    .post-auth-note { font-size: 0.76rem; color: var(--gray); margin-top: 0.5rem; line-height: 1.6; }
+    .post-auth-actions { margin-top: 0.5rem; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .btn-login-inline { background: #fff; border: 1.5px solid #dadce0; border-radius: 16px; padding: 5px 11px; font-size: 0.75rem; font-weight: 700; cursor: pointer; }
+    .btn-login-inline:hover { border-color: #c4c7cc; }
     .form-label { display: block; font-size: 0.85rem; font-weight: 700; color: var(--dark); margin-bottom: 0.55rem; letter-spacing: 0.02em; }
     .form-input, .form-select, .form-textarea { width: 100%; border: 1.5px solid var(--border); border-radius: 10px; padding: 11px 14px; font-size: 0.95rem; font-family: 'Noto Sans JP', sans-serif; color: var(--dark); outline: none; background: white; transition: all 0.2s; }
     .form-input:hover, .form-select:hover, .form-textarea:hover { border-color: var(--gray-lighter); }
@@ -785,6 +792,24 @@
         <button class="modal-close" onclick="closePostModal()">×</button>
       </div>
       <div class="modal-body">
+        <div class="post-auth-box">
+          <label class="form-label" style="margin-bottom:0;">投稿方法 <span style="color:#e74c3c;">*</span></label>
+          <div class="post-auth-options">
+            <label class="post-auth-option"><input type="radio" name="postAuthMode" value="login" onchange="onPostAuthModeChange()"> ログインして投稿（追跡・削除・マイページ対応）</label>
+            <label class="post-auth-option"><input type="radio" name="postAuthMode" value="guest" onchange="onPostAuthModeChange()"> ログインせず投稿（追跡不可）</label>
+          </div>
+          <div class="post-auth-actions" id="postAuthActions" style="display:none;">
+            <button type="button" class="btn-login-inline" onclick="handleGoogleAuthClick()">Googleでログイン</button>
+            <span style="font-size:0.74rem;color:var(--gray);">ログイン後、投稿を追跡できます</span>
+          </div>
+          <div class="post-auth-note" id="postAuthNote"></div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">ニックネーム <span style="color:#e74c3c;">*</span></label>
+          <input class="form-input" type="text" id="postNickname" placeholder="例：waseda_taro" maxlength="20">
+        </div>
+
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">カテゴリ</label>
@@ -1245,11 +1270,19 @@
     if (!error) googleAuthUser = data?.session?.user || null;
     syncNicknameFromGoogle();
     renderGoogleAuthButton();
+    if (document.getElementById('postModal')?.classList.contains('open')) {
+      fillPostNickname();
+      onPostAuthModeChange();
+    }
     db.auth.onAuthStateChange((_event, session) => {
       googleAuthUser = session?.user || null;
       syncNicknameFromGoogle();
       renderGoogleAuthButton();
       if (document.getElementById('myPageModal')?.classList.contains('open')) loadMyPagePosts();
+      if (document.getElementById('postModal')?.classList.contains('open')) {
+        fillPostNickname();
+        onPostAuthModeChange();
+      }
     });
   }
 
@@ -1264,7 +1297,7 @@
   }
 
   function getOwnerKey() {
-    return googleAuthUser?.id ? `auth:${googleAuthUser.id}` : getDeviceId();
+    return googleAuthUser?.id ? `auth:${googleAuthUser.id}` : null;
   }
 
   function isOwnerKeyColumnError(error) {
@@ -1273,15 +1306,14 @@
   }
 
   function createOwnerPayload(base) {
-    return { ...base, device_id: getDeviceId(), owner_key: getOwnerKey() };
+    const ownerKey = getOwnerKey();
+    return { ...base, device_id: getDeviceId(), owner_key: ownerKey };
   }
 
   function isMyContent(item, myIds) {
-    if (!item) return false;
-    if (item.owner_key && item.owner_key === getOwnerKey()) return true;
-    if (item.device_id && item.device_id === getDeviceId()) return true;
-    if (myIds && myIds.has(String(item.id))) return true;
-    return !!(item.author && item.author === currentUser);
+    if (!item || !googleAuthUser?.id) return false;
+    const ownerKey = getOwnerKey();
+    return !!(ownerKey && item.owner_key && item.owner_key === ownerKey);
   }
 
   function syncNicknameFromGoogle() {
@@ -1358,30 +1390,17 @@
       listEl.innerHTML = '';
       return;
     }
+    if (!googleAuthUser?.id) {
+      summaryEl.textContent = 'マイページはログインユーザー向け機能です';
+      listEl.innerHTML = '<div style="text-align:center;color:var(--gray);padding:1.2rem 0;">投稿追跡・削除・一覧表示を使うにはGoogleログインして投稿してください。</div>';
+      return;
+    }
     try {
       summaryEl.textContent = '読み込み中...';
-      const merged = new Map();
-      const addRows = (rows) => (rows || []).forEach(row => merged.set(String(row.id), row));
-
-      const { data: byDevice, error: byDeviceErr } = await db.from('posts').select('*').eq('device_id', getDeviceId()).order('created_at', { ascending: false }).limit(60);
-      if (byDeviceErr) throw byDeviceErr;
-      addRows(byDevice);
-
-      if (googleAuthUser?.id) {
-        const { data: byOwner, error: byOwnerErr } = await db.from('posts').select('*').eq('owner_key', getOwnerKey()).order('created_at', { ascending: false }).limit(60);
-        if (byOwnerErr && !isOwnerKeyColumnError(byOwnerErr)) throw byOwnerErr;
-        if (!byOwnerErr) addRows(byOwner);
-      }
-
-      if (currentUser && currentUser !== 'ゲスト') {
-        const { data: byAuthor, error: byAuthorErr } = await db.from('posts').select('*').eq('author', currentUser).order('created_at', { ascending: false }).limit(60);
-        if (byAuthorErr) throw byAuthorErr;
-        addRows(byAuthor);
-      }
-
-      const rows = [...merged.values()].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-      const mode = googleAuthUser ? 'Google連携追跡' : '端末ベース追跡';
-      summaryEl.textContent = `${mode} | ニックネーム: @${currentUser} | 投稿数: ${rows.length}`;
+      const { data: byOwner, error: byOwnerErr } = await db.from('posts').select('*').eq('owner_key', getOwnerKey()).order('created_at', { ascending: false }).limit(80);
+      if (byOwnerErr && !isOwnerKeyColumnError(byOwnerErr)) throw byOwnerErr;
+      const rows = (byOwner || []).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      summaryEl.textContent = `Google連携追跡 | ニックネーム: @${currentUser} | 投稿数: ${rows.length}`;
 
       if (!rows.length) {
         listEl.innerHTML = '<div style="text-align:center;color:var(--gray);padding:1.2rem 0;">まだあなたの投稿がありません</div>';
@@ -2106,7 +2125,49 @@
     document.getElementById('postModal').classList.add('open'); 
     resetPostForm();
   }
+
+  function getPostAuthMode() {
+    const checked = document.querySelector('input[name="postAuthMode"]:checked');
+    if (checked?.value) return checked.value;
+    return googleAuthUser ? 'login' : 'guest';
+  }
+
+  function onPostAuthModeChange() {
+    const mode = getPostAuthMode();
+    const actions = document.getElementById('postAuthActions');
+    const note = document.getElementById('postAuthNote');
+    if (!actions || !note) return;
+    if (mode === 'login') {
+      actions.style.display = googleAuthUser ? 'none' : 'flex';
+      note.textContent = googleAuthUser
+        ? 'ログイン投稿: あなたの投稿は追跡・削除でき、マイページに表示されます。'
+        : 'ログイン投稿を選択中です。投稿前にGoogleログインしてください。';
+    } else {
+      actions.style.display = 'none';
+      note.textContent = 'ゲスト投稿: ニックネーム投稿はできますが、追跡・削除・マイページ表示はできません。';
+    }
+  }
+
+  function fillPostNickname() {
+    const input = document.getElementById('postNickname');
+    if (!input) return;
+    const base = currentUser === 'ゲスト' && googleAuthUser ? getGoogleDisplayName(googleAuthUser).slice(0, 20) : currentUser;
+    input.value = base && base !== 'ゲスト' ? base : '';
+  }
+
   function resetPostForm() {
+    const loginRadio = document.querySelector('input[name="postAuthMode"][value="login"]');
+    const guestRadio = document.querySelector('input[name="postAuthMode"][value="guest"]');
+    if (googleAuthUser) {
+      if (loginRadio) loginRadio.checked = true;
+      if (guestRadio) guestRadio.checked = false;
+    } else {
+      if (loginRadio) loginRadio.checked = false;
+      if (guestRadio) guestRadio.checked = true;
+    }
+    fillPostNickname();
+    onPostAuthModeChange();
+
     document.getElementById('postCategory').value = 'lecture';
     document.getElementById('lectureName').value = '';
     document.getElementById('lectureBody').value = '';
@@ -2176,6 +2237,21 @@
 
   // 投稿送信
   async function submitPost() {
+    const authMode = getPostAuthMode();
+    const nickname = (document.getElementById('postNickname')?.value || '').trim();
+    if (!nickname) {
+      alert('ニックネームを入力してください');
+      return;
+    }
+    if (authMode === 'login' && !googleAuthUser) {
+      alert('ログイン投稿を選択したため、先にGoogleログインしてください。');
+      return;
+    }
+
+    currentUser = nickname;
+    localStorage.setItem('waseda_nickname', nickname);
+    updateNicknameBadge();
+
     const category = document.getElementById('postCategory').value;
     let title, body, faculty, extraData = {};
     
@@ -2281,7 +2357,7 @@
     const newPost = {
       category,
       faculty,
-      author: currentUser,
+      author: nickname,
       title,
       body,
       likes: 0,
@@ -2289,7 +2365,9 @@
       ...extraData
     };
 
-    let payload = createOwnerPayload(newPost);
+    let payload = authMode === 'login'
+      ? createOwnerPayload(newPost)
+      : { ...newPost, device_id: getDeviceId(), owner_key: null };
     let { error } = await db.from('posts').insert([payload]);
     if (error && isOwnerKeyColumnError(error)) {
       delete payload.owner_key;
