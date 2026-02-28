@@ -1051,14 +1051,18 @@ async function handleGoogleAuthClick(source = 'header') {
 }
 async function initGoogleAuth() {
   if (!db?.auth) return;
-  
+
   db.auth.onAuthStateChange((_event, session) => {
     googleAuthUser = session?.user || null;
     renderGoogleAuthButton();
   });
 
-  const { data, error } = await db.auth.getSession();
-  if (!error && data?.session?.user) {
+  if (location.hash.includes('access_token')) {
+    history.replaceState(null, '', location.pathname);
+  }
+
+  const { data } = await db.auth.getSession();
+  if (data?.session?.user) {
     googleAuthUser = data.session.user;
     renderGoogleAuthButton();
   }
