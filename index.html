@@ -499,7 +499,8 @@
   .juken-qa-grid { display: flex; flex-direction: column; gap: 0.7rem; }
   .juken-qa-card { background: var(--white); border: 1.5px solid var(--border); border-radius: 10px; padding: 1rem 1.1rem; cursor: pointer; transition: border-color 0.2s; }
   .juken-qa-card:hover { border-color: var(--crimson); }
-  .juken-qa-card.my-question { border-color: var(--gold-dark); box-shadow: 0 2px 10px rgba(200,169,81,0.18); }
+  .juken-qa-card.my-question { border-color: var(--gold-dark); box-shadow: 0 2px 10px rgba(200,169,81,0.18); background: #fffdf5; }
+  .juken-qa-section-title { font-size: 0.78rem; font-weight: 800; color: var(--gray); margin: 0.2rem 0 0.45rem; letter-spacing: 0.02em; }
   .juken-qa-card-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 0.4rem; }
   .juken-qa-faculty { font-size: 0.68rem; background: var(--crimson-pale); color: var(--crimson); padding: 2px 8px; border-radius: 4px; font-weight: 600; }
   .juken-qa-my-badge { font-size: 0.68rem; background: #fff8e1; color: #8a5d00; padding: 2px 8px; border-radius: 4px; font-weight: 700; }
@@ -2309,7 +2310,14 @@
         if (mineA !== mineB) return mineB - mineA;
         return new Date(b.created_at || 0) - new Date(a.created_at || 0);
       });
-      el.innerHTML = sorted.map(p => {
+      const mine = [];
+      const others = [];
+      sorted.forEach(p => {
+        const isMine = (p.device_id === getDeviceId() || myIds.has(String(p.id)) || (p.author && p.author === currentUser));
+        if (isMine) mine.push(p); else others.push(p);
+      });
+
+      const renderCard = (p) => {
         const isMine = (p.device_id === getDeviceId() || myIds.has(String(p.id)) || (p.author && p.author === currentUser));
         const myTag = isMine ? '<span class="juken-qa-my-badge">🧷 あなたの質問</span>' : '';
         const fTag = p.faculty ? `<span class="juken-qa-faculty">${escHtml(FACULTIES[p.faculty]||p.faculty)}</span>` : '';
@@ -2320,7 +2328,16 @@
           <div class="juken-qa-body">${escHtml(p.body)}</div>
           <div class="juken-qa-footer"><span>💬 回答 ${ans}件</span><span>❤️ ${p.likes||0}</span></div>
         </div>`;
-      }).join('');
+      };
+
+      const mineSection = mine.length
+        ? `<div class="juken-qa-section-title">🧷 あなたの質問（${mine.length}）</div>${mine.map(p => renderCard(p)).join('')}`
+        : '';
+      const othersSection = others.length
+        ? `<div class="juken-qa-section-title">📚 みんなの質問</div>${others.map(p => renderCard(p)).join('')}`
+        : '';
+
+      el.innerHTML = `${mineSection}${othersSection}`;
     } catch(e) { console.error(e); el.innerHTML = '<div class="loading">読み込みエラー</div>'; }
   }
 

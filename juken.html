@@ -92,7 +92,8 @@
   .qa-grid { display: flex; flex-direction: column; gap: .7rem; }
   .qa-card { border: 1.5px solid var(--border); border-radius: 10px; background: #fff; padding: 1rem 1.1rem; cursor: pointer; transition: border-color .2s; }
   .qa-card:hover { border-color: var(--crimson); }
-  .qa-card.my-question { border-color: var(--gold-dark); box-shadow: 0 2px 10px rgba(200,169,81,.18); }
+  .qa-card.my-question { border-color: var(--gold-dark); box-shadow: 0 2px 10px rgba(200,169,81,.18); background: #fffdf5; }
+  .qa-list-section-title { font-size: .78rem; font-weight: 800; color: var(--gray); margin: .2rem 0 .45rem; letter-spacing: .02em; }
   .qa-card-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: .35rem; }
   .qa-faculty-tag { font-size: .68rem; background: var(--crimson-pale); color: var(--crimson); padding: 2px 8px; border-radius: 4px; font-weight: 600; }
   .qa-open-badge { font-size: .68rem; background: #e8f5e9; color: #2e7d32; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
@@ -754,7 +755,14 @@ function renderQaList(kind='study') {
     if (mineA !== mineB) return mineB - mineA;
     return new Date(b.created_at || 0) - new Date(a.created_at || 0);
   });
-  el.innerHTML = sortedPosts.map(p => {
+  const mine = [];
+  const others = [];
+  sortedPosts.forEach(p => {
+    const isMine = (p.device_id === getDeviceId() || myIds.has(String(p.id)) || (currentNick && p.author === currentNick));
+    if (isMine) mine.push(p); else others.push(p);
+  });
+
+  const renderCard = (p) => {
     const isMine = (p.device_id === getDeviceId() || myIds.has(String(p.id)) || (currentNick && p.author === currentNick));
     const myTag = isMine ? '<span class="qa-my-badge">🧷 あなたの質問</span>' : '';
     const fTag = p.faculty ? `<span class="qa-faculty-tag">${escHtml(FACULTIES[p.faculty]||p.faculty)}</span>` : '';
@@ -764,7 +772,16 @@ function renderQaList(kind='study') {
       <div class="qa-card-body">${escHtml(p.body)}</div>
       <div class="qa-card-footer"><span>💬 回答 ${p.comments||0}件</span><span>❤️ ${p.likes||0}</span></div>
     </div>`;
-  }).join('');
+  };
+
+  const mineSection = mine.length
+    ? `<div class="qa-list-section-title">🧷 あなたの質問（${mine.length}）</div>${mine.map(p => renderCard(p)).join('')}`
+    : '';
+  const othersSection = others.length
+    ? `<div class="qa-list-section-title">📚 みんなの質問</div>${others.map(p => renderCard(p)).join('')}`
+    : '';
+
+  el.innerHTML = `${mineSection}${othersSection}`;
 }
 
 function filterQa(kind, fac, el) {
