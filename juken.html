@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>早稲田大学 受験生サポート - ワセダノート</title>
+<meta name="description" content="早稲田大学を目指す受験生のための情報サイト。在学生の合格体験記、学部紹介、勉強アドバイス、受験生同士の掲示板が揃っています。">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --crimson: #8B0000; --crimson-light: #A50000; --crimson-dark: #700000; --crimson-pale: #f9f0f0;
+    --gold: #C8A951; --gold-light: #e8c96a; --gold-dark: #b8941f;
+    --dark: #1a1a1a; --gray: #6b6b6b; --gray-light: #9a9a9a; --gray-lighter: #d5d5d5;
+    --white: #ffffff; --border: #e8e0e0; --bg: #faf8f8; --bg-light: #ffffff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--dark); min-height: 100vh; line-height: 1.6; }
+
+  /* ─── HEADER ─── */
+  header {
+    background: linear-gradient(135deg, var(--crimson) 0%, var(--crimson-dark) 100%);
+    padding: 0 1.2rem; position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 3px 16px rgba(139,0,0,0.3);
+  }
+  .header-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 58px; gap: 1rem; }
+  .logo { display: flex; align-items: center; gap: 8px; text-decoration: none; flex-shrink: 0; }
+  .logo-jp { font-size: 1.2rem; font-weight: 900; color: var(--white); white-space: nowrap; }
+  .logo-badge { font-size: 0.68rem; background: var(--gold); color: #1a1000; padding: 3px 9px; border-radius: 20px; font-weight: 700; white-space: nowrap; }
+  .header-back { color: rgba(255,255,255,0.75); font-size: 0.82rem; text-decoration: none; display: flex; align-items: center; gap: 4px; white-space: nowrap; transition: color 0.2s; flex-shrink: 0; }
+  .header-back:hover { color: var(--white); }
+
+  /* ─── LAYOUT ─── */
+  section { padding: 64px 1.2rem; }
+  .container { max-width: 1100px; margin: 0 auto; }
+  .section-eyebrow { font-size: 0.72rem; font-weight: 700; color: var(--crimson); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.4rem; }
+  .section-title { font-size: 1.5rem; font-weight: 900; color: var(--dark); margin-bottom: 0.4rem; }
+  .section-divider { width: 36px; height: 3px; background: var(--crimson); border-radius: 2px; margin: 0.5rem 0 1rem; }
+  .section-sub { font-size: 0.88rem; color: var(--gray); margin-bottom: 2rem; line-height: 1.6; }
+
+  /* ─── HERO ─── */
+  .hero {
+    background: linear-gradient(160deg, var(--crimson-dark) 0%, var(--crimson) 60%, #a52020 100%);
+    padding: 80px 1.2rem 72px;
+  }
+  .hero-inner { max-width: 680px; margin: 0 auto; text-align: center; }
+  .hero-label {
+    display: inline-block; background: var(--gold); color: #1a1000;
+    font-size: 0.72rem; font-weight: 700; padding: 4px 14px; border-radius: 20px;
+    margin-bottom: 1.2rem; letter-spacing: 0.05em;
+  }
+  .hero-title { font-size: 1.85rem; font-weight: 900; color: var(--white); line-height: 1.45; margin-bottom: 1rem; }
+  .hero-sub { font-size: 0.95rem; color: rgba(255,255,255,0.82); line-height: 1.75; margin-bottom: 2.2rem; }
+  .hero-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn-primary {
+    background: var(--white); color: var(--crimson); padding: 13px 26px; border-radius: 8px;
+    font-weight: 700; font-size: 0.9rem; text-decoration: none; border: none; cursor: pointer;
+    transition: all 0.2s; display: inline-block; font-family: 'Noto Sans JP', sans-serif;
+  }
+  .btn-primary:hover { background: var(--gold); color: #1a1000; }
+  .btn-outline {
+    background: transparent; color: var(--white); padding: 13px 26px; border-radius: 8px;
+    font-weight: 700; font-size: 0.9rem; text-decoration: none;
+    border: 2px solid rgba(255,255,255,0.55); cursor: pointer;
+    transition: all 0.2s; display: inline-block; font-family: 'Noto Sans JP', sans-serif;
+  }
+  .btn-outline:hover { background: rgba(255,255,255,0.12); border-color: var(--white); }
+
+  /* ─── FACULTY GRID ─── */
+  .faculty-section { background: var(--bg-light); }
+  .faculty-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.9rem; }
+  .faculty-card {
+    border: 1.5px solid var(--border); border-radius: 12px; padding: 1.15rem;
+    background: var(--white); transition: all 0.2s; cursor: pointer;
+  }
+  .faculty-card:hover { border-color: var(--crimson); box-shadow: 0 4px 18px rgba(139,0,0,0.1); transform: translateY(-2px); }
+  .faculty-campus {
+    font-size: 0.68rem; background: var(--crimson-pale); color: var(--crimson);
+    padding: 2px 8px; border-radius: 4px; display: inline-block; margin-bottom: 0.55rem; font-weight: 600;
+  }
+  .faculty-name { font-size: 0.97rem; font-weight: 700; color: var(--dark); margin-bottom: 0.25rem; }
+  .faculty-eng { font-size: 0.65rem; color: var(--gray-light); font-family: 'Playfair Display', serif; margin-bottom: 0.5rem; line-height: 1.4; }
+  .faculty-desc { font-size: 0.79rem; color: var(--gray); line-height: 1.55; margin-bottom: 0.8rem; }
+  .faculty-link { font-size: 0.76rem; color: var(--crimson); font-weight: 700; display: flex; align-items: center; gap: 3px; }
+
+  /* ─── ADVICE / TAIKENKI ─── */
+  .advice-section { background: var(--bg); }
+  .taikenki-section { background: var(--bg-light); }
+  .posts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+  .advice-card {
+    border: 1.5px solid var(--border); border-radius: 12px; padding: 1.2rem;
+    background: var(--white); transition: border-color 0.2s;
+  }
+  .advice-card:hover { border-color: var(--gray-lighter); }
+  .card-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 0.65rem; }
+  .card-tag { font-size: 0.7rem; font-weight: 700; padding: 3px 9px; border-radius: 20px; display: inline-block; }
+  .tag-advice { background: #e8f4e8; color: #2d7a2d; }
+  .tag-taikenki { background: #fff3e0; color: #c65f00; }
+  .tag-faculty { background: var(--crimson-pale); color: var(--crimson); }
+  .advice-card-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.4rem; }
+  .advice-card-body {
+    font-size: 0.82rem; color: var(--gray); line-height: 1.65;
+    overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  }
+  .advice-card-meta { margin-top: 0.8rem; font-size: 0.74rem; color: var(--gray-light); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+  /* ─── EMPTY STATE ─── */
+  .empty-state {
+    text-align: center; padding: 3rem 1.5rem;
+    border: 1.5px dashed var(--border); border-radius: 12px;
+    grid-column: 1 / -1;
+  }
+  .empty-state-icon { font-size: 2.5rem; margin-bottom: 0.8rem; }
+  .empty-state-title { font-size: 1rem; font-weight: 700; color: var(--gray); margin-bottom: 0.4rem; }
+  .empty-state-text { font-size: 0.83rem; color: var(--gray-light); line-height: 1.6; }
+  .empty-state-btn {
+    margin-top: 1.2rem; display: inline-block; background: var(--crimson); color: var(--white);
+    padding: 10px 22px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; text-decoration: none;
+    transition: background 0.2s;
+  }
+  .empty-state-btn:hover { background: var(--crimson-dark); }
+
+  /* ─── BULLETIN BOARD ─── */
+  .board-section { background: var(--bg); }
+  .board-layout { display: grid; grid-template-columns: 340px 1fr; gap: 1.5rem; align-items: start; }
+
+  .post-form-box {
+    background: var(--white); border: 1.5px solid var(--border);
+    border-radius: 14px; padding: 1.4rem; position: sticky; top: 72px;
+  }
+  .post-form-title { font-size: 1rem; font-weight: 700; margin-bottom: 1.1rem; color: var(--dark); }
+  .form-group { margin-bottom: 0.85rem; }
+  .form-label { display: block; font-size: 0.79rem; font-weight: 700; color: var(--dark); margin-bottom: 0.28rem; }
+  .form-input {
+    width: 100%; border: 1.5px solid var(--border); border-radius: 8px;
+    padding: 9px 11px; font-size: 0.87rem; font-family: 'Noto Sans JP', sans-serif;
+    transition: border-color 0.2s; background: var(--bg);
+  }
+  .form-input:focus { outline: none; border-color: var(--crimson); background: var(--white); }
+  .form-select {
+    width: 100%; border: 1.5px solid var(--border); border-radius: 8px;
+    padding: 9px 11px; font-size: 0.87rem; font-family: 'Noto Sans JP', sans-serif;
+    background: var(--bg); cursor: pointer; appearance: auto;
+  }
+  .form-select:focus { outline: none; border-color: var(--crimson); }
+  .form-textarea {
+    width: 100%; border: 1.5px solid var(--border); border-radius: 8px;
+    padding: 10px 11px; font-size: 0.87rem; font-family: 'Noto Sans JP', sans-serif;
+    resize: vertical; min-height: 100px; background: var(--bg);
+  }
+  .form-textarea:focus { outline: none; border-color: var(--crimson); background: var(--white); }
+  .btn-submit {
+    width: 100%; background: var(--crimson); color: var(--white); border: none;
+    border-radius: 8px; padding: 12px; font-size: 0.9rem; font-weight: 700;
+    cursor: pointer; transition: background 0.2s; font-family: 'Noto Sans JP', sans-serif;
+  }
+  .btn-submit:hover { background: var(--crimson-light); }
+  .btn-submit:disabled { background: var(--gray-lighter); cursor: not-allowed; }
+  .form-notice { font-size: 0.7rem; color: var(--gray-light); margin-top: 0.6rem; text-align: center; line-height: 1.5; }
+
+  .board-posts { display: flex; flex-direction: column; gap: 0.75rem; }
+  .board-card {
+    background: var(--white); border: 1.5px solid var(--border);
+    border-radius: 12px; padding: 1.05rem 1.15rem; transition: border-color 0.2s;
+  }
+  .board-card:hover { border-color: var(--gray-lighter); }
+  .board-card-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 0.5rem; }
+  .board-type-tag { font-size: 0.69rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
+  .type-soudan   { background: #e3f0ff; color: #1a5cb8; }
+  .type-shinchoku{ background: #e8f5e9; color: #2e7d32; }
+  .type-shitsumon{ background: #fff8e1; color: #b77000; }
+  .type-zatsudan { background: #f3e5f5; color: #6a1b9a; }
+  .board-faculty-tag { font-size: 0.69rem; background: var(--crimson-pale); color: var(--crimson); padding: 2px 8px; border-radius: 4px; font-weight: 600; white-space: nowrap; }
+  .board-card-author { font-size: 0.74rem; color: var(--gray-light); }
+  .board-card-time { font-size: 0.7rem; color: var(--gray-lighter); margin-left: auto; white-space: nowrap; }
+  .board-card-body { font-size: 0.88rem; color: var(--dark); line-height: 1.65; }
+  .board-card-footer { margin-top: 0.65rem; display: flex; gap: 1rem; align-items: center; }
+  .board-like { font-size: 0.77rem; color: var(--gray-light); cursor: pointer; transition: color 0.15s; display: flex; align-items: center; gap: 3px; user-select: none; }
+  .board-like:hover, .board-like.liked { color: var(--crimson); font-weight: 700; }
+  .board-comment-count { font-size: 0.77rem; color: var(--gray-light); }
+
+  /* ─── CTA ─── */
+  .cta-section { background: linear-gradient(160deg, var(--crimson-pale) 0%, var(--white) 100%); }
+  .cta-box {
+    border: 2px solid var(--border); border-radius: 16px;
+    padding: 2.8rem 2rem; text-align: center; max-width: 560px; margin: 0 auto;
+    background: var(--white); box-shadow: 0 4px 24px rgba(139,0,0,0.06);
+  }
+  .cta-icon { font-size: 2.4rem; margin-bottom: 0.8rem; }
+  .cta-title { font-size: 1.35rem; font-weight: 900; color: var(--dark); margin-bottom: 0.6rem; }
+  .cta-sub { font-size: 0.88rem; color: var(--gray); margin-bottom: 1.6rem; line-height: 1.7; }
+  .btn-cta {
+    background: var(--crimson); color: var(--white); padding: 14px 34px; border-radius: 10px;
+    font-weight: 700; font-size: 0.95rem; text-decoration: none; display: inline-block;
+    transition: background 0.2s;
+  }
+  .btn-cta:hover { background: var(--crimson-dark); }
+
+  /* ─── AFTER ACCEPTANCE ─── */
+  .after-section { background: var(--bg-light); }
+  .after-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+  .after-card {
+    border: 1.5px solid var(--border); border-radius: 12px; padding: 1.3rem;
+    background: var(--white); transition: all 0.2s;
+  }
+  .after-card:hover { border-color: var(--gold); box-shadow: 0 4px 14px rgba(200,169,81,0.15); transform: translateY(-2px); }
+  .after-card-icon { font-size: 1.8rem; margin-bottom: 0.6rem; }
+  .after-card-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.35rem; }
+  .after-card-desc { font-size: 0.79rem; color: var(--gray); line-height: 1.55; margin-bottom: 0.85rem; }
+  .after-card-link { font-size: 0.77rem; color: var(--crimson); font-weight: 700; text-decoration: none; }
+  .after-card-link:hover { text-decoration: underline; }
+
+  /* ─── FOOTER ─── */
+  footer { background: var(--dark); color: rgba(255,255,255,0.55); padding: 2.2rem 1.2rem; }
+  .footer-inner { max-width: 700px; margin: 0 auto; text-align: center; }
+  .footer-logo { font-size: 1rem; font-weight: 900; color: var(--white); margin-bottom: 0.4rem; }
+  .footer-link { color: var(--gold-light); text-decoration: none; }
+  .footer-link:hover { text-decoration: underline; }
+  .footer-disclaimer { font-size: 0.7rem; line-height: 1.8; margin-top: 1rem; color: rgba(255,255,255,0.35); }
+
+  /* ─── UTILITIES ─── */
+  .loading { text-align: center; padding: 2.5rem; color: var(--gray-light); font-size: 0.87rem; }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 900px) {
+    .board-layout { grid-template-columns: 1fr; }
+    .post-form-box { position: static; }
+  }
+  @media (max-width: 768px) {
+    section { padding: 48px 1rem; }
+    .hero { padding: 60px 1rem 52px; }
+    .hero-title { font-size: 1.45rem; }
+    .faculty-grid { grid-template-columns: repeat(2, 1fr); }
+    .after-grid { grid-template-columns: repeat(2, 1fr); }
+    .hero-btns { flex-direction: column; align-items: center; }
+    .btn-primary, .btn-outline { width: 100%; max-width: 280px; text-align: center; }
+  }
+  @media (max-width: 480px) {
+    .hero-title { font-size: 1.25rem; }
+    .section-title { font-size: 1.3rem; }
+    .posts-grid { grid-template-columns: 1fr; }
+    .cta-box { padding: 2rem 1.2rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<header>
+  <div class="header-inner">
+    <a href="https://waseda-ten.vercel.app/" class="logo">
+      <span class="logo-jp">ワセダノート</span>
+      <span class="logo-badge">受験生サポート</span>
+    </a>
+    <a href="https://waseda-ten.vercel.app/" class="header-back">← 在学生掲示板へ</a>
+  </div>
+</header>
+
+<!-- ═══ HERO ═══ -->
+<section class="hero">
+  <div class="hero-inner">
+    <span class="hero-label">早稲田大学 受験生サポート</span>
+    <h1 class="hero-title">早稲田を目指す人のための情報サイト</h1>
+    <p class="hero-sub">在学生のリアルな声と、同じ目標を持つ仲間が集まる場所</p>
+    <div class="hero-btns">
+      <a href="#ask" class="btn-primary">在学生に質問する</a>
+      <a href="#board" class="btn-outline">受験生掲示板</a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 学部紹介 ═══ -->
+<section class="faculty-section" id="faculties">
+  <div class="container">
+    <div class="section-eyebrow">志望校選び</div>
+    <h2 class="section-title">学部紹介</h2>
+    <div class="section-divider"></div>
+    <p class="section-sub">早稲田大学の13学部それぞれの特色をまとめました。気になる学部をクリックすると掲示板で質問できます。</p>
+    <div class="faculty-grid" id="faculty-grid"><!-- JSで描画 --></div>
+  </div>
+</section>
+
+<!-- ═══ 勉強・受験アドバイス ═══ -->
+<section class="advice-section" id="advice">
+  <div class="container">
+    <div class="section-eyebrow">先輩からのメッセージ</div>
+    <h2 class="section-title">勉強・受験アドバイス</h2>
+    <div class="section-divider"></div>
+    <p class="section-sub">早稲田在学生・卒業生による受験勉強のアドバイスをまとめています。</p>
+    <div id="advice-posts" class="posts-grid"><div class="loading">読み込み中...</div></div>
+  </div>
+</section>
+
+<!-- ═══ 合格体験記 ═══ -->
+<section class="taikenki-section" id="taikenki">
+  <div class="container">
+    <div class="section-eyebrow">先輩の合格ストーリー</div>
+    <h2 class="section-title">合格体験記</h2>
+    <div class="section-divider"></div>
+    <p class="section-sub">受験本番までのリアルな声。合格した先輩たちの体験記を届けます。</p>
+    <div id="taikenki-posts" class="posts-grid"><div class="loading">読み込み中...</div></div>
+  </div>
+</section>
+
+<!-- ═══ 受験生掲示板 ═══ -->
+<section class="board-section" id="board">
+  <div class="container">
+    <div class="section-eyebrow">受験生コミュニティ</div>
+    <h2 class="section-title">受験生掲示板</h2>
+    <div class="section-divider"></div>
+    <p class="section-sub">同じ目標を持つ仲間と情報交換・進捗報告ができる場所です。</p>
+    <div class="board-layout">
+
+      <!-- 投稿フォーム -->
+      <div class="post-form-box">
+        <div class="post-form-title">📝 投稿する</div>
+        <div class="form-group">
+          <label class="form-label">ニックネーム <span style="color:#e74c3c;">*</span></label>
+          <input class="form-input" type="text" id="boardNickname" placeholder="例：早稲田志望19歳" maxlength="20">
+        </div>
+        <div class="form-group">
+          <label class="form-label">志望学部</label>
+          <select class="form-select" id="boardFaculty">
+            <option value="">学部を選択（任意）</option>
+            <option value="seikei">政治経済学部</option>
+            <option value="ho">法学部</option>
+            <option value="shogaku">商学部</option>
+            <option value="kyoiku">教育学部</option>
+            <option value="bun">文学部</option>
+            <option value="bunkagaku">文化構想学部</option>
+            <option value="kiso">基幹理工学部</option>
+            <option value="sozo">創造理工学部</option>
+            <option value="sentan">先進理工学部</option>
+            <option value="ningen">人間科学部</option>
+            <option value="sports">スポーツ科学部</option>
+            <option value="kokusai">国際教養学部</option>
+            <option value="shakou">社会科学部</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">投稿種別 <span style="color:#e74c3c;">*</span></label>
+          <select class="form-select" id="boardType">
+            <option value="">選択してください</option>
+            <option value="相談">相談</option>
+            <option value="進捗報告">進捗報告</option>
+            <option value="質問">質問</option>
+            <option value="雑談">雑談</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">本文 <span style="color:#e74c3c;">*</span></label>
+          <textarea class="form-textarea" id="boardBody" placeholder="気になることや進捗を自由に書いてください..."></textarea>
+        </div>
+        <button class="btn-submit" id="boardSubmitBtn" onclick="submitBoardPost()">投稿する</button>
+        <p class="form-notice">投稿内容には責任を持ち、良識ある投稿をお願いします。</p>
+      </div>
+
+      <!-- 投稿一覧 -->
+      <div id="board-posts" class="board-posts">
+        <div class="loading">読み込み中...</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 在学生に質問 ═══ -->
+<section class="cta-section" id="ask">
+  <div class="container">
+    <div class="cta-box">
+      <div class="cta-icon">💬</div>
+      <div class="cta-title">早稲田生に直接聞いてみよう</div>
+      <p class="cta-sub">授業・サークル・一人暮らし・就活——在学生がリアルな体験をもとに回答します。気になることは何でも聞いてみてください。</p>
+      <a href="https://waseda-ten.vercel.app/" class="btn-cta">Q&amp;A掲示板で質問する →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 合格後の準備 ═══ -->
+<section class="after-section" id="after">
+  <div class="container">
+    <div class="section-eyebrow">合格した方へ</div>
+    <h2 class="section-title">合格後の準備</h2>
+    <div class="section-divider"></div>
+    <p class="section-sub">合格おめでとうございます。入学前に確認しておきたいことをまとめました。</p>
+    <div class="after-grid">
+      <div class="after-card">
+        <div class="after-card-icon">📋</div>
+        <div class="after-card-title">入学手続き</div>
+        <div class="after-card-desc">入学金・授業料の支払いや書類提出の締切など、手続きの流れを先輩に確認しよう。</div>
+        <a href="https://waseda-ten.vercel.app/" class="after-card-link">在学生に聞く →</a>
+      </div>
+      <div class="after-card">
+        <div class="after-card-icon">🏠</div>
+        <div class="after-card-title">一人暮らし準備</div>
+        <div class="after-card-desc">早稲田周辺の家賃相場・おすすめエリア・引越し時期の注意点など。</div>
+        <a href="https://waseda-ten.vercel.app/" class="after-card-link">在学生に聞く →</a>
+      </div>
+      <div class="after-card">
+        <div class="after-card-icon">🎯</div>
+        <div class="after-card-title">サークル情報</div>
+        <div class="after-card-desc">新歓の時期、人気サークル、兼サーの実態まで先輩から教えてもらおう。</div>
+        <a href="https://waseda-ten.vercel.app/" class="after-card-link">サークル情報を見る →</a>
+      </div>
+      <div class="after-card">
+        <div class="after-card-icon">📚</div>
+        <div class="after-card-title">履修登録</div>
+        <div class="after-card-desc">初めての履修登録は戸惑うことも。単位の取り方を先輩の授業口コミで確認しよう。</div>
+        <a href="https://waseda-ten.vercel.app/" class="after-card-link">授業口コミを見る →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-logo">ワセダノート</div>
+    <p style="font-size:0.82rem;margin-bottom:0.3rem;">
+      <a href="https://waseda-ten.vercel.app/" class="footer-link">在学生掲示板へ戻る</a>
+    </p>
+    <div class="footer-disclaimer">
+      本サイトは早稲田大学の公式サイトではありません。掲載情報はすべてユーザーによる投稿であり、内容の正確性を保証するものではありません。<br>
+      受験に関する正確な情報は必ず<a href="https://www.waseda.jp/" class="footer-link" target="_blank" rel="noopener">早稲田大学公式サイト</a>でご確認ください。<br>
+      © ワセダノート — 早稲田大学生による非公式情報共有サービス
+    </div>
+  </div>
+</footer>
+
+<script>
+// ── Supabase 初期化 ──
+const SUPABASE_URL = 'https://hazntivymzywhowtdtcc.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_Mr1wt5ZOoLtmYqPEoIKeUw_cM4ZPSbN';
+let db;
+try {
+  if (typeof createClient === 'function') db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  else if (window.supabase && typeof window.supabase.createClient === 'function') db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} catch(e) { console.error('Supabase init:', e); }
+
+// ── 定数 ──
+const FACULTIES = {
+  seikei:'政治経済学部', ho:'法学部', shogaku:'商学部', kyoiku:'教育学部',
+  bun:'文学部', bunkagaku:'文化構想学部', kiso:'基幹理工学部', sozo:'創造理工学部',
+  sentan:'先進理工学部', ningen:'人間科学部', sports:'スポーツ科学部',
+  kokusai:'国際教養学部', shakou:'社会科学部'
+};
+const FACULTY_DATA = [
+  { key:'seikei', name:'政治経済学部', eng:'Political Science & Economics', campus:'早稲田', desc:'政治・経済・国際政治経済の3専攻。文系の看板学部。' },
+  { key:'ho',     name:'法学部',       eng:'Law',                            campus:'早稲田', desc:'法律・政治の2専攻。司法試験・公務員・企業法務に強い。' },
+  { key:'shogaku',name:'商学部',       eng:'Commerce',                       campus:'早稲田', desc:'経営・マーケティング・会計。就職率トップクラス。' },
+  { key:'kyoiku', name:'教育学部',     eng:'Education',                      campus:'早稲田', desc:'多彩な専修を持つ総合学部。教員免許取得も可能。' },
+  { key:'bun',    name:'文学部',       eng:'Humanities & Social Sciences',   campus:'早稲田', desc:'文学・語学・文化を深く学ぶ人文学の伝統学部。' },
+  { key:'bunkagaku',name:'文化構想学部',eng:'Culture, Media & Society',      campus:'早稲田', desc:'文化・メディア・表象を多角的に学ぶ学部。' },
+  { key:'kiso',   name:'基幹理工学部', eng:'Fundamental Sci. & Engineering', campus:'西早稲田', desc:'数学・情報・電気電子が中心の理工学部。' },
+  { key:'sozo',   name:'創造理工学部', eng:'Creative Sci. & Engineering',    campus:'西早稲田', desc:'建築・機械・環境資源。ものづくりに特化した理工学部。' },
+  { key:'sentan', name:'先進理工学部', eng:'Advanced Sci. & Engineering',    campus:'西早稲田', desc:'物理・化学・生命医科学。最先端研究を目指す学部。' },
+  { key:'ningen', name:'人間科学部',   eng:'Human Sciences',                 campus:'所沢', desc:'心理・教育・社会学の融合。所沢キャンパス。' },
+  { key:'sports', name:'スポーツ科学部',eng:'Sport Sciences',                campus:'所沢', desc:'スポーツを科学・人文社会の視点から学ぶ学部。' },
+  { key:'kokusai',name:'国際教養学部', eng:'International Liberal Studies',  campus:'早稲田', desc:'英語で学ぶリベラルアーツ。高い英語力が求められる。' },
+  { key:'shakou', name:'社会科学部',   eng:'Social Sciences',                campus:'早稲田', desc:'文理融合で社会現象を多角的に分析する学部。' },
+];
+const TYPE_CLASSES = { '相談':'type-soudan', '進捗報告':'type-shinchoku', '質問':'type-shitsumon', '雑談':'type-zatsudan' };
+
+// ── ユーティリティ ──
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function formatTime(ts) {
+  const d = Math.floor((Date.now() - new Date(ts)) / 1000);
+  if (d < 60)    return 'たった今';
+  if (d < 3600)  return Math.floor(d/60)+'分前';
+  if (d < 86400) return Math.floor(d/3600)+'時間前';
+  return Math.floor(d/86400)+'日前';
+}
+function getDeviceId() {
+  let id = localStorage.getItem('waseda_device_id');
+  if (!id) { id = 'dev_'+Math.random().toString(36).substr(2,9)+'_'+Date.now().toString(36); localStorage.setItem('waseda_device_id', id); }
+  return id;
+}
+function getLikedPosts() { try { return new Set(JSON.parse(localStorage.getItem('waseda_liked')||'[]')); } catch { return new Set(); } }
+function setPostLiked(id, liked) { const s = getLikedPosts(); liked ? s.add(String(id)) : s.delete(String(id)); localStorage.setItem('waseda_liked', JSON.stringify([...s])); }
+
+// ── 学部グリッド ──
+function renderFacultyGrid() {
+  document.getElementById('faculty-grid').innerHTML = FACULTY_DATA.map(f => `
+    <div class="faculty-card" onclick="focusBoardWithFaculty('${f.key}')">
+      <span class="faculty-campus">📍 ${f.campus}</span>
+      <div class="faculty-name">${f.name}</div>
+      <div class="faculty-eng">${f.eng}</div>
+      <div class="faculty-desc">${f.desc}</div>
+      <span class="faculty-link">掲示板で質問する →</span>
+    </div>
+  `).join('');
+}
+
+function focusBoardWithFaculty(key) {
+  document.getElementById('boardFaculty').value = key;
+  document.getElementById('board').scrollIntoView({ behavior: 'smooth' });
+  setTimeout(() => document.getElementById('boardBody').focus(), 500);
+}
+
+// ── アドバイス投稿 ──
+async function loadAdvicePosts() {
+  const el = document.getElementById('advice-posts');
+  if (!db) { el.innerHTML = emptyState('📖','アドバイスを募集中','在学生の皆さん、受験生へのアドバイスを投稿してください。',false); return; }
+  try {
+    const { data, error } = await db.from('posts').select('*')
+      .eq('category','juken').eq('circle_type','advice')
+      .order('created_at',{ascending:false}).limit(6);
+    if (error) throw error;
+    if (!data || !data.length) {
+      el.innerHTML = emptyState('📖','まだアドバイスがありません','在学生の皆さん、ぜひ受験生へのアドバイスを投稿してください！',true);
+      return;
+    }
+    el.innerHTML = data.map(p => adviceCard(p,'advice')).join('');
+  } catch(e) {
+    console.error(e);
+    el.innerHTML = emptyState('⚠️','読み込みエラー','しばらく後でもう一度お試しください。',false);
+  }
+}
+
+// ── 合格体験記 ──
+async function loadTaikenkiPosts() {
+  const el = document.getElementById('taikenki-posts');
+  if (!db) { el.innerHTML = emptyState('🏆','体験記を募集中','合格した先輩の皆さん、体験記を投稿してください。',false); return; }
+  try {
+    const { data, error } = await db.from('posts').select('*')
+      .eq('category','juken').eq('circle_type','taikenki')
+      .order('created_at',{ascending:false}).limit(6);
+    if (error) throw error;
+    if (!data || !data.length) {
+      el.innerHTML = emptyState('🏆','まだ体験記がありません','合格した先輩の皆さん、ぜひ体験記を投稿してください！',true);
+      return;
+    }
+    el.innerHTML = data.map(p => adviceCard(p,'taikenki')).join('');
+  } catch(e) {
+    console.error(e);
+    el.innerHTML = emptyState('⚠️','読み込みエラー','しばらく後でもう一度お試しください。',false);
+  }
+}
+
+function adviceCard(p, type) {
+  const tagLabel = type === 'advice' ? '📖 アドバイス' : '🏆 合格体験記';
+  const tagClass = type === 'advice' ? 'tag-advice' : 'tag-taikenki';
+  const facultyTag = p.faculty ? `<span class="card-tag tag-faculty">${escHtml(FACULTIES[p.faculty]||p.faculty)}</span>` : '';
+  const title = p.title && p.title !== p.body.slice(0,40) ? p.title : p.body.slice(0,30)+'…';
+  return `<div class="advice-card">
+    <div class="card-tags">
+      <span class="card-tag ${tagClass}">${tagLabel}</span>${facultyTag}
+    </div>
+    <div class="advice-card-title">${escHtml(title)}</div>
+    <div class="advice-card-body">${escHtml(p.body)}</div>
+    <div class="advice-card-meta">
+      <span>@${escHtml(p.author)}</span>
+      <span>${formatTime(p.created_at)}</span>
+      <span>❤️ ${p.likes||0}</span>
+    </div>
+  </div>`;
+}
+
+function emptyState(icon, title, text, showLink) {
+  return `<div class="empty-state">
+    <div class="empty-state-icon">${icon}</div>
+    <div class="empty-state-title">${title}</div>
+    <div class="empty-state-text">${text}</div>
+    ${showLink ? `<a href="https://waseda-ten.vercel.app/" class="empty-state-btn">在学生掲示板で投稿する</a>` : ''}
+  </div>`;
+}
+
+// ── 受験生掲示板 ──
+let boardPosts = [];
+
+async function loadBoardPosts() {
+  const el = document.getElementById('board-posts');
+  if (!db) { el.innerHTML = '<div class="loading">データベースに接続できません</div>'; return; }
+  try {
+    const { data, error } = await db.from('posts').select('*')
+      .eq('category','juken')
+      .order('created_at',{ascending:false}).limit(40);
+    if (error) throw error;
+    // advice/taikenki はこのセクションから除外
+    boardPosts = (data || []).filter(p => p.circle_type !== 'advice' && p.circle_type !== 'taikenki');
+    renderBoardPosts();
+  } catch(e) {
+    console.error(e);
+    document.getElementById('board-posts').innerHTML = '<div class="loading">読み込みに失敗しました</div>';
+  }
+}
+
+function renderBoardPosts() {
+  const el = document.getElementById('board-posts');
+  if (!boardPosts.length) {
+    el.innerHTML = `<div class="empty-state">
+      <div class="empty-state-icon">💬</div>
+      <div class="empty-state-title">まだ投稿がありません</div>
+      <div class="empty-state-text">最初の投稿者になりませんか？</div>
+    </div>`;
+    return;
+  }
+  const likedSet = getLikedPosts();
+  el.innerHTML = boardPosts.map(p => {
+    const typeClass = TYPE_CLASSES[p.circle_type] || 'type-zatsudan';
+    const typeTag = p.circle_type ? `<span class="board-type-tag ${typeClass}">${escHtml(p.circle_type)}</span>` : '';
+    const facultyTag = p.faculty ? `<span class="board-faculty-tag">${escHtml(FACULTIES[p.faculty]||p.faculty)}</span>` : '';
+    const likedCls = likedSet.has(String(p.id)) ? ' liked' : '';
+    return `<div class="board-card">
+      <div class="board-card-meta">
+        ${typeTag}${facultyTag}
+        <span class="board-card-author">@${escHtml(p.author)}</span>
+        <span class="board-card-time">${formatTime(p.created_at)}</span>
+      </div>
+      <div class="board-card-body">${escHtml(p.body)}</div>
+      <div class="board-card-footer">
+        <span class="board-like${likedCls}" onclick="likeBoardPost(${JSON.stringify(p.id)}, this)">❤️ <span class="like-num">${p.likes||0}</span></span>
+        <span class="board-comment-count">💬 ${p.comments||0}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function likeBoardPost(id, el) {
+  if (!db) return;
+  const alreadyLiked = getLikedPosts().has(String(id));
+  const numEl = el.querySelector('.like-num');
+  const cur = numEl ? parseInt(numEl.textContent||'0') : 0;
+  const newCount = alreadyLiked ? Math.max(0, cur-1) : cur+1;
+  if (numEl) numEl.textContent = newCount;
+  el.classList.toggle('liked', !alreadyLiked);
+  setPostLiked(id, !alreadyLiked);
+  const { error } = await db.from('posts').update({ likes: newCount }).eq('id', id);
+  if (error) {
+    if (numEl) numEl.textContent = cur;
+    el.classList.toggle('liked', alreadyLiked);
+    setPostLiked(id, alreadyLiked);
+  }
+}
+
+async function submitBoardPost() {
+  const nickname = document.getElementById('boardNickname').value.trim();
+  const faculty  = document.getElementById('boardFaculty').value;
+  const type     = document.getElementById('boardType').value;
+  const body     = document.getElementById('boardBody').value.trim();
+
+  if (!nickname) { alert('ニックネームを入力してください'); return; }
+  if (!type)     { alert('投稿種別を選択してください'); return; }
+  if (!body)     { alert('本文を入力してください'); return; }
+  if (body.length < 5) { alert('もう少し詳しく書いてみてください'); return; }
+  if (!db)       { alert('データベースに接続できません'); return; }
+
+  const btn = document.getElementById('boardSubmitBtn');
+  btn.disabled = true; btn.textContent = '投稿中...';
+
+  try {
+    const { error } = await db.from('posts').insert([{
+      category: 'juken',
+      author: nickname,
+      title: body.slice(0, 40),
+      body,
+      faculty: faculty || null,
+      circle_type: type,
+      likes: 0,
+      comments: 0,
+      device_id: getDeviceId()
+    }]);
+    if (error) throw error;
+    document.getElementById('boardNickname').value = '';
+    document.getElementById('boardFaculty').value  = '';
+    document.getElementById('boardType').value     = '';
+    document.getElementById('boardBody').value     = '';
+    await loadBoardPosts();
+    document.getElementById('board-posts').scrollIntoView({ behavior: 'smooth' });
+  } catch(e) {
+    console.error(e);
+    alert('投稿に失敗しました。時間をおいてお試しください。');
+  } finally {
+    btn.disabled = false; btn.textContent = '投稿する';
+  }
+}
+
+// ── 初期化 ──
+document.addEventListener('DOMContentLoaded', () => {
+  renderFacultyGrid();
+  loadAdvicePosts();
+  loadTaikenkiPosts();
+  loadBoardPosts();
+});
+</script>
+</body>
+</html>
