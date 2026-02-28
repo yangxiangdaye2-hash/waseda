@@ -616,6 +616,8 @@
 // ── Supabase ──
 const SUPABASE_URL = 'https://hazntivymzywhowtdtcc.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_Mr1wt5ZOoLtmYqPEoIKeUw_cM4ZPSbN';
+const AUTH_REDIRECT_URL = 'https://waseda-ten.vercel.app/juken.html';
+const TRUSTED_AUTH_HOSTS = ['waseda-ten.vercel.app'];
 const JUKEN_AUTH_RETURN_KEY = 'waseda_juken_auth_return';
 const JUKEN_AUTH_DRAFT_KEY = 'waseda_juken_auth_draft';
 const JUKEN_AUTH_DRAFT_TS_KEY = 'waseda_juken_auth_draft_ts';
@@ -905,7 +907,15 @@ function getGoogleDisplayName(user) {
   return user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'ログイン中ユーザー';
 }
 function getAuthRedirectUrl() {
-  return `${window.location.origin}${window.location.pathname}`;
+  try {
+    const url = new URL(window.location.href);
+    const isHttp = url.protocol === 'http:' || url.protocol === 'https:';
+    const isTrustedHost = TRUSTED_AUTH_HOSTS.includes(url.hostname);
+    if (isHttp && isTrustedHost) return `${url.origin}${url.pathname}`;
+  } catch (e) {
+    console.warn('redirect URL parse failed:', e);
+  }
+  return AUTH_REDIRECT_URL;
 }
 function scheduleJukenDraftRestoreChecks() {
   [0, 250, 800, 1500].forEach(ms => setTimeout(() => restoreJukenDraftAfterAuthIfNeeded(), ms));
