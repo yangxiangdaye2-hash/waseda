@@ -1353,6 +1353,7 @@
     const localReturn = localStorage.getItem(POST_AUTH_RETURN_KEY) === '1';
     const shouldReturn = sessionReturn || localReturn;
     if (!shouldReturn) return;
+    if (!googleAuthUser?.id) return;
 
     const tsRaw = sessionStorage.getItem(POST_AUTH_DRAFT_TS_KEY) || localStorage.getItem(POST_AUTH_DRAFT_TS_KEY) || '0';
     const ageMs = Date.now() - Number(tsRaw || 0);

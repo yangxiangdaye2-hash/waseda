@@ -739,6 +739,7 @@ function saveJukenDraftBeforeAuth() {
 function restoreJukenDraftAfterAuthIfNeeded() {
   const shouldReturn = sessionStorage.getItem(JUKEN_AUTH_RETURN_KEY) === '1' || localStorage.getItem(JUKEN_AUTH_RETURN_KEY) === '1';
   if (!shouldReturn) return;
+  if (!googleAuthUser?.id) return;
 
   const tsRaw = sessionStorage.getItem(JUKEN_AUTH_DRAFT_TS_KEY) || localStorage.getItem(JUKEN_AUTH_DRAFT_TS_KEY) || '0';
   const ageMs = Date.now() - Number(tsRaw || 0);
@@ -775,21 +776,6 @@ function restoreJukenDraftAfterAuthIfNeeded() {
       const el = document.getElementById(id);
       if (el && typeof value === 'string') el.value = value;
     });
-  }
-
-  if (!googleAuthUser?.id && draft.authModes) {
-    if (draft.authModes.qa === 'login') {
-      const radio = document.getElementById('qaAuthLogin');
-      if (radio) radio.checked = true;
-    }
-    if (draft.authModes.qaLife === 'login') {
-      const radio = document.getElementById('qaLifeAuthLogin');
-      if (radio) radio.checked = true;
-    }
-    if (draft.authModes.board === 'login') {
-      const radio = document.getElementById('boardAuthLogin');
-      if (radio) radio.checked = true;
-    }
   }
 
   updateAuthModeSelectors();
