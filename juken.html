@@ -583,6 +583,18 @@ function getDeviceId() {
   if (!id) { id='dev_'+Math.random().toString(36).substr(2,9)+'_'+Date.now().toString(36); localStorage.setItem('waseda_device_id',id); }
   return id;
 }
+function getMyQuestionIds() {
+  try { return new Set(JSON.parse(localStorage.getItem('waseda_my_question_ids') || '[]')); }
+  catch { return new Set(); }
+}
+function rememberMyQuestionId(id) {
+  if (!id) return;
+  const set = getMyQuestionIds();
+  set.add(String(id));
+  const arr = [...set];
+  if (arr.length > 300) arr.splice(0, arr.length - 300);
+  localStorage.setItem('waseda_my_question_ids', JSON.stringify(arr));
+}
 function getLikedPosts() { try{return new Set(JSON.parse(localStorage.getItem('waseda_liked')||'[]'));}catch{return new Set();} }
 function setPostLiked(id,liked) { const s=getLikedPosts(); liked?s.add(String(id)):s.delete(String(id)); localStorage.setItem('waseda_liked',JSON.stringify([...s])); }
 
@@ -732,16 +744,18 @@ function renderQaList(kind='study') {
   const el = document.getElementById(isLife ? 'qa-life-list' : 'qa-list');
   const basePosts = isLife ? qaLifeAllPosts : qaAllPosts;
   const facFilter = isLife ? qaLifeFacultyFilter : qaFacultyFilter;
+  const myIds = getMyQuestionIds();
+  const currentNick = localStorage.getItem('waseda_nickname') || '';
   const posts = facFilter==='all' ? basePosts : basePosts.filter(p=>p.faculty===facFilter);
   if (!posts.length) { el.innerHTML = emptyState('❓','まだ質問がありません','最初に質問を投稿してみましょう！',false); return; }
   const sortedPosts = [...posts].sort((a, b) => {
-    const mineA = a.device_id === getDeviceId() ? 1 : 0;
-    const mineB = b.device_id === getDeviceId() ? 1 : 0;
+    const mineA = (a.device_id === getDeviceId() || myIds.has(String(a.id)) || (currentNick && a.author === currentNick)) ? 1 : 0;
+    const mineB = (b.device_id === getDeviceId() || myIds.has(String(b.id)) || (currentNick && b.author === currentNick)) ? 1 : 0;
     if (mineA !== mineB) return mineB - mineA;
     return new Date(b.created_at || 0) - new Date(a.created_at || 0);
   });
   el.innerHTML = sortedPosts.map(p => {
-    const isMine = p.device_id === getDeviceId();
+    const isMine = (p.device_id === getDeviceId() || myIds.has(String(p.id)) || (currentNick && p.author === currentNick));
     const myTag = isMine ? '<span class="qa-my-badge">🧷 あなたの質問</span>' : '';
     const fTag = p.faculty ? `<span class="qa-faculty-tag">${escHtml(FACULTIES[p.faculty]||p.faculty)}</span>` : '';
     return `<div class="qa-card${isMine ? ' my-question' : ''}" onclick="openQaDetail(${JSON.stringify(p.id)})">
@@ -777,11 +791,12 @@ async function submitJukenQa(btn, kind='study') {
   if (!db)     { alert('DB未接続'); return; }
   btn.disabled=true; btn.textContent='投稿中...';
   try {
-    const { error } = await db.from('posts').insert([{
+    const { data, error } = await db.from('posts').insert([{
       category: isLife ? 'juken_life_qa' : 'juken_qa', author, title, body, faculty:faculty||null,
       likes:0, comments:0, device_id:getDeviceId()
-    }]);
+    }]).select('id').single();
     if (error) throw error;
+    if (data?.id) rememberMyQuestionId(data.id);
     (isLife ? ['qa-life-author','qa-life-faculty','qa-life-title','qa-life-body'] : ['qa-author','qa-faculty','qa-title','qa-body'])
       .forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
     await loadQaList(kind);

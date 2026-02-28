@@ -1186,6 +1186,11 @@
     return id;
   }
 
+  function getMyQuestionIds() {
+    try { return new Set(JSON.parse(localStorage.getItem('waseda_my_question_ids') || '[]')); }
+    catch { return new Set(); }
+  }
+
   function canManagePost(post) {
     if (!post) return false;
     return isAdmin || post.device_id === getDeviceId() || (post.author && post.author === currentUser);
@@ -2286,6 +2291,7 @@
     const el = document.getElementById(isLife ? 'juken-qa-life-list' : 'juken-qa-study-list');
     if (!db) { el.innerHTML = '<div class="loading">DB未接続</div>'; return; }
     try {
+      const myIds = getMyQuestionIds();
       const categories = isLife ? ['juken_life_qa'] : ['juken_qa'];
       const { data, error } = await db.from('posts').select('*')
         .in('category', categories).order('created_at',{ascending:false}).limit(30);
@@ -2298,13 +2304,13 @@
         return;
       }
       const sorted = [...data].sort((a, b) => {
-        const mineA = (a.device_id === getDeviceId() || (a.author && a.author === currentUser)) ? 1 : 0;
-        const mineB = (b.device_id === getDeviceId() || (b.author && b.author === currentUser)) ? 1 : 0;
+        const mineA = (a.device_id === getDeviceId() || myIds.has(String(a.id)) || (a.author && a.author === currentUser)) ? 1 : 0;
+        const mineB = (b.device_id === getDeviceId() || myIds.has(String(b.id)) || (b.author && b.author === currentUser)) ? 1 : 0;
         if (mineA !== mineB) return mineB - mineA;
         return new Date(b.created_at || 0) - new Date(a.created_at || 0);
       });
       el.innerHTML = sorted.map(p => {
-        const isMine = (p.device_id === getDeviceId() || (p.author && p.author === currentUser));
+        const isMine = (p.device_id === getDeviceId() || myIds.has(String(p.id)) || (p.author && p.author === currentUser));
         const myTag = isMine ? '<span class="juken-qa-my-badge">🧷 あなたの質問</span>' : '';
         const fTag = p.faculty ? `<span class="juken-qa-faculty">${escHtml(FACULTIES[p.faculty]||p.faculty)}</span>` : '';
         const ans = answersCountMap[p.id] || 0;
