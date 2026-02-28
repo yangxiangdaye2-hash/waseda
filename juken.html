@@ -852,6 +852,15 @@ async function getResolvedAuthUser() {
     if (error) return null;
     let user = data?.session?.user || null;
     if (!user?.id) {
+      try {
+        const { data: refreshed, error: refreshError } = await db.auth.refreshSession();
+        if (!refreshError && refreshed?.session?.user) {
+          user = refreshed.session.user;
+          saveAuthSessionBackup(refreshed.session);
+        }
+      } catch {}
+    }
+    if (!user?.id) {
       const restored = await restoreAuthSessionFromBackupIfNeeded();
       user = restored?.user || null;
     }
@@ -1065,9 +1074,17 @@ async function initGoogleAuth() {
   if (!db?.auth) return;
   await bootstrapAuthSessionFromUrlIfNeeded();
   await restoreAuthSessionFromBackupIfNeeded();
-  const { data, error } = await db.auth.getSession();
-  if (!error) googleAuthUser = data?.session?.user || null;
-  if (!error) saveAuthSessionBackup(data?.session || null);
+  const resolved = await getResolvedAuthUser();
+  googleAuthUser = resolved || null;
+  if (!googleAuthUser?.id) {
+    try {
+      const { data: refreshed, error: refreshError } = await db.auth.refreshSession();
+      if (!refreshError && refreshed?.session?.user) {
+        googleAuthUser = refreshed.session.user;
+        saveAuthSessionBackup(refreshed.session);
+      }
+    } catch {}
+  }
   syncNicknameFromGoogle();
   currentUser = localStorage.getItem('waseda_nickname') || 'ゲスト';
   renderGoogleAuthButton();
@@ -1083,6 +1100,20 @@ async function initGoogleAuth() {
     fillNicknameInputs();
     scheduleJukenDraftRestoreChecks();
     if (document.getElementById('myPageModal')?.classList.contains('open')) loadMyPagePosts();
+  });
+
+  const resyncAuthState = async () => {
+    const user = await getResolvedAuthUser();
+    googleAuthUser = user || null;
+    syncNicknameFromGoogle();
+    currentUser = localStorage.getItem('waseda_nickname') || 'ゲスト';
+    renderGoogleAuthButton();
+    fillNicknameInputs();
+    scheduleJukenDraftRestoreChecks();
+  };
+  window.addEventListener('focus', () => { setTimeout(() => resyncAuthState(), 0); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') setTimeout(() => resyncAuthState(), 0);
   });
 }
 function updateNicknameBadge() { renderAccountSummary(); }

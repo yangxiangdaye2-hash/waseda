@@ -1491,9 +1491,17 @@
     if (!db?.auth) return;
     await bootstrapAuthSessionFromUrlIfNeeded();
     await restoreAuthSessionFromBackupIfNeeded();
-    const { data, error } = await db.auth.getSession();
-    if (!error) googleAuthUser = data?.session?.user || null;
-    if (!error) saveAuthSessionBackup(data?.session || null);
+    const resolved = await getResolvedAuthUser();
+    googleAuthUser = resolved || null;
+    if (!googleAuthUser?.id) {
+      try {
+        const { data: refreshed, error: refreshError } = await db.auth.refreshSession();
+        if (!refreshError && refreshed?.session?.user) {
+          googleAuthUser = refreshed.session.user;
+          saveAuthSessionBackup(refreshed.session);
+        }
+      } catch {}
+    }
     syncNicknameFromGoogle();
     renderGoogleAuthButton();
     schedulePostDraftRestoreChecks();
@@ -1513,6 +1521,21 @@
         fillPostNickname();
         onPostAuthModeChange();
       }
+    });
+
+    const resyncAuthState = async () => {
+      const user = await getResolvedAuthUser();
+      googleAuthUser = user || null;
+      syncNicknameFromGoogle();
+      renderGoogleAuthButton();
+      if (document.getElementById('postModal')?.classList.contains('open')) {
+        fillPostNickname();
+        onPostAuthModeChange();
+      }
+    };
+    window.addEventListener('focus', () => { setTimeout(() => resyncAuthState(), 0); });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') setTimeout(() => resyncAuthState(), 0);
     });
   }
 
@@ -1537,6 +1560,15 @@
       const { data, error } = await db.auth.getSession();
       if (error) return null;
       let sessionUser = data?.session?.user || null;
+      if (!sessionUser?.id) {
+        try {
+          const { data: refreshed, error: refreshError } = await db.auth.refreshSession();
+          if (!refreshError && refreshed?.session?.user) {
+            sessionUser = refreshed.session.user;
+            saveAuthSessionBackup(refreshed.session);
+          }
+        } catch {}
+      }
       if (!sessionUser?.id) {
         const restored = await restoreAuthSessionFromBackupIfNeeded();
         sessionUser = restored?.user || null;
