@@ -539,7 +539,7 @@
       <a class="logo" href="#"><span class="logo-jp">ワセダノート</span><span class="logo-en">WASEDA NOTE</span></a>
       <div class="header-right">
         <button class="btn-google-auth" id="googleAuthBtn" onclick="handleGoogleAuthClick()">Googleでログイン</button>
-        <button class="btn-mypage" onclick="openMyPageModal()">📌 マイページ</button>
+        <button class="btn-mypage" id="myPageBtn" onclick="openMyPageModal()">📌 マイページ</button>
         <div class="nickname-badge" id="nicknameBadge" onclick="openNicknameModal()">👤 設定中...</div>
         <button class="btn-admin" id="adminBtn" style="display:none;margin-right:0.5rem;" onclick="openAdminModal()">⚙️ 管理</button>
         <button class="btn-post" onclick="openPostModal()">＋ 投稿する</button>
@@ -794,8 +794,8 @@
       </div>
       <div class="modal-body">
         <div class="post-auth-box">
-          <label class="form-label" style="margin-bottom:0;">投稿方法 <span style="color:#e74c3c;">*</span></label>
-          <div class="post-auth-options">
+          <label class="form-label" id="postAuthLabel" style="margin-bottom:0;">投稿方法 <span style="color:#e74c3c;">*</span></label>
+          <div class="post-auth-options" id="postAuthOptions">
             <label class="post-auth-option"><input type="radio" name="postAuthMode" value="login" onchange="onPostAuthModeChange()"> ログインして投稿（追跡・削除・マイページ対応）</label>
             <label class="post-auth-option"><input type="radio" name="postAuthMode" value="guest" onchange="onPostAuthModeChange()"> ログインせず投稿（追跡不可）</label>
           </div>
@@ -1203,10 +1203,11 @@
   const SUPABASE_ANON_KEY = 'sb_publishable_Mr1wt5ZOoLtmYqPEoIKeUw_cM4ZPSbN';
   let db;
   try {
+    const supabaseOptions = { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } };
     if (typeof createClient === 'function') {
-      db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, supabaseOptions);
     } else if (window.supabase && typeof window.supabase.createClient === 'function') {
-      db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, supabaseOptions);
     } else {
       throw new Error('Supabase client not found');
     }
@@ -1236,6 +1237,27 @@
     return user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'ログイン中ユーザー';
   }
 
+  function getAuthRedirectUrl() {
+    if (location.origin && location.origin !== 'null') return `${location.origin}${location.pathname}`;
+    return AUTH_REDIRECT_URL;
+  }
+
+  function renderAccountSummary() {
+    const nick = document.getElementById('nicknameBadge');
+    const myPageBtn = document.getElementById('myPageBtn');
+    if (nick) {
+      const name = (currentUser || '').trim();
+      nick.textContent = name && name !== 'ゲスト' ? `👤 ニックネーム: ${name}` : '👤 ニックネームを設定';
+      nick.title = googleAuthUser
+        ? '現在はログイン投稿モードです。クリックでニックネームを変更できます。'
+        : '現在は未ログインです。クリックでニックネームを設定できます。';
+    }
+    if (myPageBtn) {
+      myPageBtn.textContent = googleAuthUser ? '📌 マイページ（追跡中）' : '📌 マイページ（ログインで追跡）';
+      myPageBtn.title = googleAuthUser ? 'あなたの投稿を確認・削除できます' : 'ログインするとあなたの投稿を追跡・削除できます';
+    }
+  }
+
   function renderGoogleAuthButton() {
     const btn = document.getElementById('googleAuthBtn');
     if (!btn) return;
@@ -1245,9 +1267,10 @@
       btn.title = 'クリックでログアウト';
     } else {
       btn.classList.remove('logged-in');
-      btn.textContent = 'Googleでログイン';
-      btn.title = '';
+      btn.textContent = 'Googleでログイン（投稿追跡）';
+      btn.title = 'ログインすると投稿を追跡・削除できます';
     }
+    renderAccountSummary();
   }
 
   function savePostDraftBeforeAuth() {
@@ -1321,7 +1344,7 @@
       return;
     }
     if (source === 'post-modal') savePostDraftBeforeAuth();
-    const redirectTo = AUTH_REDIRECT_URL;
+    const redirectTo = getAuthRedirectUrl();
     const { error } = await db.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo }
@@ -1421,7 +1444,7 @@
   let answersCountMap = {};
 
   // ニックネーム
-  function updateNicknameBadge() { document.getElementById('nicknameBadge').textContent = '👤 ' + currentUser; }
+  function updateNicknameBadge() { renderAccountSummary(); }
   function openNicknameModal() { document.getElementById('nicknameInput').value = currentUser === 'ゲスト' && googleAuthUser ? getGoogleDisplayName(googleAuthUser).slice(0, 20) : currentUser; document.getElementById('nicknameModal').classList.add('open'); }
   function closeNicknameModal() { document.getElementById('nicknameModal').classList.remove('open'); }
   function saveNickname() { const val = document.getElementById('nicknameInput').value.trim(); if (!val) { alert('ニックネームを入力してください'); return; } currentUser = val; localStorage.setItem('waseda_nickname', val); updateNicknameBadge(); checkAdmin(); closeNicknameModal(); }
@@ -1460,7 +1483,7 @@
     }
     if (!googleAuthUser?.id) {
       summaryEl.textContent = 'マイページはログインユーザー向け機能です';
-      listEl.innerHTML = '<div style="text-align:center;color:var(--gray);padding:1.2rem 0;">投稿追跡・削除・一覧表示を使うにはGoogleログインして投稿してください。</div>';
+      listEl.innerHTML = '<div style="text-align:center;color:var(--gray);padding:1.2rem 0;">投稿追跡・削除・一覧表示を使うにはGoogleログインして投稿してください。<br><span style="font-size:0.78rem;">未ログインの投稿は追跡・削除できません。</span></div>';
       return;
     }
     try {
@@ -2195,16 +2218,34 @@
   }
 
   function getPostAuthMode() {
+    if (googleAuthUser) return 'login';
     const checked = document.querySelector('input[name="postAuthMode"]:checked');
     if (checked?.value) return checked.value;
-    return googleAuthUser ? 'login' : 'guest';
+    return 'guest';
   }
 
   function onPostAuthModeChange() {
     const mode = getPostAuthMode();
+    const authLabel = document.getElementById('postAuthLabel');
+    const options = document.getElementById('postAuthOptions');
     const actions = document.getElementById('postAuthActions');
     const note = document.getElementById('postAuthNote');
-    if (!actions || !note) return;
+    const loginRadio = document.querySelector('input[name="postAuthMode"][value="login"]');
+    const guestRadio = document.querySelector('input[name="postAuthMode"][value="guest"]');
+    if (!actions || !note || !authLabel || !options) return;
+
+    if (googleAuthUser) {
+      if (loginRadio) loginRadio.checked = true;
+      if (guestRadio) guestRadio.checked = false;
+      authLabel.innerHTML = '投稿方法（自動）';
+      options.style.display = 'none';
+      actions.style.display = 'none';
+      note.textContent = 'ログイン投稿中: 以後の投稿は自動で追跡・削除・マイページ対応になります。';
+      return;
+    }
+
+    authLabel.innerHTML = '投稿方法 <span style="color:#e74c3c;">*</span>';
+    options.style.display = 'flex';
     if (mode === 'login') {
       actions.style.display = googleAuthUser ? 'none' : 'flex';
       note.textContent = googleAuthUser
