@@ -118,6 +118,9 @@
   .auth-hint { font-size: .74rem; color: var(--gray); line-height: 1.6; margin: -.25rem 0 .9rem; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: .45rem .6rem; }
   .post-auth-options { display: flex; gap: .6rem; flex-wrap: wrap; margin-bottom: .8rem; }
   .post-auth-option { display: inline-flex; align-items: center; gap: 6px; font-size: .78rem; color: var(--dark); background: #fff; border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; }
+  .post-auth-login-actions { display: none; margin: -.2rem 0 .8rem; }
+  .post-auth-login-btn { width: 100%; background: linear-gradient(135deg, var(--crimson) 0%, var(--crimson-dark) 100%); color: #fff; border: none; border-radius: 10px; padding: 9px 12px; font-size: .8rem; font-weight: 800; cursor: pointer; }
+  .post-auth-login-btn:hover { opacity: .95; }
   .qa-layout { display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; align-items: start; }
 
   /* Q&A detail modal */
@@ -333,8 +336,11 @@
         <div class="qa-form-title">❓ 質問を投稿する</div>
         <div class="auth-hint" id="authHintQa">ログインして投稿すると追跡・削除・マイページが使えます。未ログイン投稿は追跡不可です。</div>
         <div class="post-auth-options" id="authOptionsQa">
-          <label class="post-auth-option"><input type="radio" name="postAuthMode-qa" id="qaAuthLogin" value="login"> ログインして投稿（追跡・削除・マイページ対応）</label>
-          <label class="post-auth-option"><input type="radio" name="postAuthMode-qa" id="qaAuthGuest" value="guest" checked> ログインせず投稿（追跡不可）</label>
+          <label class="post-auth-option"><input type="radio" name="postAuthMode-qa" id="qaAuthLogin" value="login" onchange="updateAuthModeSelectors()"> ログインして投稿（追跡・削除・マイページ対応）</label>
+          <label class="post-auth-option"><input type="radio" name="postAuthMode-qa" id="qaAuthGuest" value="guest" checked onchange="updateAuthModeSelectors()"> ログインせず投稿（追跡不可）</label>
+        </div>
+        <div class="post-auth-login-actions" id="authLoginActionsQa">
+          <button type="button" class="post-auth-login-btn" onclick="handleGoogleAuthClick()">このままGoogleでログイン</button>
         </div>
         <div class="form-group">
           <label class="form-label">ニックネーム <span style="color:#e74c3c">*</span></label>
@@ -385,8 +391,11 @@
         <div class="qa-form-title">🏫 大学生活について質問する</div>
         <div class="auth-hint" id="authHintQaLife">ログインして投稿すると追跡・削除・マイページが使えます。未ログイン投稿は追跡不可です。</div>
         <div class="post-auth-options" id="authOptionsQaLife">
-          <label class="post-auth-option"><input type="radio" name="postAuthMode-qaLife" id="qaLifeAuthLogin" value="login"> ログインして投稿（追跡・削除・マイページ対応）</label>
-          <label class="post-auth-option"><input type="radio" name="postAuthMode-qaLife" id="qaLifeAuthGuest" value="guest" checked> ログインせず投稿（追跡不可）</label>
+          <label class="post-auth-option"><input type="radio" name="postAuthMode-qaLife" id="qaLifeAuthLogin" value="login" onchange="updateAuthModeSelectors()"> ログインして投稿（追跡・削除・マイページ対応）</label>
+          <label class="post-auth-option"><input type="radio" name="postAuthMode-qaLife" id="qaLifeAuthGuest" value="guest" checked onchange="updateAuthModeSelectors()"> ログインせず投稿（追跡不可）</label>
+        </div>
+        <div class="post-auth-login-actions" id="authLoginActionsQaLife">
+          <button type="button" class="post-auth-login-btn" onclick="handleGoogleAuthClick()">このままGoogleでログイン</button>
         </div>
         <div class="form-group">
           <label class="form-label">ニックネーム <span style="color:#e74c3c">*</span></label>
@@ -448,8 +457,11 @@
         <div class="post-form-body">
           <div class="auth-hint" id="authHintBoard">ログインして投稿すると追跡・削除・マイページが使えます。未ログイン投稿は追跡不可です。</div>
           <div class="post-auth-options" id="authOptionsBoard">
-            <label class="post-auth-option"><input type="radio" name="postAuthMode-board" id="boardAuthLogin" value="login"> ログインして投稿（追跡・削除・マイページ対応）</label>
-            <label class="post-auth-option"><input type="radio" name="postAuthMode-board" id="boardAuthGuest" value="guest" checked> ログインせず投稿（追跡不可）</label>
+            <label class="post-auth-option"><input type="radio" name="postAuthMode-board" id="boardAuthLogin" value="login" onchange="updateAuthModeSelectors()"> ログインして投稿（追跡・削除・マイページ対応）</label>
+            <label class="post-auth-option"><input type="radio" name="postAuthMode-board" id="boardAuthGuest" value="guest" checked onchange="updateAuthModeSelectors()"> ログインせず投稿（追跡不可）</label>
+          </div>
+          <div class="post-auth-login-actions" id="authLoginActionsBoard">
+            <button type="button" class="post-auth-login-btn" onclick="handleGoogleAuthClick()">このままGoogleでログイン</button>
           </div>
           <div class="form-group">
             <label class="form-label">ニックネーム <span style="color:#e74c3c">*</span></label>
@@ -728,22 +740,25 @@ function getSelectedAuthMode(formKey) {
 }
 function updateAuthModeSelectors() {
   const pairs = [
-    { key: 'qa', container: 'authOptionsQa', login: 'qaAuthLogin', guest: 'qaAuthGuest' },
-    { key: 'qaLife', container: 'authOptionsQaLife', login: 'qaLifeAuthLogin', guest: 'qaLifeAuthGuest' },
-    { key: 'board', container: 'authOptionsBoard', login: 'boardAuthLogin', guest: 'boardAuthGuest' }
+    { key: 'qa', container: 'authOptionsQa', login: 'qaAuthLogin', guest: 'qaAuthGuest', actions: 'authLoginActionsQa' },
+    { key: 'qaLife', container: 'authOptionsQaLife', login: 'qaLifeAuthLogin', guest: 'qaLifeAuthGuest', actions: 'authLoginActionsQaLife' },
+    { key: 'board', container: 'authOptionsBoard', login: 'boardAuthLogin', guest: 'boardAuthGuest', actions: 'authLoginActionsBoard' }
   ];
-  pairs.forEach(({ container, login, guest }) => {
+  pairs.forEach(({ container, login, guest, actions }) => {
     const wrap = document.getElementById(container);
     const loginRadio = document.getElementById(login);
     const guestRadio = document.getElementById(guest);
+    const actionWrap = document.getElementById(actions);
     if (!wrap || !loginRadio || !guestRadio) return;
     if (googleAuthUser?.id) {
       loginRadio.checked = true;
       guestRadio.checked = false;
       wrap.style.display = 'none';
+      if (actionWrap) actionWrap.style.display = 'none';
     } else {
       wrap.style.display = 'flex';
       if (!loginRadio.checked && !guestRadio.checked) guestRadio.checked = true;
+      if (actionWrap) actionWrap.style.display = loginRadio.checked ? 'block' : 'none';
     }
   });
 }
