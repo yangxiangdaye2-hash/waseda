@@ -1270,44 +1270,14 @@
   async function bootstrapAuthSessionFromUrlIfNeeded() {
     if (!db?.auth) return;
     try {
-      const { data: cur } = await db.auth.getSession();
-      if (cur?.session?.user) return;
-
-      const search = new URLSearchParams(window.location.search || '');
-      const authCode = search.get('code');
-      if (authCode && typeof db.auth.exchangeCodeForSession === 'function') {
-        try {
-          await db.auth.exchangeCodeForSession(authCode);
-        } catch (e) {
-          console.warn('exchangeCodeForSession failed:', e);
-        }
-      }
-
-      const hash = new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
-      const accessToken = hash.get('access_token');
-      const refreshToken = hash.get('refresh_token');
-      if (accessToken && refreshToken) {
-        const { data, error } = await db.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-        if (!error && data?.session?.user) {
-          const cleanUrl = `${window.location.pathname}${window.location.search}`;
-          history.replaceState({}, document.title, cleanUrl);
-        }
-      }
+      await db.auth.getSession();
     } catch (e) {
       console.warn('bootstrapAuthSessionFromUrlIfNeeded failed:', e);
     }
   }
 
   function saveAuthSessionBackup(session) {
-    try {
-      if (!session?.access_token || !session?.refresh_token) return;
-      localStorage.setItem(AUTH_SESSION_BACKUP_KEY, JSON.stringify({
-        access_token: session.access_token,
-        refresh_token: session.refresh_token,
-        expires_at: session.expires_at || null,
-        saved_at: Date.now()
-      }));
-    } catch {}
+    return;
   }
 
   function clearAuthSessionBackup() {
@@ -1315,33 +1285,11 @@
   }
 
   function readAuthSessionBackup() {
-    try {
-      const raw = localStorage.getItem(AUTH_SESSION_BACKUP_KEY);
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      if (!parsed?.access_token || !parsed?.refresh_token) return null;
-      return parsed;
-    } catch {
-      return null;
-    }
+    return null;
   }
 
   async function restoreAuthSessionFromBackupIfNeeded() {
-    if (!db?.auth) return null;
-    try {
-      const { data: cur } = await db.auth.getSession();
-      if (cur?.session?.user) return cur.session;
-      const backup = readAuthSessionBackup();
-      if (!backup) return null;
-      const { data, error } = await db.auth.setSession({ access_token: backup.access_token, refresh_token: backup.refresh_token });
-      if (error || !data?.session?.user) {
-        localStorage.removeItem(AUTH_SESSION_BACKUP_KEY);
-        return null;
-      }
-      return data.session;
-    } catch {
-      return null;
-    }
+    return null;
   }
 
   function schedulePostDraftRestoreChecks() {
@@ -1490,18 +1438,8 @@
   async function initGoogleAuth() {
     if (!db?.auth) return;
     await bootstrapAuthSessionFromUrlIfNeeded();
-    await restoreAuthSessionFromBackupIfNeeded();
     const resolved = await getResolvedAuthUser();
     googleAuthUser = resolved || null;
-    if (!googleAuthUser?.id) {
-      try {
-        const { data: refreshed, error: refreshError } = await db.auth.refreshSession();
-        if (!refreshError && refreshed?.session?.user) {
-          googleAuthUser = refreshed.session.user;
-          saveAuthSessionBackup(refreshed.session);
-        }
-      } catch {}
-    }
     syncNicknameFromGoogle();
     renderGoogleAuthButton();
     schedulePostDraftRestoreChecks();
@@ -1512,7 +1450,6 @@
     db.auth.onAuthStateChange((event, session) => {
       googleAuthUser = session?.user || null;
       if (event === 'SIGNED_OUT') clearAuthSessionBackup();
-      else if (session?.access_token && session?.refresh_token) saveAuthSessionBackup(session);
       syncNicknameFromGoogle();
       renderGoogleAuthButton();
       schedulePostDraftRestoreChecks();
@@ -1562,16 +1499,9 @@
       let sessionUser = data?.session?.user || null;
       if (!sessionUser?.id) {
         try {
-          const { data: refreshed, error: refreshError } = await db.auth.refreshSession();
-          if (!refreshError && refreshed?.session?.user) {
-            sessionUser = refreshed.session.user;
-            saveAuthSessionBackup(refreshed.session);
-          }
+          const { data: userData, error: userError } = await db.auth.getUser();
+          if (!userError && userData?.user?.id) sessionUser = userData.user;
         } catch {}
-      }
-      if (!sessionUser?.id) {
-        const restored = await restoreAuthSessionFromBackupIfNeeded();
-        sessionUser = restored?.user || null;
       }
       if (sessionUser?.id) {
         googleAuthUser = sessionUser;
