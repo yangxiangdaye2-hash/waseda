@@ -1051,18 +1051,12 @@ async function handleGoogleAuthClick(source = 'header') {
 }
 async function initGoogleAuth() {
   if (!db?.auth) return;
-  await bootstrapAuthSessionFromUrlIfNeeded();
-  await restoreAuthSessionFromBackupIfNeeded();
-  const resolved = await getResolvedAuthUser();
-  googleAuthUser = resolved || null;
-  syncNicknameFromGoogle();
-  currentUser = localStorage.getItem('waseda_nickname') || 'ゲスト';
-  renderGoogleAuthButton();
-  fillNicknameInputs();
-  scheduleJukenDraftRestoreChecks();
+
+  // Register listener FIRST so the initial INITIAL_SESSION/SIGNED_IN event is captured
   db.auth.onAuthStateChange((event, session) => {
     googleAuthUser = session?.user || null;
     if (session?.access_token && session?.refresh_token) saveAuthSessionBackup(session);
+    if (event === 'SIGNED_OUT') clearAuthSessionBackup();
     syncNicknameFromGoogle();
     currentUser = localStorage.getItem('waseda_nickname') || 'ゲスト';
     renderGoogleAuthButton();
@@ -1070,6 +1064,22 @@ async function initGoogleAuth() {
     scheduleJukenDraftRestoreChecks();
     if (document.getElementById('myPageModal')?.classList.contains('open')) loadMyPagePosts();
   });
+
+  // These calls trigger getSession() internally, which fires the listener above
+  await bootstrapAuthSessionFromUrlIfNeeded();
+  await restoreAuthSessionFromBackupIfNeeded();
+
+  // Fallback: if onAuthStateChange hasn't fired yet, resolve manually
+  if (!googleAuthUser) {
+    const resolved = await getResolvedAuthUser();
+    googleAuthUser = resolved || null;
+    syncNicknameFromGoogle();
+    currentUser = localStorage.getItem('waseda_nickname') || 'ゲスト';
+    renderGoogleAuthButton();
+    fillNicknameInputs();
+  }
+
+  scheduleJukenDraftRestoreChecks();
 
   const resyncAuthState = async () => {
     const user = await getResolvedAuthUser();

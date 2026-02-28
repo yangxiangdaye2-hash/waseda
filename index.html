@@ -1471,20 +1471,14 @@
 
   async function initGoogleAuth() {
     if (!db?.auth) return;
-    await bootstrapAuthSessionFromUrlIfNeeded();
-    await restoreAuthSessionFromBackupIfNeeded();
-    const resolved = await getResolvedAuthUser();
-    googleAuthUser = resolved || null;
-    syncNicknameFromGoogle();
-    renderGoogleAuthButton();
-    schedulePostDraftRestoreChecks();
-    if (document.getElementById('postModal')?.classList.contains('open')) {
-      fillPostNickname();
-      onPostAuthModeChange();
-    }
+
+    // Register listener FIRST so the initial INITIAL_SESSION/SIGNED_IN event is captured
+    // (Supabase v2 fires this event when getSession() is first called — if the listener
+    // isn't registered yet, that event is missed and the session won't restore on reload)
     db.auth.onAuthStateChange((event, session) => {
       googleAuthUser = session?.user || null;
       if (session?.access_token && session?.refresh_token) saveAuthSessionBackup(session);
+      if (event === 'SIGNED_OUT') clearAuthSessionBackup();
       syncNicknameFromGoogle();
       renderGoogleAuthButton();
       schedulePostDraftRestoreChecks();
@@ -1494,6 +1488,24 @@
         onPostAuthModeChange();
       }
     });
+
+    // These calls trigger getSession() internally, which fires the listener above
+    await bootstrapAuthSessionFromUrlIfNeeded();
+    await restoreAuthSessionFromBackupIfNeeded();
+
+    // Fallback: if onAuthStateChange hasn't fired yet, resolve manually
+    if (!googleAuthUser) {
+      const resolved = await getResolvedAuthUser();
+      googleAuthUser = resolved || null;
+      syncNicknameFromGoogle();
+      renderGoogleAuthButton();
+    }
+
+    schedulePostDraftRestoreChecks();
+    if (document.getElementById('postModal')?.classList.contains('open')) {
+      fillPostNickname();
+      onPostAuthModeChange();
+    }
 
     const resyncAuthState = async () => {
       const user = await getResolvedAuthUser();
