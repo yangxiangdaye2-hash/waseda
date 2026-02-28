@@ -621,6 +621,7 @@ const TRUSTED_AUTH_HOSTS = ['waseda-ten.vercel.app'];
 const JUKEN_AUTH_RETURN_KEY = 'waseda_juken_auth_return';
 const JUKEN_AUTH_DRAFT_KEY = 'waseda_juken_auth_draft';
 const JUKEN_AUTH_DRAFT_TS_KEY = 'waseda_juken_auth_draft_ts';
+const AUTH_SESSION_BACKUP_KEY = 'waseda_auth_session_backup';
 let db;
 try {
   const supabaseOptions = { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } };
@@ -679,6 +680,9 @@ function createOwnerPayload(base) {
 function getOwnedPostIdsKey(userId) {
   return `waseda_owned_post_ids_${userId}`;
 }
+function getOwnedNicknamesKey(userId) {
+  return `waseda_owned_nicknames_${userId}`;
+}
 function getOwnedPostIds(userId) {
   if (!userId) return [];
   try {
@@ -695,6 +699,35 @@ function rememberOwnedPostId(postId, userId) {
   const arr = [...set];
   if (arr.length > 500) arr.splice(0, arr.length - 500);
   localStorage.setItem(getOwnedPostIdsKey(userId), JSON.stringify(arr));
+}
+function getOwnedNicknames(userId) {
+  if (!userId) return [];
+  try {
+    const parsed = JSON.parse(localStorage.getItem(getOwnedNicknamesKey(userId)) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+function rememberOwnedNickname(nickname, userId) {
+  const nick = (nickname || '').trim();
+  if (!nick || !userId) return;
+  const set = new Set(getOwnedNicknames(userId).map(v => String(v).trim()).filter(Boolean));
+  set.add(nick);
+  const arr = [...set];
+  if (arr.length > 100) arr.splice(0, arr.length - 100);
+  localStorage.setItem(getOwnedNicknamesKey(userId), JSON.stringify(arr));
+}
+function getAccountNicknameCandidates(user) {
+  const set = new Set();
+  const localNick = (localStorage.getItem('waseda_nickname') || '').trim();
+  const currentNick = (currentUser || '').trim();
+  const displayNick = getGoogleDisplayName(user || googleAuthUser).trim();
+  [localNick, currentNick, displayNick].forEach(v => {
+    if (v && v !== 'ゲスト') set.add(v);
+  });
+  if (user?.id) getOwnedNicknames(user.id).forEach(v => { if (v) set.add(String(v)); });
+  return [...set];
 }
 function removeOwnedPostId(postId, userId) {
   if (!postId || !userId) return;
@@ -802,7 +835,11 @@ async function getResolvedAuthUser() {
   try {
     const { data, error } = await db.auth.getSession();
     if (error) return null;
-    const user = data?.session?.user || null;
+    let user = data?.session?.user || null;
+    if (!user?.id) {
+      const restored = await restoreAuthSessionFromBackupIfNeeded();
+      user = restored?.user || null;
+    }
     if (user?.id) googleAuthUser = user;
     return user;
   } catch {
@@ -910,6 +947,48 @@ async function bootstrapAuthSessionFromUrlIfNeeded() {
     console.warn('bootstrapAuthSessionFromUrlIfNeeded failed:', e);
   }
 }
+function saveAuthSessionBackup(session) {
+  try {
+    if (!session?.access_token || !session?.refresh_token) {
+      localStorage.removeItem(AUTH_SESSION_BACKUP_KEY);
+      return;
+    }
+    localStorage.setItem(AUTH_SESSION_BACKUP_KEY, JSON.stringify({
+      access_token: session.access_token,
+      refresh_token: session.refresh_token,
+      expires_at: session.expires_at || null,
+      saved_at: Date.now()
+    }));
+  } catch {}
+}
+function readAuthSessionBackup() {
+  try {
+    const raw = localStorage.getItem(AUTH_SESSION_BACKUP_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.access_token || !parsed?.refresh_token) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+async function restoreAuthSessionFromBackupIfNeeded() {
+  if (!db?.auth) return null;
+  try {
+    const { data: cur } = await db.auth.getSession();
+    if (cur?.session?.user) return cur.session;
+    const backup = readAuthSessionBackup();
+    if (!backup) return null;
+    const { data, error } = await db.auth.setSession({ access_token: backup.access_token, refresh_token: backup.refresh_token });
+    if (error || !data?.session?.user) {
+      localStorage.removeItem(AUTH_SESSION_BACKUP_KEY);
+      return null;
+    }
+    return data.session;
+  } catch {
+    return null;
+  }
+}
 function scheduleJukenDraftRestoreChecks() {
   [0, 250, 800, 1500].forEach(ms => setTimeout(() => restoreJukenDraftAfterAuthIfNeeded(), ms));
 }
@@ -953,6 +1032,7 @@ async function handleGoogleAuthClick(source = 'header') {
   if (!db?.auth) { alert('ログイン機能を初期化できませんでした'); return; }
   if (googleAuthUser) {
     const { error } = await db.auth.signOut();
+    localStorage.removeItem(AUTH_SESSION_BACKUP_KEY);
     if (error) alert('ログアウトに失敗しました: ' + error.message);
     return;
   }
@@ -969,8 +1049,10 @@ async function handleGoogleAuthClick(source = 'header') {
 async function initGoogleAuth() {
   if (!db?.auth) return;
   await bootstrapAuthSessionFromUrlIfNeeded();
+  await restoreAuthSessionFromBackupIfNeeded();
   const { data, error } = await db.auth.getSession();
   if (!error) googleAuthUser = data?.session?.user || null;
+  if (!error) saveAuthSessionBackup(data?.session || null);
   syncNicknameFromGoogle();
   currentUser = localStorage.getItem('waseda_nickname') || 'ゲスト';
   renderGoogleAuthButton();
@@ -978,6 +1060,7 @@ async function initGoogleAuth() {
   scheduleJukenDraftRestoreChecks();
   db.auth.onAuthStateChange((_event, session) => {
     googleAuthUser = session?.user || null;
+    saveAuthSessionBackup(session || null);
     syncNicknameFromGoogle();
     currentUser = localStorage.getItem('waseda_nickname') || 'ゲスト';
     renderGoogleAuthButton();
@@ -999,6 +1082,7 @@ function saveNickname() {
   if (!val) { alert('ニックネームを入力してください'); return; }
   currentUser = val;
   localStorage.setItem('waseda_nickname', val);
+  if (googleAuthUser?.id) rememberOwnedNickname(val, googleAuthUser.id);
   fillNicknameInputs();
   updateNicknameBadge();
   closeNicknameModal();
@@ -1036,6 +1120,42 @@ async function loadMyPagePosts() {
         rows = [...merged.values()];
       }
     }
+
+    const nicknameCandidates = getAccountNicknameCandidates(resolvedUser).map(v => String(v).trim().toLowerCase()).filter(Boolean);
+    const nicknameSet = new Set(nicknameCandidates);
+    const { data: deviceRows, error: deviceErr } = await db.from('posts').select('*').eq('device_id', getDeviceId()).order('created_at',{ascending:false}).limit(200);
+    if (deviceErr) throw deviceErr;
+    if (Array.isArray(deviceRows) && deviceRows.length) {
+      const legacyRows = deviceRows.filter(p => {
+        const owner = (p.owner_key || '').trim();
+        if (owner === ownerKey || owner === resolvedUser.id) return true;
+        if (owner) return false;
+        const authorLower = String(p.author || '').trim().toLowerCase();
+        if (!authorLower) return true;
+        if (!nicknameSet.size) return true;
+        return nicknameSet.has(authorLower);
+      });
+
+      const adoptIds = legacyRows.filter(p => !p.owner_key).map(p => p.id).filter(Boolean);
+      if (adoptIds.length) {
+        try {
+          const { error: adoptErr } = await db.from('posts').update({ owner_key: ownerKey }).in('id', adoptIds).is('owner_key', null);
+          if (adoptErr && !isOwnerKeyColumnError(adoptErr)) console.warn('owner adopt failed', adoptErr);
+        } catch (e) {
+          console.warn('owner adopt exception', e);
+        }
+      }
+
+      const merged = new Map(rows.map(p => [String(p.id), p]));
+      legacyRows.forEach(p => {
+        if (!p.owner_key) p.owner_key = ownerKey;
+        merged.set(String(p.id), p);
+        rememberOwnedPostId(p.id, resolvedUser.id);
+        if (p.author) rememberOwnedNickname(p.author, resolvedUser.id);
+      });
+      rows = [...merged.values()];
+    }
+
     rows.sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
     summaryEl.textContent = `Google連携追跡 | ニックネーム: @${localStorage.getItem('waseda_nickname') || '未設定'} | 投稿数: ${rows.length}`;
     if (!rows.length) { listEl.innerHTML = '<div style="text-align:center;color:var(--gray);padding:1rem 0;">まだあなたの投稿がありません</div>'; return; }
@@ -1066,12 +1186,23 @@ async function deleteMyPagePost(postId) {
   const resolvedUser = await getResolvedAuthUser();
   if (!resolvedUser?.id) { alert('ログインが必要です'); return; }
   try {
-    const { data: target, error: getErr } = await db.from('posts').select('id,owner_key,category').eq('id', postId).single();
+    const { data: target, error: getErr } = await db.from('posts').select('id,owner_key,device_id,category,author').eq('id', postId).single();
     if (getErr) throw getErr;
-    if (target?.owner_key !== `auth:${resolvedUser.id}`) { alert('この投稿は削除できません'); return; }
+    const ownerKey = `auth:${resolvedUser.id}`;
+    const isLegacyOwner = target?.owner_key === resolvedUser.id;
+    const isDeviceLegacy = !target?.owner_key && target?.device_id && target.device_id === getDeviceId();
+    if (!(target?.owner_key === ownerKey || isLegacyOwner || isDeviceLegacy)) { alert('この投稿は削除できません'); return; }
+
+    if (isDeviceLegacy || isLegacyOwner) {
+      try {
+        await db.from('posts').update({ owner_key: ownerKey }).eq('id', postId);
+      } catch {}
+    }
+
     const { error } = await db.from('posts').delete().eq('id', postId);
     if (error) throw error;
     removeOwnedPostId(postId, resolvedUser.id);
+    if (target?.author) rememberOwnedNickname(target.author, resolvedUser.id);
     await loadMyPagePosts();
     if (target?.category === 'juken_life_qa') await loadQaList('life');
     else if (target?.category === 'juken_qa') await loadQaList('study');
@@ -1344,7 +1475,10 @@ async function submitJukenQa(btn, kind='study') {
     const { data, error } = insertRes;
     if (error) throw error;
     if (data?.id) rememberMyQuestionId(data.id);
-    if (auth.mode === 'login' && auth.user?.id && data?.id) rememberOwnedPostId(data.id, auth.user.id);
+    if (auth.mode === 'login' && auth.user?.id && data?.id) {
+      rememberOwnedPostId(data.id, auth.user.id);
+      rememberOwnedNickname(author, auth.user.id);
+    }
     const authorId = isLife ? 'qa-life-author' : 'qa-author';
     const restIds = isLife ? ['qa-life-faculty','qa-life-title','qa-life-body'] : ['qa-faculty','qa-title','qa-body'];
     const authorEl = document.getElementById(authorId);
@@ -1505,7 +1639,10 @@ async function submitBoardPost(btn) {
     }
     const { data, error } = insertRes;
     if (error) throw error;
-    if (auth.mode === 'login' && auth.user?.id && data?.id) rememberOwnedPostId(data.id, auth.user.id);
+    if (auth.mode === 'login' && auth.user?.id && data?.id) {
+      rememberOwnedPostId(data.id, auth.user.id);
+      rememberOwnedNickname(nickname, auth.user.id);
+    }
     const boardNick = document.getElementById('boardNickname');
     if (boardNick) boardNick.value = nickname;
     ['boardFaculty','boardType','boardBody'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
