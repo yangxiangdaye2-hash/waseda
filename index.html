@@ -113,6 +113,8 @@
     }
   .nickname-badge { background: rgba(255,255,255,0.18); border: 1.5px solid rgba(255,255,255,0.35); color: white; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; font-weight: 500; white-space: nowrap; }
   .nickname-badge:hover { background: rgba(255,255,255,0.28); }
+  .btn-mypage { background: rgba(255,255,255,0.14); color: #fff; border: 1.5px solid rgba(255,255,255,0.35); padding: 6px 12px; border-radius: 18px; font-size: 0.77rem; font-weight: 700; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+  .btn-mypage:hover { background: rgba(255,255,255,0.28); }
   .btn-post { background: var(--gold); color: var(--crimson-dark); border: none; padding: 8px 18px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; transition: all 0.2s; white-space: nowrap; }
   .btn-post:hover { background: var(--gold-light); transform: translateY(-1px); }
 
@@ -400,6 +402,7 @@
       .tabs { top: 54px; }
       .logo-jp { font-size: 1.2rem; }
       .nickname-badge { padding: 5px 11px; font-size: 0.76rem; }
+      .btn-mypage { padding: 5px 10px; font-size: 0.72rem; }
       .btn-post { padding: 7px 14px; font-size: 0.8rem; }
       .btn-admin { padding: 5px 10px; font-size: 0.78rem; }
 
@@ -448,6 +451,7 @@
       .logo-en { display: none; }
       .logo-jp { font-size: 1.15rem; }
       .nickname-badge { padding: 5px 10px; font-size: 0.74rem; }
+      .btn-mypage { padding: 5px 9px; font-size: 0.7rem; }
     }
 
     @media (max-width: 480px) {
@@ -456,6 +460,7 @@
       .tabs { top: 50px; }
       .logo-jp { font-size: 1.05rem; }
       .nickname-badge { max-width: 80px; overflow: hidden; text-overflow: ellipsis; padding: 5px 8px; font-size: 0.72rem; }
+      .btn-mypage { padding: 5px 8px; font-size: 0.68rem; }
       .btn-post { padding: 6px 12px; font-size: 0.78rem; }
 
       /* Hero */
@@ -526,6 +531,7 @@
       <a class="logo" href="#"><span class="logo-jp">ワセダノート</span><span class="logo-en">WASEDA NOTE</span></a>
       <div class="header-right">
         <button class="btn-google-auth" id="googleAuthBtn" onclick="handleGoogleAuthClick()">Googleでログイン</button>
+        <button class="btn-mypage" onclick="openMyPageModal()">📌 マイページ</button>
         <div class="nickname-badge" id="nicknameBadge" onclick="openNicknameModal()">👤 設定中...</div>
         <button class="btn-admin" id="adminBtn" style="display:none;margin-right:0.5rem;" onclick="openAdminModal()">⚙️ 管理</button>
         <button class="btn-post" onclick="openPostModal()">＋ 投稿する</button>
@@ -1152,6 +1158,19 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="myPageModal">
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <h3>📌 マイページ</h3>
+        <button class="modal-close" onclick="closeMyPageModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="myPageSummary" style="font-size:0.86rem;color:var(--gray);margin-bottom:1rem;">読み込み中...</div>
+        <div id="myPageList"></div>
+      </div>
+    </div>
+  </div>
+
   <script>
   // Supabase初期化（CDNのエクスポートの違いに対応する）
   const SUPABASE_URL = 'https://hazntivymzywhowtdtcc.supabase.co';
@@ -1224,10 +1243,13 @@
     if (!db?.auth) return;
     const { data, error } = await db.auth.getSession();
     if (!error) googleAuthUser = data?.session?.user || null;
+    syncNicknameFromGoogle();
     renderGoogleAuthButton();
     db.auth.onAuthStateChange((_event, session) => {
       googleAuthUser = session?.user || null;
+      syncNicknameFromGoogle();
       renderGoogleAuthButton();
+      if (document.getElementById('myPageModal')?.classList.contains('open')) loadMyPagePosts();
     });
   }
 
@@ -1241,19 +1263,58 @@
     return id;
   }
 
+  function getOwnerKey() {
+    return googleAuthUser?.id ? `auth:${googleAuthUser.id}` : getDeviceId();
+  }
+
+  function isOwnerKeyColumnError(error) {
+    const msg = `${error?.message || ''} ${error?.details || ''}`;
+    return /owner_key/i.test(msg) && /(column|schema|does not exist|unknown)/i.test(msg);
+  }
+
+  function createOwnerPayload(base) {
+    return { ...base, device_id: getDeviceId(), owner_key: getOwnerKey() };
+  }
+
+  function isMyContent(item, myIds) {
+    if (!item) return false;
+    if (item.owner_key && item.owner_key === getOwnerKey()) return true;
+    if (item.device_id && item.device_id === getDeviceId()) return true;
+    if (myIds && myIds.has(String(item.id))) return true;
+    return !!(item.author && item.author === currentUser);
+  }
+
+  function syncNicknameFromGoogle() {
+    if (!googleAuthUser) return;
+    const saved = (localStorage.getItem('waseda_nickname') || '').trim();
+    if (saved && saved !== 'ゲスト') return;
+    const display = getGoogleDisplayName(googleAuthUser).trim();
+    if (!display) return;
+    currentUser = display.slice(0, 20);
+    localStorage.setItem('waseda_nickname', currentUser);
+    updateNicknameBadge();
+  }
+
   function getMyQuestionIds() {
     try { return new Set(JSON.parse(localStorage.getItem('waseda_my_question_ids') || '[]')); }
     catch { return new Set(); }
   }
 
+  function rememberMyQuestionId(id) {
+    if (!id) return;
+    const set = getMyQuestionIds();
+    set.add(String(id));
+    const arr = [...set];
+    if (arr.length > 300) arr.splice(0, arr.length - 300);
+    localStorage.setItem('waseda_my_question_ids', JSON.stringify(arr));
+  }
+
   function canManagePost(post) {
-    if (!post) return false;
-    return isAdmin || post.device_id === getDeviceId() || (post.author && post.author === currentUser);
+    return isAdmin || isMyContent(post);
   }
 
   function canManageComment(comment) {
-    if (!comment) return false;
-    return isAdmin || comment.device_id === getDeviceId() || (comment.author && comment.author === currentUser);
+    return isAdmin || isMyContent(comment);
   }
 
   let allPosts = [];
@@ -1261,9 +1322,94 @@
 
   // ニックネーム
   function updateNicknameBadge() { document.getElementById('nicknameBadge').textContent = '👤 ' + currentUser; }
-  function openNicknameModal() { document.getElementById('nicknameInput').value = currentUser; document.getElementById('nicknameModal').classList.add('open'); }
+  function openNicknameModal() { document.getElementById('nicknameInput').value = currentUser === 'ゲスト' && googleAuthUser ? getGoogleDisplayName(googleAuthUser).slice(0, 20) : currentUser; document.getElementById('nicknameModal').classList.add('open'); }
   function closeNicknameModal() { document.getElementById('nicknameModal').classList.remove('open'); }
   function saveNickname() { const val = document.getElementById('nicknameInput').value.trim(); if (!val) { alert('ニックネームを入力してください'); return; } currentUser = val; localStorage.setItem('waseda_nickname', val); updateNicknameBadge(); checkAdmin(); closeNicknameModal(); }
+
+  function getCategoryLabel(category) {
+    const labels = {
+      lecture: '授業口コミ',
+      circle: 'サークル情報',
+      campus: 'キャンパスライフ',
+      qa: 'Q&A',
+      juken: '受験生掲示板',
+      juken_qa: '受験Q&A（勉強）',
+      juken_life_qa: '受験Q&A（大学生活）',
+      taikenki: '合格体験記'
+    };
+    return labels[category] || category;
+  }
+
+  function openMyPageModal() {
+    document.getElementById('myPageModal').classList.add('open');
+    loadMyPagePosts();
+  }
+
+  function closeMyPageModal() {
+    document.getElementById('myPageModal').classList.remove('open');
+  }
+
+  async function loadMyPagePosts() {
+    const summaryEl = document.getElementById('myPageSummary');
+    const listEl = document.getElementById('myPageList');
+    if (!summaryEl || !listEl) return;
+    if (!db) {
+      summaryEl.textContent = 'DB未接続';
+      listEl.innerHTML = '';
+      return;
+    }
+    try {
+      summaryEl.textContent = '読み込み中...';
+      const merged = new Map();
+      const addRows = (rows) => (rows || []).forEach(row => merged.set(String(row.id), row));
+
+      const { data: byDevice, error: byDeviceErr } = await db.from('posts').select('*').eq('device_id', getDeviceId()).order('created_at', { ascending: false }).limit(60);
+      if (byDeviceErr) throw byDeviceErr;
+      addRows(byDevice);
+
+      if (googleAuthUser?.id) {
+        const { data: byOwner, error: byOwnerErr } = await db.from('posts').select('*').eq('owner_key', getOwnerKey()).order('created_at', { ascending: false }).limit(60);
+        if (byOwnerErr && !isOwnerKeyColumnError(byOwnerErr)) throw byOwnerErr;
+        if (!byOwnerErr) addRows(byOwner);
+      }
+
+      if (currentUser && currentUser !== 'ゲスト') {
+        const { data: byAuthor, error: byAuthorErr } = await db.from('posts').select('*').eq('author', currentUser).order('created_at', { ascending: false }).limit(60);
+        if (byAuthorErr) throw byAuthorErr;
+        addRows(byAuthor);
+      }
+
+      const rows = [...merged.values()].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      const mode = googleAuthUser ? 'Google連携追跡' : '端末ベース追跡';
+      summaryEl.textContent = `${mode} | ニックネーム: @${currentUser} | 投稿数: ${rows.length}`;
+
+      if (!rows.length) {
+        listEl.innerHTML = '<div style="text-align:center;color:var(--gray);padding:1.2rem 0;">まだあなたの投稿がありません</div>';
+        return;
+      }
+
+      listEl.innerHTML = rows.map(p => {
+        const isQa = p.category === 'qa' || p.category === 'juken_qa' || p.category === 'juken_life_qa';
+        const openFn = isQa ? `openQaDetail(${JSON.stringify(p.id)})` : `openPostDetail(${JSON.stringify(p.id)})`;
+        return `<div style="border:1px solid var(--border);border-radius:8px;padding:0.8rem;margin-bottom:0.7rem;">
+          <div style="display:flex;justify-content:space-between;gap:0.6rem;align-items:center;flex-wrap:wrap;">
+            <span style="font-size:0.72rem;color:var(--gray);background:var(--crimson-pale);padding:2px 8px;border-radius:999px;">${escHtml(getCategoryLabel(p.category))}</span>
+            <span style="font-size:0.73rem;color:var(--gray-light);">${formatTime(p.created_at)}</span>
+          </div>
+          <div style="margin-top:0.4rem;font-size:0.9rem;font-weight:700;color:var(--dark);">${escHtml(p.title || '(タイトルなし)')}</div>
+          <div style="margin-top:0.2rem;font-size:0.8rem;color:var(--gray);">${escHtml((p.body || '').slice(0, 110))}</div>
+          <div style="margin-top:0.5rem;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:0.73rem;color:var(--gray-light);">❤️ ${p.likes || 0} / 💬 ${p.comments || 0}</span>
+            <button class="btn-submit" style="margin-top:0;padding:6px 10px;font-size:0.74rem;" onclick="closeMyPageModal();${openFn}">詳細を見る</button>
+          </div>
+        </div>`;
+      }).join('');
+    } catch (e) {
+      console.error(e);
+      summaryEl.textContent = '読み込みに失敗しました';
+      listEl.innerHTML = '';
+    }
+  }
 
   // 投稿取得
   async function loadPosts() {
@@ -1541,7 +1687,7 @@
       if (!isAdmin) {
         const { data: targetPost, error: getError } = await db
           .from('posts')
-          .select('id, device_id, author')
+          .select('id, device_id, owner_key, author')
           .eq('id', postId)
           .single();
         if (getError) throw getError;
@@ -1565,7 +1711,7 @@
       if (!isAdmin) {
         const { data: targetComment, error: getError } = await db
           .from('comments')
-          .select('id, device_id, author')
+          .select('id, device_id, owner_key, author')
           .eq('id', commentId)
           .single();
         if (getError) throw getError;
@@ -2136,7 +2282,6 @@
       category,
       faculty,
       author: currentUser,
-      device_id: getDeviceId(),
       title,
       body,
       likes: 0,
@@ -2144,7 +2289,12 @@
       ...extraData
     };
 
-    const { error } = await db.from('posts').insert([newPost]);
+    let payload = createOwnerPayload(newPost);
+    let { error } = await db.from('posts').insert([payload]);
+    if (error && isOwnerKeyColumnError(error)) {
+      delete payload.owner_key;
+      ({ error } = await db.from('posts').insert([payload]));
+    }
     btn.disabled = false;
     btn.textContent = '投稿する';
     
@@ -2283,8 +2433,12 @@
 
     try {
       if (!db) throw new Error('Supabase client not initialized');
-      const newComment = { post_id: postId, author: currentUser, device_id: getDeviceId(), text };
-      const { error: insertErr } = await db.from('comments').insert([newComment]);
+      let payload = createOwnerPayload({ post_id: postId, author: currentUser, text });
+      let { error: insertErr } = await db.from('comments').insert([payload]);
+      if (insertErr && isOwnerKeyColumnError(insertErr)) {
+        delete payload.owner_key;
+        ({ error: insertErr } = await db.from('comments').insert([payload]));
+      }
       if (insertErr) { alert('コメント投稿に失敗しました: ' + insertErr.message); return; }
 
       // posts テーブルのコメント数を更新
@@ -2306,8 +2460,13 @@
     if (!text) { alert('回答を入力してください'); return; }
     try {
       if (!db) throw new Error('Supabase client not initialized');
-      const newAns = { post_id: postId, author: currentUser, device_id: getDeviceId(), text };
-      const { data: inserted, error: insertErr } = await db.from('answers').insert([newAns]);
+      let payload = createOwnerPayload({ post_id: postId, author: currentUser, text });
+      let insertRes = await db.from('answers').insert([payload]);
+      if (insertRes.error && isOwnerKeyColumnError(insertRes.error)) {
+        delete payload.owner_key;
+        insertRes = await db.from('answers').insert([payload]);
+      }
+      const insertErr = insertRes.error;
       if (insertErr) throw insertErr;
       input.value = '';
       openQaDetail(postId);
@@ -2320,6 +2479,7 @@
   document.getElementById('postDetailModal').addEventListener('click', e => { if (e.target===document.getElementById('postDetailModal')) closePostDetailModal(); });
   document.getElementById('qaModal').addEventListener('click', e => { if (e.target===document.getElementById('qaModal')) closeQaModal(); });
   document.getElementById('nicknameModal').addEventListener('click', e => { if (e.target===document.getElementById('nicknameModal')) closeNicknameModal(); });
+  document.getElementById('myPageModal').addEventListener('click', e => { if (e.target===document.getElementById('myPageModal')) closeMyPageModal(); });
   document.getElementById('adminModal').addEventListener('click', e => { if (e.target===document.getElementById('adminModal')) closeAdminModal(); });
   document.getElementById('reportModal').addEventListener('click', e => { if (e.target===document.getElementById('reportModal')) closeReportModal(); });
 
@@ -2359,20 +2519,20 @@
         return;
       }
       const sorted = [...data].sort((a, b) => {
-        const mineA = (a.device_id === getDeviceId() || myIds.has(String(a.id)) || (a.author && a.author === currentUser)) ? 1 : 0;
-        const mineB = (b.device_id === getDeviceId() || myIds.has(String(b.id)) || (b.author && b.author === currentUser)) ? 1 : 0;
+        const mineA = isMyContent(a, myIds) ? 1 : 0;
+        const mineB = isMyContent(b, myIds) ? 1 : 0;
         if (mineA !== mineB) return mineB - mineA;
         return new Date(b.created_at || 0) - new Date(a.created_at || 0);
       });
       const mine = [];
       const others = [];
       sorted.forEach(p => {
-        const isMine = (p.device_id === getDeviceId() || myIds.has(String(p.id)) || (p.author && p.author === currentUser));
+        const isMine = isMyContent(p, myIds);
         if (isMine) mine.push(p); else others.push(p);
       });
 
       const renderCard = (p) => {
-        const isMine = (p.device_id === getDeviceId() || myIds.has(String(p.id)) || (p.author && p.author === currentUser));
+        const isMine = isMyContent(p, myIds);
         const myTag = isMine ? '<span class="juken-qa-my-badge">🧷 あなたの質問</span>' : '';
         const fTag = p.faculty ? `<span class="juken-qa-faculty">${escHtml(FACULTIES[p.faculty]||p.faculty)}</span>` : '';
         const ans = answersCountMap[p.id] || 0;

@@ -595,6 +595,46 @@ function getDeviceId() {
   if (!id) { id='dev_'+Math.random().toString(36).substr(2,9)+'_'+Date.now().toString(36); localStorage.setItem('waseda_device_id',id); }
   return id;
 }
+function getOwnerKey() {
+  return googleAuthUser?.id ? `auth:${googleAuthUser.id}` : getDeviceId();
+}
+function isOwnerKeyColumnError(error) {
+  const msg = `${error?.message || ''} ${error?.details || ''}`;
+  return /owner_key/i.test(msg) && /(column|schema|does not exist|unknown)/i.test(msg);
+}
+function createOwnerPayload(base) {
+  return { ...base, device_id: getDeviceId(), owner_key: getOwnerKey() };
+}
+function getPreferredNickname() {
+  const saved = (localStorage.getItem('waseda_nickname') || '').trim();
+  if (saved && saved !== 'ゲスト') return saved;
+  if (googleAuthUser) return getGoogleDisplayName(googleAuthUser).trim().slice(0, 20);
+  return '';
+}
+function syncNicknameFromGoogle() {
+  if (!googleAuthUser) return;
+  const saved = (localStorage.getItem('waseda_nickname') || '').trim();
+  if (saved && saved !== 'ゲスト') return;
+  const display = getGoogleDisplayName(googleAuthUser).trim();
+  if (!display) return;
+  localStorage.setItem('waseda_nickname', display.slice(0, 20));
+}
+function fillNicknameInputs() {
+  const nick = getPreferredNickname();
+  if (!nick) return;
+  ['qa-author', 'qa-life-author', 'boardNickname'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el.value.trim()) el.value = nick;
+  });
+}
+function isMyContent(item, myIds) {
+  if (!item) return false;
+  if (item.owner_key && item.owner_key === getOwnerKey()) return true;
+  if (item.device_id && item.device_id === getDeviceId()) return true;
+  if (myIds && myIds.has(String(item.id))) return true;
+  const nick = getPreferredNickname();
+  return !!(nick && item.author === nick);
+}
 function getGoogleDisplayName(user) {
   return user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'ログイン中ユーザー';
 }
@@ -631,10 +671,14 @@ async function initGoogleAuth() {
   if (!db?.auth) return;
   const { data, error } = await db.auth.getSession();
   if (!error) googleAuthUser = data?.session?.user || null;
+  syncNicknameFromGoogle();
   renderGoogleAuthButton();
+  fillNicknameInputs();
   db.auth.onAuthStateChange((_event, session) => {
     googleAuthUser = session?.user || null;
+    syncNicknameFromGoogle();
     renderGoogleAuthButton();
+    fillNicknameInputs();
   });
 }
 function getMyQuestionIds() {
@@ -799,24 +843,23 @@ function renderQaList(kind='study') {
   const basePosts = isLife ? qaLifeAllPosts : qaAllPosts;
   const facFilter = isLife ? qaLifeFacultyFilter : qaFacultyFilter;
   const myIds = getMyQuestionIds();
-  const currentNick = localStorage.getItem('waseda_nickname') || '';
   const posts = facFilter==='all' ? basePosts : basePosts.filter(p=>p.faculty===facFilter);
   if (!posts.length) { el.innerHTML = emptyState('❓','まだ質問がありません','最初に質問を投稿してみましょう！',false); return; }
   const sortedPosts = [...posts].sort((a, b) => {
-    const mineA = (a.device_id === getDeviceId() || myIds.has(String(a.id)) || (currentNick && a.author === currentNick)) ? 1 : 0;
-    const mineB = (b.device_id === getDeviceId() || myIds.has(String(b.id)) || (currentNick && b.author === currentNick)) ? 1 : 0;
+    const mineA = isMyContent(a, myIds) ? 1 : 0;
+    const mineB = isMyContent(b, myIds) ? 1 : 0;
     if (mineA !== mineB) return mineB - mineA;
     return new Date(b.created_at || 0) - new Date(a.created_at || 0);
   });
   const mine = [];
   const others = [];
   sortedPosts.forEach(p => {
-    const isMine = (p.device_id === getDeviceId() || myIds.has(String(p.id)) || (currentNick && p.author === currentNick));
+    const isMine = isMyContent(p, myIds);
     if (isMine) mine.push(p); else others.push(p);
   });
 
   const renderCard = (p) => {
-    const isMine = (p.device_id === getDeviceId() || myIds.has(String(p.id)) || (currentNick && p.author === currentNick));
+    const isMine = isMyContent(p, myIds);
     const myTag = isMine ? '<span class="qa-my-badge">🧷 あなたの質問</span>' : '';
     const fTag = p.faculty ? `<span class="qa-faculty-tag">${escHtml(FACULTIES[p.faculty]||p.faculty)}</span>` : '';
     return `<div class="qa-card${isMine ? ' my-question' : ''}" onclick="openQaDetail(${JSON.stringify(p.id)})">
@@ -851,7 +894,8 @@ function filterQa(kind, fac, el) {
 
 async function submitJukenQa(btn, kind='study') {
   const isLife = kind === 'life';
-  const author = document.getElementById(isLife ? 'qa-life-author' : 'qa-author').value.trim();
+  const authorInput = document.getElementById(isLife ? 'qa-life-author' : 'qa-author');
+  const author = authorInput.value.trim() || getPreferredNickname();
   const faculty = document.getElementById(isLife ? 'qa-life-faculty' : 'qa-faculty').value;
   const title  = document.getElementById(isLife ? 'qa-life-title' : 'qa-title').value.trim();
   const body   = document.getElementById(isLife ? 'qa-life-body' : 'qa-body').value.trim();
@@ -859,16 +903,27 @@ async function submitJukenQa(btn, kind='study') {
   if (!title)  { alert('質問タイトルを入力してください'); return; }
   if (!body)   { alert('本文を入力してください'); return; }
   if (!db)     { alert('DB未接続'); return; }
+  localStorage.setItem('waseda_nickname', author);
+  if (authorInput) authorInput.value = author;
   btn.disabled=true; btn.textContent='投稿中...';
   try {
-    const { data, error } = await db.from('posts').insert([{
+    let payload = createOwnerPayload({
       category: isLife ? 'juken_life_qa' : 'juken_qa', author, title, body, faculty:faculty||null,
-      likes:0, comments:0, device_id:getDeviceId()
-    }]).select('id').single();
+      likes:0, comments:0
+    });
+    let insertRes = await db.from('posts').insert([payload]).select('id').single();
+    if (insertRes.error && isOwnerKeyColumnError(insertRes.error)) {
+      delete payload.owner_key;
+      insertRes = await db.from('posts').insert([payload]).select('id').single();
+    }
+    const { data, error } = insertRes;
     if (error) throw error;
     if (data?.id) rememberMyQuestionId(data.id);
-    (isLife ? ['qa-life-author','qa-life-faculty','qa-life-title','qa-life-body'] : ['qa-author','qa-faculty','qa-title','qa-body'])
-      .forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+    const authorId = isLife ? 'qa-life-author' : 'qa-author';
+    const restIds = isLife ? ['qa-life-faculty','qa-life-title','qa-life-body'] : ['qa-faculty','qa-title','qa-body'];
+    const authorEl = document.getElementById(authorId);
+    if (authorEl) authorEl.value = author;
+    restIds.forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
     await loadQaList(kind);
   } catch(e) { console.error(e); alert('投稿に失敗しました: ' + (e?.message || e?.code || JSON.stringify(e))); }
   finally { btn.disabled=false; btn.textContent='質問を投稿する'; }
@@ -906,10 +961,17 @@ async function submitJukenAnswer(postId) {
   const input = document.getElementById(`ans-input-${postId}`);
   const text = input ? input.value.trim() : '';
   if (!text) { alert('回答を入力してください'); return; }
-  const nick = localStorage.getItem('waseda_nickname') || '匿名';
+  const nick = getPreferredNickname() || '匿名';
+  localStorage.setItem('waseda_nickname', nick);
   const btn = event.target; btn.disabled=true; btn.textContent='投稿中...';
   try {
-    const { error } = await db.from('answers').insert([{ post_id:postId, author:nick, text, device_id:getDeviceId() }]);
+    let payload = createOwnerPayload({ post_id:postId, author:nick, text });
+    let insertRes = await db.from('answers').insert([payload]);
+    if (insertRes.error && isOwnerKeyColumnError(insertRes.error)) {
+      delete payload.owner_key;
+      insertRes = await db.from('answers').insert([payload]);
+    }
+    const { error } = insertRes;
     if (error) throw error;
     const cur = qaAllPosts.find(p=>p.id===postId) || qaLifeAllPosts.find(p=>p.id===postId);
     if (cur) await db.from('posts').update({comments:(cur.comments||0)+1}).eq('id',postId);
@@ -994,14 +1056,23 @@ async function submitBoardPost(btn) {
   if (!type)     { alert('投稿種別を選択してください'); return; }
   if (!body)     { alert('本文を入力してください'); return; }
   if (!db) { alert('DB未接続'); return; }
+  localStorage.setItem('waseda_nickname', nickname);
   btn.disabled=true; btn.textContent='投稿中...';
   try {
-    const { error } = await db.from('posts').insert([{
+    let payload = createOwnerPayload({
       category:'juken', author:nickname, title:body.slice(0,40), body,
-      faculty:faculty||null, circle_type:type, likes:0, comments:0, device_id:getDeviceId()
-    }]);
+      faculty:faculty||null, circle_type:type, likes:0, comments:0
+    });
+    let insertRes = await db.from('posts').insert([payload]);
+    if (insertRes.error && isOwnerKeyColumnError(insertRes.error)) {
+      delete payload.owner_key;
+      insertRes = await db.from('posts').insert([payload]);
+    }
+    const { error } = insertRes;
     if (error) throw error;
-    ['boardNickname','boardFaculty','boardType','boardBody'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+    const boardNick = document.getElementById('boardNickname');
+    if (boardNick) boardNick.value = nickname;
+    ['boardFaculty','boardType','boardBody'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
     await loadBoardPosts();
     document.getElementById('board-posts').scrollIntoView({behavior:'smooth'});
   } catch(e) { console.error(e); alert('投稿に失敗しました: ' + (e?.message || JSON.stringify(e))); }
