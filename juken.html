@@ -334,7 +334,7 @@
           <label class="form-label">本文 <span style="color:#e74c3c">*</span></label>
           <textarea class="form-textarea" id="qa-body" placeholder="質問の詳細を書いてください..."></textarea>
         </div>
-        <button class="btn-submit" onclick="submitJukenQa()">質問を投稿する</button>
+        <button class="btn-submit" onclick="submitJukenQa(this)">質問を投稿する</button>
         <p class="form-notice">良識ある投稿をお願いします。</p>
       </div>
       <!-- Q&A一覧 -->
@@ -397,7 +397,7 @@
             <label class="form-label">本文 <span style="color:#e74c3c">*</span></label>
             <textarea class="form-textarea" id="boardBody" placeholder="気になることや進捗を自由に書いてください..."></textarea>
           </div>
-          <button class="btn-submit" id="boardSubmitBtn" onclick="submitBoardPost()">投稿する</button>
+          <button class="btn-submit" id="boardSubmitBtn" onclick="submitBoardPost(this)">投稿する</button>
           <p class="form-notice">良識ある投稿をお願いします。</p>
         </div>
       </div>
@@ -689,7 +689,7 @@ function renderQaList() {
 
 function filterQa(fac, el) { setActiveChip('qa-faculty-filter', el); qaFacultyFilter=fac; renderQaList(); }
 
-async function submitJukenQa() {
+async function submitJukenQa(btn) {
   const author = document.getElementById('qa-author').value.trim();
   const faculty = document.getElementById('qa-faculty').value;
   const title  = document.getElementById('qa-title').value.trim();
@@ -698,7 +698,7 @@ async function submitJukenQa() {
   if (!title)  { alert('質問タイトルを入力してください'); return; }
   if (!body)   { alert('本文を入力してください'); return; }
   if (!db)     { alert('DB未接続'); return; }
-  const btn = event.target; btn.disabled=true; btn.textContent='投稿中...';
+  btn.disabled=true; btn.textContent='投稿中...';
   try {
     const { error } = await db.from('posts').insert([{
       category:'juken_qa', author, title, body, faculty:faculty||null,
@@ -820,16 +820,15 @@ function toggleBoardForm() {
   document.getElementById('boardFormBox').classList.toggle('open');
 }
 
-async function submitBoardPost() {
+async function submitBoardPost(btn) {
   const nickname = document.getElementById('boardNickname').value.trim();
   const faculty  = document.getElementById('boardFaculty').value;
   const type     = document.getElementById('boardType').value;
   const body     = document.getElementById('boardBody').value.trim();
   if (!nickname) { alert('ニックネームを入力してください'); return; }
   if (!type)     { alert('投稿種別を選択してください'); return; }
-  if (!body || body.length<5) { alert('本文をもう少し詳しく書いてください'); return; }
+  if (!body)     { alert('本文を入力してください'); return; }
   if (!db) { alert('DB未接続'); return; }
-  const btn = document.getElementById('boardSubmitBtn');
   btn.disabled=true; btn.textContent='投稿中...';
   try {
     const { error } = await db.from('posts').insert([{

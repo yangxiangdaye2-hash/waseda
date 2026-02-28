@@ -708,7 +708,7 @@
             <label class="form-label">後輩へのアドバイス <span style="color:#e74c3c">*</span></label>
             <textarea class="form-textarea" id="tk-advice" placeholder="受験生へ伝えたいことを自由に書いてください..." style="min-height:100px"></textarea>
           </div>
-          <button class="btn-submit" onclick="submitTaikenki()">体験記を投稿する</button>
+          <button class="btn-submit" onclick="submitTaikenki(this)">体験記を投稿する</button>
         </div>
     </div>
 
@@ -741,7 +741,7 @@
           <label class="form-label">コメント <span style="color:#e74c3c">*</span></label>
           <textarea class="form-textarea" id="fc-comment" placeholder="授業の雰囲気・就職・男女比など、受験生に伝えたいことを..." style="min-height:90px"></textarea>
         </div>
-        <button class="btn-submit" onclick="submitFacultyComment()">コメントを投稿する</button>
+        <button class="btn-submit" onclick="submitFacultyComment(this)">コメントを投稿する</button>
       </div>
     </div>
 
@@ -2267,7 +2267,7 @@
   }
 
   // 合格体験記投稿
-  async function submitTaikenki() {
+  async function submitTaikenki(btn) {
     const author  = document.getElementById('tk-author').value.trim();
     const faculty = document.getElementById('tk-faculty').value;
     const advice  = document.getElementById('tk-advice').value.trim();
@@ -2275,7 +2275,7 @@
     if (!faculty) { alert('合格学部を選択してください'); return; }
     if (!advice)  { alert('後輩へのアドバイスを入力してください'); return; }
     if (!db) { alert('DB未接続'); return; }
-    const btn = event.target; btn.disabled = true; btn.textContent = '投稿中...';
+    btn.disabled = true; btn.textContent = '投稿中...';
     try {
       const ef = {};
       const examType    = document.getElementById('tk-exam-type').value;
@@ -2303,7 +2303,7 @@
   }
 
   // 学部コメント投稿
-  async function submitFacultyComment() {
+  async function submitFacultyComment(btn) {
     const author  = document.getElementById('fc-author').value.trim();
     const faculty = document.getElementById('fc-faculty').value;
     const comment = document.getElementById('fc-comment').value.trim();
@@ -2311,7 +2311,7 @@
     if (!faculty) { alert('学部を選択してください'); return; }
     if (!comment) { alert('コメントを入力してください'); return; }
     if (!db) { alert('DB未接続'); return; }
-    const btn = event.target; btn.disabled = true; btn.textContent = '投稿中...';
+    btn.disabled = true; btn.textContent = '投稿中...';
     try {
       const { error } = await db.from('posts').insert([{
         category: 'faculty_comment', author, faculty,
