@@ -377,8 +377,8 @@
     .ann-item { padding: 6px 0; border-bottom: 1px solid #eee; }
 
     /* Admin tabs */
-    .admin-tabs { display: flex; gap: 8px; border-bottom: 2px solid #f0f0f0; margin-bottom: 1.5rem; }
-    .admin-tab-btn { background: none; border: none; padding: 10px 16px; font-size: 0.9rem; font-weight: 600; color: var(--gray-light); cursor: pointer; transition: all 0.2s; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+    .admin-tabs { display: flex; gap: 8px; border-bottom: 2px solid #f0f0f0; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: flex-end; }
+    .admin-tab-btn { background: none; border: none; padding: 10px 16px; font-size: 0.9rem; font-weight: 600; color: var(--gray-light); cursor: pointer; transition: all 0.2s; border-bottom: 3px solid transparent; margin-bottom: -2px; white-space: nowrap; }
     .admin-tab-btn.active { color: var(--crimson); border-bottom-color: var(--crimson); }
     .admin-tab-content { display: none; }
     .admin-tab-content.active { display: block; }
