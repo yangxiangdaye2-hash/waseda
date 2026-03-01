@@ -796,8 +796,8 @@
         <div class="post-auth-box">
           <label class="form-label" id="postAuthLabel" style="margin-bottom:0;">投稿方法 <span style="color:#e74c3c;">*</span></label>
           <div class="post-auth-options" id="postAuthOptions">
-            <label class="post-auth-option"><input type="radio" name="postAuthMode" value="login" onchange="onPostAuthModeChange()"> ログインして投稿（追跡・削除・マイページ対応）</label>
-            <label class="post-auth-option"><input type="radio" name="postAuthMode" value="guest" onchange="onPostAuthModeChange()"> ログインせず投稿（追跡不可）</label>
+            <label class="post-auth-option"><input type="radio" name="postAuthMode" value="login" onchange="onPostAuthModeChange()"> ログインして投稿（確認・削除・マイページ対応）</label>
+            <label class="post-auth-option"><input type="radio" name="postAuthMode" value="guest" onchange="onPostAuthModeChange()"> ログインせず投稿（管理対象外）</label>
           </div>
           <div class="post-auth-actions" id="postAuthActions" style="display:none;">
             <button type="button" class="btn-login-inline" onclick="handleGoogleAuthClick('post-modal')">この画面のままGoogleでログイン</button>
@@ -1281,8 +1281,8 @@
         : '現在は未ログインです。クリックでニックネームを設定できます。';
     }
     if (myPageBtn) {
-      myPageBtn.textContent = googleAuthUser ? '📌 マイページ（追跡中）' : '📌 マイページ（ログインで追跡）';
-      myPageBtn.title = googleAuthUser ? 'あなたの投稿を確認・削除できます' : 'ログインするとあなたの投稿を追跡・削除できます';
+      myPageBtn.textContent = googleAuthUser ? '📌 マイページ（投稿管理ON）' : '📌 マイページ（ログインで投稿管理）';
+      myPageBtn.title = googleAuthUser ? 'あなたの投稿を確認・削除できます' : 'ログインするとあなたの投稿を確認・削除できます';
     }
   }
 
@@ -1295,8 +1295,8 @@
       btn.title = 'クリックでログアウト';
     } else {
       btn.classList.remove('logged-in');
-      btn.textContent = 'Googleでログイン（投稿追跡）';
-      btn.title = 'ログインすると投稿を追跡・削除できます';
+      btn.textContent = 'Googleでログイン（投稿管理）';
+      btn.title = 'ログインすると投稿を確認・削除できます';
     }
     renderAccountSummary();
   }
@@ -1665,7 +1665,7 @@
     }
     if (!trackingUserId) {
       summaryEl.textContent = 'マイページはログインユーザー向け機能です';
-      listEl.innerHTML = '<div style="text-align:center;color:var(--gray);padding:1.2rem 0;">投稿追跡・削除・一覧表示を使うにはGoogleログインして投稿してください。<br><span style="font-size:0.78rem;">未ログインの投稿は追跡・削除できません。</span></div>';
+      listEl.innerHTML = '<div style="text-align:center;color:var(--gray);padding:1.2rem 0;">投稿の確認・削除・一覧表示を使うにはGoogleログインして投稿してください。<br><span style="font-size:0.78rem;">未ログインの投稿は管理・削除できません。</span></div>';
       return;
     }
     try {
@@ -1743,7 +1743,7 @@
       const rows = (byOwner || []).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
       const qaIds = rows.filter(p => p.category === 'qa' || p.category === 'juken_qa' || p.category === 'juken_life_qa').map(p => p.id).filter(Boolean);
       const myPageAnswerMap = await fetchAnswerCountsByPostIds(qaIds);
-      const trackingMode = resolvedUser?.id ? 'Google連携追跡' : 'ローカル追跡（再ログイン推奨）';
+      const trackingMode = resolvedUser?.id ? 'Google連携' : 'ローカル管理（再ログイン推奨）';
       summaryEl.textContent = `${trackingMode} | ニックネーム: @${currentUser} | 投稿数: ${rows.length}`;
 
       if (!rows.length) {
@@ -2556,7 +2556,7 @@
       authLabel.innerHTML = '投稿方法（自動）';
       options.style.display = 'none';
       actions.style.display = 'none';
-      note.textContent = 'ログイン投稿中: 以後の投稿は自動で追跡・削除・マイページ対応になります。';
+      note.textContent = 'ログイン投稿中: 以後の投稿は自動で確認・削除・マイページ対応になります。';
       return;
     }
 
@@ -2565,11 +2565,11 @@
     if (mode === 'login') {
       actions.style.display = googleAuthUser ? 'none' : 'flex';
       note.textContent = googleAuthUser
-        ? 'ログイン投稿: あなたの投稿は追跡・削除でき、マイページに表示されます。'
+        ? 'ログイン投稿: あなたの投稿は確認・削除でき、マイページに表示されます。'
         : 'ログイン投稿を選択中です。下のボタンからログインすると、この投稿画面に戻って続きから投稿できます。';
     } else {
       actions.style.display = 'none';
-      note.textContent = 'ゲスト投稿: ニックネーム投稿はできますが、追跡・削除・マイページ表示はできません。';
+      note.textContent = 'ゲスト投稿: ニックネーム投稿はできますが、管理・削除・マイページ表示はできません。';
     }
   }
 

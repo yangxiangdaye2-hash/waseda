@@ -341,10 +341,10 @@
       <!-- 投稿フォーム -->
       <div class="qa-form-box">
         <div class="qa-form-title">❓ 質問を投稿する</div>
-        <div class="auth-hint" id="authHintQa">ログインして投稿すると追跡・削除・マイページが使えます。未ログイン投稿は追跡不可です。</div>
+        <div class="auth-hint" id="authHintQa">ログインして投稿すると確認・削除・マイページが使えます。未ログイン投稿は管理対象外です。</div>
         <div class="post-auth-options" id="authOptionsQa">
-          <label class="post-auth-option"><input type="radio" name="postAuthMode-qa" id="qaAuthLogin" value="login" onchange="updateAuthModeSelectors()"> ログインして投稿（追跡・削除・マイページ対応）</label>
-          <label class="post-auth-option"><input type="radio" name="postAuthMode-qa" id="qaAuthGuest" value="guest" checked onchange="updateAuthModeSelectors()"> ログインせず投稿（追跡不可）</label>
+          <label class="post-auth-option"><input type="radio" name="postAuthMode-qa" id="qaAuthLogin" value="login" onchange="updateAuthModeSelectors()"> ログインして投稿（確認・削除・マイページ対応）</label>
+          <label class="post-auth-option"><input type="radio" name="postAuthMode-qa" id="qaAuthGuest" value="guest" checked onchange="updateAuthModeSelectors()"> ログインせず投稿（管理対象外）</label>
         </div>
         <div class="post-auth-login-actions" id="authLoginActionsQa">
           <button type="button" class="post-auth-login-btn" onclick="handleGoogleAuthClick('post-form')">このままGoogleでログイン</button>
@@ -396,10 +396,10 @@
     <div class="qa-layout">
       <div class="qa-form-box">
         <div class="qa-form-title">🏫 大学生活について質問する</div>
-        <div class="auth-hint" id="authHintQaLife">ログインして投稿すると追跡・削除・マイページが使えます。未ログイン投稿は追跡不可です。</div>
+        <div class="auth-hint" id="authHintQaLife">ログインして投稿すると確認・削除・マイページが使えます。未ログイン投稿は管理対象外です。</div>
         <div class="post-auth-options" id="authOptionsQaLife">
-          <label class="post-auth-option"><input type="radio" name="postAuthMode-qaLife" id="qaLifeAuthLogin" value="login" onchange="updateAuthModeSelectors()"> ログインして投稿（追跡・削除・マイページ対応）</label>
-          <label class="post-auth-option"><input type="radio" name="postAuthMode-qaLife" id="qaLifeAuthGuest" value="guest" checked onchange="updateAuthModeSelectors()"> ログインせず投稿（追跡不可）</label>
+          <label class="post-auth-option"><input type="radio" name="postAuthMode-qaLife" id="qaLifeAuthLogin" value="login" onchange="updateAuthModeSelectors()"> ログインして投稿（確認・削除・マイページ対応）</label>
+          <label class="post-auth-option"><input type="radio" name="postAuthMode-qaLife" id="qaLifeAuthGuest" value="guest" checked onchange="updateAuthModeSelectors()"> ログインせず投稿（管理対象外）</label>
         </div>
         <div class="post-auth-login-actions" id="authLoginActionsQaLife">
           <button type="button" class="post-auth-login-btn" onclick="handleGoogleAuthClick('post-form')">このままGoogleでログイン</button>
@@ -462,10 +462,10 @@
           <span class="post-form-toggle-icon">▼</span>
         </div>
         <div class="post-form-body">
-          <div class="auth-hint" id="authHintBoard">ログインして投稿すると追跡・削除・マイページが使えます。未ログイン投稿は追跡不可です。</div>
+          <div class="auth-hint" id="authHintBoard">ログインして投稿すると確認・削除・マイページが使えます。未ログイン投稿は管理対象外です。</div>
           <div class="post-auth-options" id="authOptionsBoard">
-            <label class="post-auth-option"><input type="radio" name="postAuthMode-board" id="boardAuthLogin" value="login" onchange="updateAuthModeSelectors()"> ログインして投稿（追跡・削除・マイページ対応）</label>
-            <label class="post-auth-option"><input type="radio" name="postAuthMode-board" id="boardAuthGuest" value="guest" checked onchange="updateAuthModeSelectors()"> ログインせず投稿（追跡不可）</label>
+            <label class="post-auth-option"><input type="radio" name="postAuthMode-board" id="boardAuthLogin" value="login" onchange="updateAuthModeSelectors()"> ログインして投稿（確認・削除・マイページ対応）</label>
+            <label class="post-auth-option"><input type="radio" name="postAuthMode-board" id="boardAuthGuest" value="guest" checked onchange="updateAuthModeSelectors()"> ログインせず投稿（管理対象外）</label>
           </div>
           <div class="post-auth-login-actions" id="authLoginActionsBoard">
             <button type="button" class="post-auth-login-btn" onclick="handleGoogleAuthClick('post-form')">このままGoogleでログイン</button>
@@ -906,7 +906,7 @@ async function resolvePostAuthMode(formKey = null) {
   if (resolvedUser?.id) return { mode: 'login', user: resolvedUser };
 
   if (!formKey) {
-    const useLogin = confirm('投稿方法を選択してください。\nOK: ログインして投稿（追跡・削除・マイページ対応）\nキャンセル: ログインせず投稿（追跡不可）');
+    const useLogin = confirm('投稿方法を選択してください。\nOK: ログインして投稿（確認・削除・マイページ対応）\nキャンセル: ログインせず投稿（管理対象外）');
     if (useLogin) {
       alert('Googleログイン後に、もう一度投稿してください。');
       await handleGoogleAuthClick();
@@ -961,8 +961,8 @@ function renderGoogleAuthButton() {
     btn.title = 'クリックでログアウト';
   } else {
     btn.classList.remove('logged-in');
-    btn.textContent = 'Googleでログイン（投稿追跡）';
-    btn.title = 'ログインすると投稿を追跡・削除できます';
+    btn.textContent = 'Googleでログイン（投稿管理）';
+    btn.title = 'ログインすると投稿を確認・削除できます';
   }
   renderAccountSummary();
 }
@@ -974,14 +974,14 @@ function renderAccountSummary() {
     nick.textContent = name && name !== 'ゲスト' ? `👤 ニックネーム: ${name}` : '👤 ニックネームを設定';
   }
   if (myPageBtn) {
-    myPageBtn.textContent = googleAuthUser ? '📌 マイページ（追跡中）' : '📌 マイページ（ログインで追跡）';
+    myPageBtn.textContent = googleAuthUser ? '📌 マイページ（投稿管理ON）' : '📌 マイページ（ログインで投稿管理）';
   }
   updateAuthHints();
 }
 function updateAuthHints() {
   const msg = googleAuthUser
-    ? '現在はログイン投稿モードです。投稿は自動で追跡・削除・マイページ対応になります。'
-    : 'ゲスト投稿: ニックネーム投稿はできますが、追跡・削除・マイページ表示はできません。';
+    ? '現在はログイン投稿モードです。投稿は自動で確認・削除・マイページ対応になります。'
+    : 'ゲスト投稿: ニックネーム投稿はできますが、管理・削除・マイページ表示はできません。';
   ['authHintQa', 'authHintQaLife', 'authHintBoard'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = msg;
@@ -1082,7 +1082,7 @@ async function loadMyPagePosts() {
   const trackingUserId = resolvedUser?.id || getLastAuthUserId();
   if (!trackingUserId) {
     summaryEl.textContent = 'マイページはログインユーザー向け機能です';
-    listEl.innerHTML = '<div style="text-align:center;color:var(--gray);padding:1rem 0;">ログイン投稿のみ追跡・削除できます。</div>';
+    listEl.innerHTML = '<div style="text-align:center;color:var(--gray);padding:1rem 0;">ログイン投稿のみ確認・削除できます。</div>';
     return;
   }
   try {
@@ -1143,7 +1143,7 @@ async function loadMyPagePosts() {
     }
 
     rows.sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
-    const trackingMode = resolvedUser?.id ? 'Google連携追跡' : 'ローカル追跡（再ログイン推奨）';
+    const trackingMode = resolvedUser?.id ? 'Google連携' : 'ローカル管理（再ログイン推奨）';
     summaryEl.textContent = `${trackingMode} | ニックネーム: @${localStorage.getItem('waseda_nickname') || '未設定'} | 投稿数: ${rows.length}`;
     if (!rows.length) { listEl.innerHTML = '<div style="text-align:center;color:var(--gray);padding:1rem 0;">まだあなたの投稿がありません</div>'; return; }
     listEl.innerHTML = rows.map(p => {
