@@ -546,12 +546,12 @@
     <h2 class="sec-title">受験生掲示板</h2>
     <div class="sec-div"></div>
     <p class="sec-sub">同じ目標を持つ仲間と情報交換・進捗報告ができる場所です。</p>
-    <div class="filter-bar" id="board-type-filter">
-      <span class="chip active" data-type="all" onclick="filterBoard('all',this)">すべて</span>
-      <span class="chip" data-type="相談" onclick="filterBoard('相談',this)">相談</span>
-      <span class="chip" data-type="進捗報告" onclick="filterBoard('進捗報告',this)">進捗報告</span>
-      <span class="chip" data-type="質問" onclick="filterBoard('質問',this)">質問</span>
-      <span class="chip" data-type="雑談" onclick="filterBoard('雑談',this)">雑談</span>
+    <div class="qa-sort-tabs" id="board-type-tabs">
+      <button type="button" class="qa-sort-tab active" data-type="all" onclick="filterBoard('all',this)">すべて</button>
+      <button type="button" class="qa-sort-tab" data-type="相談" onclick="filterBoard('相談',this)">相談</button>
+      <button type="button" class="qa-sort-tab" data-type="進捗報告" onclick="filterBoard('進捗報告',this)">進捗報告</button>
+      <button type="button" class="qa-sort-tab" data-type="質問" onclick="filterBoard('質問',this)">質問</button>
+      <button type="button" class="qa-sort-tab" data-type="雑談" onclick="filterBoard('雑談',this)">雑談</button>
     </div>
     <div class="filter-bar" id="board-faculty-filter"><!-- JS --></div>
     <div class="qa-sort-tabs" id="board-sort-tabs">
@@ -2338,7 +2338,11 @@ async function loadBoardPosts() {
 }
 
 function filterBoard(type, el) {
-  setActiveChip('board-type-filter', el); boardTypeFilter=type; renderBoardPosts();
+  const tabs = document.querySelectorAll('#board-type-tabs .qa-sort-tab');
+  tabs.forEach(tab => tab.classList.remove('active'));
+  if (el) el.classList.add('active');
+  boardTypeFilter = type;
+  renderBoardPosts();
 }
 function filterBoard2(fac, el) {
   setActiveChip('board-faculty-filter', el); boardFacFilter=fac; renderBoardPosts();
