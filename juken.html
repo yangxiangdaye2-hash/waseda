@@ -31,9 +31,10 @@
   .btn-google-auth.logged-in { background: #f8f9fa; }
   .google-g { width: 18px; height: 18px; border-radius: 50%; background: conic-gradient(#4285f4 0 25%, #34a853 25% 50%, #fbbc05 50% 75%, #ea4335 75% 100%); color: #fff; font-size: 11px; line-height: 18px; text-align: center; font-weight: 900; display: inline-block; }
   .google-user-name { max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .btn-mypage { background: rgba(255,255,255,.14); color: #fff; border: 1.5px solid rgba(255,255,255,.35); padding: 6px 10px; border-radius: 18px; font-size: .72rem; font-weight: 700; cursor: pointer; transition: all .2s; white-space: nowrap; position: relative; }
+  .btn-mypage { background: rgba(255,255,255,.14); color: #fff; border: 1.5px solid rgba(255,255,255,.35); padding: 6px 10px; border-radius: 18px; font-size: .72rem; font-weight: 700; cursor: pointer; transition: all .2s; white-space: nowrap; position: relative; overflow: visible; }
   .btn-mypage:hover { background: rgba(255,255,255,.28); }
-  .btn-mypage.has-notification::after { content: attr(data-notify-count); position: absolute; top: -7px; right: -7px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #ff2d55; color: #fff; font-size: .67rem; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; line-height: 1; box-shadow: 0 2px 8px rgba(0,0,0,.28); border: 1.5px solid rgba(255,255,255,.85); }
+  .btn-mypage.has-notification { z-index: 3; }
+  .btn-mypage.has-notification::after { content: attr(data-notify-count); position: absolute; top: -7px; right: -7px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #ff2d55; color: #fff; font-size: .67rem; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; line-height: 1; box-shadow: 0 2px 8px rgba(0,0,0,.28); border: 1.5px solid rgba(255,255,255,.85); z-index: 5; }
   .nickname-badge { background: rgba(255,255,255,0.18); border: 1.5px solid rgba(255,255,255,0.35); color: white; padding: 6px 10px; border-radius: 20px; font-size: 0.74rem; cursor: pointer; transition: all 0.2s; font-weight: 500; white-space: nowrap; max-width: 190px; overflow: hidden; text-overflow: ellipsis; }
   .nickname-badge:hover { background: rgba(255,255,255,0.28); }
   .header-back { color: rgba(255,255,255,.75); font-size: .82rem; text-decoration: none; display: flex; align-items: center; gap: 4px; white-space: nowrap; transition: color .2s; flex-shrink: 0; }
@@ -371,7 +372,6 @@
       justify-content: center;
       text-align: center;
       white-space: nowrap;
-      overflow: hidden;
       text-overflow: ellipsis;
     }
     .header-back {
