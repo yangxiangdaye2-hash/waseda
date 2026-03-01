@@ -485,27 +485,42 @@
       .sidebar { order: -1; }
       .posts-section { order: 0; }
 
-      /* Header: hide English logo subtitle to save space */
-      .header-inner { min-height: 72px; height: auto; }
-      .tabs { top: 84px; }
+      /* Header: clean 2-column layout */
+      header { padding: 6px 0.8rem; }
+      .header-inner { min-height: auto; height: auto; display: block; }
+      .logo { justify-content: center; margin-bottom: 0.45rem; }
       .logo-en { display: none; }
       .logo-jp { font-size: 1.15rem; }
-      .nickname-badge { padding: 5px 9px; font-size: 0.72rem; max-width: 110px; }
-      .btn-mypage { padding: 5px 9px; font-size: 0.7rem; }
-      .btn-google-auth { max-width: 120px; padding: 5px 8px; font-size: 0.69rem; }
-      .header-right { flex-direction: column; align-items: flex-end; justify-content: center; overflow: visible; padding-bottom: 0; }
-      .header-row { gap: 0.35rem; width: 100%; }
+      .header-right { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.35rem; overflow: visible; padding-bottom: 0; }
+      .header-row { display: contents; }
+      .header-right > .header-row > * {
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+        justify-content: center;
+        text-align: center;
+      }
+      .btn-google-auth { padding: 6px 8px; font-size: 0.69rem; }
+      .btn-mypage { padding: 6px 8px; font-size: 0.69rem; }
+      .nickname-badge { padding: 6px 8px; font-size: 0.69rem; max-width: none; }
+      .btn-admin { margin-right: 0 !important; padding: 6px 8px; font-size: 0.69rem; }
+      .btn-post { padding: 6px 8px; font-size: 0.72rem; }
+      .tabs { top: 152px; }
     }
 
     @media (max-width: 480px) {
       /* Header */
-      .header-inner { min-height: 68px; }
-      .tabs { top: 80px; }
+      .header-inner { min-height: auto; }
+      .tabs { top: 118px; }
       .logo-jp { font-size: 1.05rem; }
-      .nickname-badge { max-width: 80px; overflow: hidden; text-overflow: ellipsis; padding: 5px 8px; font-size: 0.72rem; }
-      .btn-mypage { padding: 5px 8px; font-size: 0.68rem; }
-      .btn-post { padding: 6px 12px; font-size: 0.78rem; }
-      .header-row { gap: 0.3rem; }
+      .header-right { gap: 0.3rem; }
+      .btn-google-auth,
+      .btn-mypage,
+      .btn-admin,
+      .nickname-badge,
+      .btn-post { font-size: 0.66rem; padding: 6px 6px; }
+      .btn-admin { margin-right: 0 !important; }
+      .tabs { top: 148px; }
 
       /* Hero */
       .hero { padding: 1.3rem 1rem 1.2rem; }
