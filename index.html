@@ -2340,6 +2340,7 @@
       subject: parsed.subject || '(件名なし)',
       body: parsed.body || '',
       nickname: parsed.nickname || reportRow?.reporter_nickname || '匿名',
+      auth_user_id: parsed.auth_user_id || null,
       email: parsed.email || null,
       source_site: parsed.source_site || 'student',
       created_at: parsed.created_at || reportRow?.created_at,
@@ -2358,6 +2359,7 @@
       body: payload?.body || '',
       email: payload?.email || null,
       nickname: payload?.nickname || '匿名',
+      auth_user_id: payload?.auth_user_id || null,
       source_site: payload?.source_site || 'student',
       created_at: payload?.created_at || new Date().toISOString()
     };
@@ -2631,8 +2633,11 @@
     const audience = String(notice?.audience || '').trim();
     const targetNick = String(notice?.target_nickname || '').trim().toLowerCase();
     const currentNick = String(currentUser || '').trim().toLowerCase();
+    const targetAuthUserId = String(notice?.target_auth_user_id || '').trim();
+    const currentAuthUserId = String(googleAuthUser?.id || getLastAuthUserId() || '').trim();
     if (!audience || audience === 'all') return true;
     if (audience === 'nickname') return !!currentNick && !!targetNick && targetNick === currentNick;
+    if (audience === 'auth_user') return !!currentAuthUserId && !!targetAuthUserId && currentAuthUserId === targetAuthUserId;
     return true;
   }
 
@@ -3908,7 +3913,9 @@
       const sourceSite = String(r.source_site || '').trim() || 'student';
       const siteLabel = sourceSite === 'exam' ? '受験生' : '在学生';
       const replyInputId = `contactReplyInput-${idStr.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
-      const canReply = !!String(r.nickname || '').trim() && String(r.nickname || '').trim() !== '匿名' && String(r.nickname || '').trim() !== 'ゲスト';
+      const canReplyByNick = !!String(r.nickname || '').trim() && String(r.nickname || '').trim() !== '匿名' && String(r.nickname || '').trim() !== 'ゲスト';
+      const canReplyByAuth = !!String(r.auth_user_id || '').trim();
+      const canReply = canReplyByNick || canReplyByAuth;
       const repliedAt = r.replied_at ? new Date(r.replied_at).toLocaleString('ja-JP') : '';
       return `<div style="padding:.75rem;background:${isRead ? '#f7f7f7' : '#fff8e8'};border:1px solid var(--border);border-radius:8px;margin-bottom:.55rem;">
         <div style="display:flex;justify-content:space-between;gap:.6rem;align-items:flex-start;">
@@ -3922,15 +3929,16 @@
         ${r.reply_body ? `<div style="margin-top:.55rem;padding:.55rem .6rem;background:#f4fff4;border:1px solid #d7ecd7;border-radius:8px;"><div style="font-size:.74rem;color:#2e7d32;font-weight:700;">返信済み ${repliedAt ? '· ' + repliedAt : ''}</div><div style="font-size:.8rem;color:#2f2f2f;white-space:pre-wrap;margin-top:.25rem;">${escHtml(r.reply_body)}</div></div>` : ''}
         <div style="margin-top:.55rem;display:flex;gap:.45rem;align-items:flex-start;flex-wrap:wrap;">
           <textarea id="${replyInputId}" class="form-textarea" style="margin:0;min-height:72px;flex:1;min-width:220px;" placeholder="このユーザーへの返信を入力"></textarea>
-          <button style="padding:8px 12px;background:#1976d2;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.76rem;white-space:nowrap;" onclick="replyToContact(${JSON.stringify(r.id)}, ${JSON.stringify(r.nickname || '')}, ${JSON.stringify(sourceSite)}, ${JSON.stringify(replyInputId)})" ${canReply ? '' : 'disabled'}>${canReply ? '返信する' : '返信不可'}</button>
+          <button style="padding:8px 12px;background:#1976d2;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.76rem;white-space:nowrap;" onclick="replyToContact(${JSON.stringify(r.id)}, ${JSON.stringify(r.nickname || '')}, ${JSON.stringify(sourceSite)}, ${JSON.stringify(replyInputId)}, ${JSON.stringify(r.auth_user_id || '')})" ${canReply ? '' : 'disabled'}>${canReply ? '返信する' : '返信不可'}</button>
         </div>
       </div>`;
     }).join('');
   }
 
-  async function replyToContact(contactId, targetNickname, sourceSite, inputId) {
+  async function replyToContact(contactId, targetNickname, sourceSite, inputId, targetAuthUserId) {
     const nickname = String(targetNickname || '').trim();
-    if (!nickname || nickname === '匿名' || nickname === 'ゲスト') {
+    const authUserId = String(targetAuthUserId || '').trim();
+    if ((!nickname || nickname === '匿名' || nickname === 'ゲスト') && !authUserId) {
       alert('返信対象のニックネームが見つかりません。');
       return;
     }
@@ -3947,8 +3955,9 @@
       body: replyBody,
       active: true,
       author: currentUser,
-      audience: 'nickname',
-      target_nickname: nickname,
+      audience: authUserId ? 'auth_user' : 'nickname',
+      target_nickname: authUserId ? null : nickname,
+      target_auth_user_id: authUserId || null,
       target_site: site,
       created_at: new Date().toISOString()
     };

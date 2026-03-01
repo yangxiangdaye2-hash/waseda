@@ -1707,8 +1707,11 @@ function isNoticeForCurrentUser(notice) {
   const audience = String(notice?.audience || '').trim();
   const targetNick = String(notice?.target_nickname || '').trim().toLowerCase();
   const currentNick = String(currentUser || '').trim().toLowerCase();
+  const targetAuthUserId = String(notice?.target_auth_user_id || '').trim();
+  const currentAuthUserId = String(googleAuthUser?.id || getLastAuthUserId() || '').trim();
   if (!audience || audience === 'all') return true;
   if (audience === 'nickname') return !!currentNick && !!targetNick && targetNick === currentNick;
+  if (audience === 'auth_user') return !!currentAuthUserId && !!targetAuthUserId && currentAuthUserId === targetAuthUserId;
   return true;
 }
 function isNoticeForCurrentSite(notice) {
