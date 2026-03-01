@@ -149,6 +149,10 @@
   .lecture-subtab { border: 1.5px solid #cfd6df; background: #f3f5f8; color: #3f4854; border-radius: 999px; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
   .lecture-subtab:hover { border-color: var(--crimson); color: var(--crimson); background: #fff; }
   .lecture-subtab.active { background: var(--crimson); color: #fff; border-color: var(--crimson); box-shadow: 0 2px 8px rgba(139,0,0,0.18); }
+  .qa-sort-tabs { display: none; align-items: center; gap: 0.5rem; margin: 0.3rem 0 0.9rem; flex-wrap: wrap; }
+  .qa-sort-tab { border: 1.5px solid #cfd6df; background: #f3f5f8; color: #3f4854; border-radius: 999px; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+  .qa-sort-tab:hover { border-color: var(--crimson); color: var(--crimson); background: #fff; }
+  .qa-sort-tab.active { background: var(--crimson); color: #fff; border-color: var(--crimson); box-shadow: 0 2px 8px rgba(139,0,0,0.18); }
   .lecture-kind-badge { font-size: 0.68rem; background: #f4f4f4; color: var(--gray); padding: 2px 8px; border-radius: 999px; font-weight: 700; }
 
   .tab { display: inline-block; padding: 7px 13px; font-size: 0.82rem; font-weight: 600; background: white; color: var(--crimson); border: 1.5px solid var(--crimson); border-radius: 18px; cursor: pointer; transition: all 0.2s; text-align: center; white-space: nowrap; letter-spacing: 0.01em; user-select: none; flex-shrink: 0; }
@@ -217,6 +221,7 @@
     .qa-status { font-size: 0.75rem; font-weight: 700; padding: 6px 12px; border-radius: 20px; letter-spacing: 0.05em; }
     .qa-status.answered { background: #e8f5e9; color: #2e7d32; }
     .qa-status.open { background: #fff3e0; color: #e65100; }
+    .qa-urgent-badge { font-size: 0.72rem; background: #fff3e0; color: #e65100; padding: 6px 12px; border-radius: 20px; font-weight: 700; letter-spacing: 0.02em; }
 
     .loading { text-align: center; padding: 4rem 2rem; color: var(--gray); font-size: 0.95rem; }
     .loading::after { content: ''; display: inline-block; width: 20px; height: 20px; margin-left: 8px; border: 3px solid rgba(139, 0, 0, 0.1); border-top-color: var(--crimson); border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; }
@@ -627,6 +632,11 @@
       <div class="lecture-subtabs" id="lectureSubtabs">
         <button class="lecture-subtab active" id="lectureSubtabReview" onclick="switchLectureMode('review', this)">⭐ 授業レビュー</button>
         <button class="lecture-subtab" id="lectureSubtabMemo" onclick="switchLectureMode('memo', this)">📝 授業メモ（雰囲気・テスト範囲）</button>
+      </div>
+      <div class="qa-sort-tabs" id="qaSortTabsMain">
+        <button class="qa-sort-tab active" onclick="setMainQaSortMode('unanswered', this)">🔓 未回答</button>
+        <button class="qa-sort-tab" onclick="setMainQaSortMode('newest', this)">🆕 新着</button>
+        <button class="qa-sort-tab" onclick="setMainQaSortMode('hot', this)">🔥 人気</button>
       </div>
       <div id="posts-container"><div class="loading">読み込み中...</div></div>
     </div>
@@ -1248,6 +1258,7 @@
   let currentLectureMode = 'review';
   let currentFaculty = 'all';
   let currentSort = 'newest';
+  let mainQaSortMode = 'unanswered';
   let currentTrendCategory = 'lecture';
   let searchQuery = '';
   let currentUser = localStorage.getItem('waseda_nickname') || 'ゲスト';
@@ -2309,7 +2320,12 @@
       if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,body.ilike.%${searchQuery}%`);
 
       // ソート処理
-      if (currentSort === 'popular') {
+      if (currentTab === 'qa') {
+        query = query.order('created_at', { ascending: false });
+        const { data, error } = await query;
+        if (error) throw error;
+        allPosts = applyLectureModeFilter(data || []);
+      } else if (currentSort === 'popular') {
         // 24時間以内の投稿をいいね数順で取得
         const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
         const { data: recentData, error: recentErr } = await query.gte('created_at', since24h).order('likes', { ascending: false });
@@ -2335,6 +2351,10 @@
       // answers 件数を別テーブルから取得
       const ids = allPosts.map(p => p.id).filter(Boolean);
       answersCountMap = await fetchAnswerCountsByPostIds(ids);
+
+      if (currentTab === 'qa') {
+        allPosts = sortMainQaPosts(allPosts);
+      }
 
       renderPosts(allPosts);
       if (currentTab === 'all') loadTrendingPosts(currentTrendCategory);
@@ -2481,8 +2501,11 @@
         const ansCount = answersCountMap[p.id] || 0;
         const sc = p.solved ? 'answered' : 'open';
         const sl = p.solved ? '✅ 解決済み' : '🔓 回答募集中';
+        const urgentBadge = mainQaSortMode === 'unanswered' && isQaOldUnanswered(p, ansCount)
+          ? '<span class="qa-urgent-badge">📣 72時間以上・未回答</span>'
+          : '';
         return `<div class="qa-card ${pinnedClass}" id="post-${p.id}" onclick='openQaDetail(${JSON.stringify(p.id)})'>
-          <div class="post-meta"><span class="category-tag cat-qa">❓ Q&amp;A</span><span class="qa-status ${sc}">${sl}</span>${fTag}<span class="post-time">${timeStr}</span></div>
+          <div class="post-meta"><span class="category-tag cat-qa">❓ Q&amp;A</span><span class="qa-status ${sc}">${sl}</span>${urgentBadge}${fTag}<span class="post-time">${timeStr}</span></div>
           <div class="post-title">${escHtml(p.title)}</div>
           <div class="post-body">${escHtml(p.body)}</div>
           <div class="post-footer">
@@ -3179,6 +3202,60 @@
   // ソート更新
   function updateSort() { currentSort = document.getElementById('sortSelect').value || 'newest'; loadPosts(); }
 
+  function getPostAgeHours(post) {
+    const created = new Date(post?.created_at || 0).getTime();
+    if (!created) return 0;
+    return Math.max(0, Date.now() - created) / (1000 * 60 * 60);
+  }
+
+  function isQaOldUnanswered(post, answerCount = Number(answersCountMap[post?.id] || 0)) {
+    return Number(answerCount || 0) === 0 && getPostAgeHours(post) >= 72;
+  }
+
+  function getMainQaSortGroup(post) {
+    const answers = Number(answersCountMap[post?.id] || 0);
+    if (answers === 0) return isQaOldUnanswered(post, answers) ? 0 : 1;
+    return 2;
+  }
+
+  function getMainQaHotScore(post) {
+    const likes = Number(post?.likes || 0);
+    const answers = Number(answersCountMap[post?.id] || 0);
+    const signal = likes * 2 + answers;
+    if (signal <= 0) return 0;
+    const age = getPostAgeHours(post);
+    return signal / Math.pow(age + 2, 1.2);
+  }
+
+  function sortMainQaPosts(posts) {
+    const sorted = [...(posts || [])];
+    if (mainQaSortMode === 'newest') {
+      return sorted.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    }
+    if (mainQaSortMode === 'hot') {
+      return sorted.sort((a, b) => {
+        const scoreDiff = getMainQaHotScore(b) - getMainQaHotScore(a);
+        if (scoreDiff !== 0) return scoreDiff;
+        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+      });
+    }
+    return sorted.sort((a, b) => {
+      const groupDiff = getMainQaSortGroup(a) - getMainQaSortGroup(b);
+      if (groupDiff !== 0) return groupDiff;
+      const ga = getMainQaSortGroup(a);
+      if (ga === 0) return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+      return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    });
+  }
+
+  function setMainQaSortMode(mode, el) {
+    mainQaSortMode = mode;
+    const wrap = document.getElementById('qaSortTabsMain');
+    if (wrap) wrap.querySelectorAll('.qa-sort-tab').forEach(btn => btn.classList.remove('active'));
+    if (el) el.classList.add('active');
+    if (currentTab === 'qa') loadPosts();
+  }
+
   // タブ・学部切替
   function switchTab(tab, el) {
     currentTab = tab;
@@ -3197,6 +3274,10 @@
       document.getElementById('section-title').textContent = titles[tab] || tab;
       const lectureSubtabs = document.getElementById('lectureSubtabs');
       if (lectureSubtabs) lectureSubtabs.style.display = tab === 'lecture' ? 'flex' : 'none';
+      const qaSortTabs = document.getElementById('qaSortTabsMain');
+      if (qaSortTabs) qaSortTabs.style.display = tab === 'qa' ? 'flex' : 'none';
+      const sortSelect = document.getElementById('sortSelect');
+      if (sortSelect) sortSelect.style.display = tab === 'qa' ? 'none' : '';
       loadPosts();
       const sidebar = document.querySelector('.sidebar');
       if (sidebar) sidebar.style.display = (tab === 'all' ? 'flex' : 'none');

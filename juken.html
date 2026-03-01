@@ -120,6 +120,11 @@
   .qa-card.expanded .qa-card-fold { display: block; }
   .qa-card-body { font-size: .8rem; color: var(--gray); line-height: 1.65; }
   .qa-card-footer { margin-top: .5rem; display: flex; gap: 1rem; font-size: .74rem; color: var(--gray-light); align-items: center; justify-content: flex-end; }
+  .qa-sort-tabs { display: flex; gap: .45rem; flex-wrap: wrap; margin: .55rem 0 .65rem; }
+  .qa-sort-tab { border: 1.5px solid #cfd6df; background: #f3f5f8; color: #3f4854; border-radius: 999px; padding: 4px 10px; font-size: .75rem; font-weight: 700; cursor: pointer; transition: all .2s; }
+  .qa-sort-tab:hover { border-color: var(--crimson); color: var(--crimson); background: #fff; }
+  .qa-sort-tab.active { background: var(--crimson); color: #fff; border-color: var(--crimson); box-shadow: 0 2px 8px rgba(139,0,0,.18); }
+  .qa-urgent-badge { font-size: .68rem; background: #fff3e0; color: #e65100; padding: 2px 8px; border-radius: 4px; font-weight: 700; }
 
   /* Q&A post form */
   .qa-form-box { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 1.3rem; margin-bottom: 1.4rem; }
@@ -425,6 +430,11 @@
       <!-- Q&A一覧 -->
       <div>
         <div class="filter-bar" id="qa-faculty-filter"><!-- JS --></div>
+        <div class="qa-sort-tabs" id="qa-sort-tabs-study">
+          <button type="button" class="qa-sort-tab active" onclick="setJukenQaSortMode('study','unanswered', this)">🔓 未回答</button>
+          <button type="button" class="qa-sort-tab" onclick="setJukenQaSortMode('study','newest', this)">🆕 新着</button>
+          <button type="button" class="qa-sort-tab" onclick="setJukenQaSortMode('study','hot', this)">🔥 人気</button>
+        </div>
         <div id="qa-list" class="qa-grid"><div class="loading">読み込み中...</div></div>
       </div>
     </div>
@@ -496,6 +506,11 @@
       </div>
       <div>
         <div class="filter-bar" id="qa-life-faculty-filter"><!-- JS --></div>
+        <div class="qa-sort-tabs" id="qa-sort-tabs-life">
+          <button type="button" class="qa-sort-tab active" onclick="setJukenQaSortMode('life','unanswered', this)">🔓 未回答</button>
+          <button type="button" class="qa-sort-tab" onclick="setJukenQaSortMode('life','newest', this)">🆕 新着</button>
+          <button type="button" class="qa-sort-tab" onclick="setJukenQaSortMode('life','hot', this)">🔥 人気</button>
+        </div>
         <div id="qa-life-list" class="qa-grid"><div class="loading">読み込み中...</div></div>
       </div>
     </div>
@@ -1944,8 +1959,79 @@ let qaAllPosts = [];
 let qaLifeAllPosts = [];
 let qaFacultyFilter = 'all';
 let qaLifeFacultyFilter = 'all';
+let qaSortModeStudy = 'unanswered';
+let qaSortModeLife = 'unanswered';
 let qaAnswerCountMap = {};
 const qaExpandedIds = { study: new Set(), life: new Set() };
+
+function getJukenQaSortMode(kind = 'study') {
+  return kind === 'life' ? qaSortModeLife : qaSortModeStudy;
+}
+
+function getElapsedHours(createdAt) {
+  const created = new Date(createdAt || 0).getTime();
+  if (!created) return 0;
+  const diffMs = Math.max(0, Date.now() - created);
+  return diffMs / (1000 * 60 * 60);
+}
+
+function getJukenQaAnswerCount(post) {
+  return Number(qaAnswerCountMap[post?.id] ?? post?.comments ?? 0);
+}
+
+function isJukenQaUrgentUnanswered(post) {
+  return getJukenQaAnswerCount(post) === 0 && getElapsedHours(post?.created_at) >= 72;
+}
+
+function getJukenQaSortGroup(post) {
+  const answers = getJukenQaAnswerCount(post);
+  if (answers === 0) return getElapsedHours(post?.created_at) >= 72 ? 0 : 1;
+  return 2;
+}
+
+function getJukenQaHotScore(post) {
+  const likes = Number(post?.likes || 0);
+  const answers = getJukenQaAnswerCount(post);
+  const signal = likes * 2 + answers;
+  if (signal <= 0) return 0;
+  const age = getElapsedHours(post?.created_at);
+  return signal / Math.pow(age + 2, 1.5);
+}
+
+function sortJukenQaPosts(posts, kind = 'study') {
+  const mode = getJukenQaSortMode(kind);
+  const sorted = [...(posts || [])];
+  if (mode === 'newest') {
+    return sorted.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+  }
+  if (mode === 'hot') {
+    return sorted.sort((a, b) => {
+      const scoreDiff = getJukenQaHotScore(b) - getJukenQaHotScore(a);
+      if (scoreDiff !== 0) return scoreDiff;
+      return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    });
+  }
+  return sorted.sort((a, b) => {
+    const groupDiff = getJukenQaSortGroup(a) - getJukenQaSortGroup(b);
+    if (groupDiff !== 0) return groupDiff;
+    const ga = getJukenQaSortGroup(a);
+    if (ga === 0) return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+    return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+  });
+}
+
+function setJukenQaSortMode(kind, mode, el) {
+  if (kind === 'life') qaSortModeLife = mode;
+  else qaSortModeStudy = mode;
+
+  const wrapId = kind === 'life' ? 'qa-sort-tabs-life' : 'qa-sort-tabs-study';
+  const wrap = document.getElementById(wrapId);
+  if (wrap) {
+    wrap.querySelectorAll('.qa-sort-tab').forEach(btn => btn.classList.remove('active'));
+  }
+  if (el) el.classList.add('active');
+  renderQaList(kind);
+}
 
 function toggleQaCard(kind, postId) {
   const key = kind === 'life' ? 'life' : 'study';
@@ -1991,35 +2077,27 @@ async function loadQaList(kind='study') {
 
 function renderQaList(kind='study') {
   const isLife = kind === 'life';
-  const key = isLife ? 'life' : 'study';
   const el = document.getElementById(isLife ? 'qa-life-list' : 'qa-list');
   const basePosts = isLife ? qaLifeAllPosts : qaAllPosts;
   const facFilter = isLife ? qaLifeFacultyFilter : qaFacultyFilter;
   const myIds = getMyQuestionIds();
-  const posts = facFilter==='all' ? basePosts : basePosts.filter(p=>p.faculty===facFilter);
-  if (!posts.length) { el.innerHTML = emptyState('❓','まだ質問がありません','最初に質問を投稿してみましょう！',false); return; }
-  const sortedPosts = [...posts].sort((a, b) => {
-    const mineA = isMyContent(a, myIds) ? 1 : 0;
-    const mineB = isMyContent(b, myIds) ? 1 : 0;
-    if (mineA !== mineB) return mineB - mineA;
-    return new Date(b.created_at || 0) - new Date(a.created_at || 0);
-  });
-  const mine = [];
-  const others = [];
-  sortedPosts.forEach(p => {
-    const isMine = isMyContent(p, myIds);
-    if (isMine) mine.push(p); else others.push(p);
-  });
+  const filtered = facFilter==='all' ? basePosts : basePosts.filter(p=>p.faculty===facFilter);
+  if (!filtered.length) { el.innerHTML = emptyState('❓','まだ質問がありません','最初に質問を投稿してみましょう！',false); return; }
+  const sortedPosts = sortJukenQaPosts(filtered, isLife ? 'life' : 'study');
+  const mode = getJukenQaSortMode(isLife ? 'life' : 'study');
 
   const renderCard = (p) => {
     const isMine = isMyContent(p, myIds);
     const myTag = isMine ? '<span class="qa-my-badge">🧷 あなたの質問</span>' : '';
     const fTag = p.faculty ? `<span class="qa-faculty-tag">${escHtml(FACULTIES[p.faculty]||p.faculty)}</span>` : '';
     const ansCount = qaAnswerCountMap[p.id] ?? p.comments ?? 0;
+    const urgentBadge = mode === 'unanswered' && isJukenQaUrgentUnanswered(p)
+      ? '<span class="qa-urgent-badge">📣 72時間以上・未回答</span>'
+      : '';
     return `<div class="qa-card${isMine ? ' my-question' : ''}" onclick="openQaDetail(${JSON.stringify(p.id)})">
       <div class="qa-card-head">
         <div class="qa-card-main">
-          <div class="qa-card-meta">${myTag}${fTag}<span class="qa-open-badge">🔓 回答募集中</span><span style="font-size:.69rem;color:var(--gray-light)">@${escHtml(p.author)} · ${formatTime(p.created_at)}</span></div>
+          <div class="qa-card-meta">${myTag}${fTag}${urgentBadge}<span class="qa-open-badge">🔓 回答募集中</span><span style="font-size:.69rem;color:var(--gray-light)">@${escHtml(p.author)} · ${formatTime(p.created_at)}</span></div>
           <div class="qa-card-title">${escHtml(p.title)}</div>
           <div class="qa-card-preview">${escHtml(p.body)}</div>
           <div class="qa-card-stats"><span>💬 回答 ${ansCount}件</span><span>❤️ ${p.likes||0}</span></div>
@@ -2028,15 +2106,7 @@ function renderQaList(kind='study') {
       </div>
     </div>`;
   };
-
-  const mineSection = mine.length
-    ? `<div class="qa-list-section-title">🧷 あなたの質問（${mine.length}）</div>${mine.map(p => renderCard(p)).join('')}`
-    : '';
-  const othersSection = others.length
-    ? `<div class="qa-list-section-title">📚 みんなの質問</div>${others.map(p => renderCard(p)).join('')}`
-    : '';
-
-  el.innerHTML = `${mineSection}${othersSection}`;
+  el.innerHTML = sortedPosts.map(p => renderCard(p)).join('');
 }
 
 function filterQa(kind, fac, el) {
