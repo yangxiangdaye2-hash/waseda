@@ -2760,15 +2760,17 @@
     if (!confirm('このコメントを削除してもよろしいですか？')) return;
     try {
       if (!db) throw new Error('Supabase client not initialized');
+      const resolvedUser = await getResolvedAuthUser();
+      const trackingUserId = resolvedUser?.id || getLastAuthUserId();
+      let targetComment = null;
       if (!isAdmin) {
-        const resolvedUser = await getResolvedAuthUser();
-        const trackingUserId = resolvedUser?.id || getLastAuthUserId();
-        const { data: targetComment, error: getError } = await db
+        const { data, error: getError } = await db
           .from('comments')
           .select('id, device_id, owner_key, author')
           .eq('id', commentId)
           .single();
         if (getError) throw getError;
+        targetComment = data;
         const owner = String(targetComment?.owner_key || '').trim();
         const ownerByAuth = trackingUserId && (owner === `auth:${trackingUserId}` || owner === trackingUserId);
         const ownerByDevice = !owner && targetComment?.device_id && targetComment.device_id === getDeviceId();
@@ -2777,8 +2779,35 @@
           throw new Error('削除権限がありません');
         }
       }
-      const { error } = await db.from('comments').delete().eq('id', commentId);
-      if (error) throw error;
+
+      let deleted = false;
+      let lastError = null;
+
+      if (!isAdmin && trackingUserId) {
+        for (const ownerKey of [`auth:${trackingUserId}`, trackingUserId]) {
+          const { error } = await db.from('comments').delete().eq('id', commentId).eq('owner_key', ownerKey);
+          if (!error) { deleted = true; break; }
+          if (!isOwnerKeyColumnError(error)) lastError = error;
+        }
+
+        if (!deleted && resolvedUser?.id && !String(targetComment?.owner_key || '').trim()) {
+          try {
+            const { error: adoptErr } = await db.from('comments').update({ owner_key: `auth:${resolvedUser.id}` }).eq('id', commentId).is('owner_key', null);
+            if (adoptErr && !isOwnerKeyColumnError(adoptErr)) lastError = adoptErr;
+          } catch (e) {
+            lastError = e;
+          }
+          const { error: retryErr } = await db.from('comments').delete().eq('id', commentId).eq('owner_key', `auth:${resolvedUser.id}`);
+          if (!retryErr) deleted = true;
+          else if (!isOwnerKeyColumnError(retryErr)) lastError = retryErr;
+        }
+      }
+
+      if (!deleted) {
+        const { error } = await db.from('comments').delete().eq('id', commentId);
+        if (error) throw (lastError || error);
+      }
+
       // decrement count on post
       const post = allPosts.find(p => p.id === postId);
       if (post) {
@@ -2789,7 +2818,7 @@
         renderPosts(allPosts);
       }
       await openPostDetail(postId);
-    } catch (e) { console.error(e); alert('コメントの削除に失敗しました'); }
+    } catch (e) { console.error(e); alert('コメントの削除に失敗しました: ' + (e?.message || e?.code || 'unknown error')); }
   }
 
   // ===== ADMIN SYSTEM =====
