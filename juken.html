@@ -114,10 +114,11 @@
   .qa-my-badge { font-size: .68rem; background: #fff8e1; color: #8a5d00; padding: 2px 8px; border-radius: 4px; font-weight: 700; }
   .qa-card-title { font-size: .9rem; font-weight: 700; margin-bottom: .1rem; line-height: 1.45; }
   .qa-card-preview { font-size: .76rem; color: var(--gray-light); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 1; line-clamp: 1; -webkit-box-orient: vertical; }
+  .qa-card-stats { margin-top: .45rem; display: flex; gap: .8rem; align-items: center; font-size: .74rem; color: var(--gray); font-weight: 700; }
   .qa-card-fold { display: none; margin-top: .55rem; border-top: 1px solid var(--border); padding-top: .55rem; }
   .qa-card.expanded .qa-card-fold { display: block; }
   .qa-card-body { font-size: .8rem; color: var(--gray); line-height: 1.65; }
-  .qa-card-footer { margin-top: .5rem; display: flex; gap: 1rem; font-size: .74rem; color: var(--gray-light); align-items: center; justify-content: space-between; }
+  .qa-card-footer { margin-top: .5rem; display: flex; gap: 1rem; font-size: .74rem; color: var(--gray-light); align-items: center; justify-content: flex-end; }
 
   /* Q&A post form */
   .qa-form-box { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 1.3rem; margin-bottom: 1.4rem; }
@@ -1457,12 +1458,13 @@ function renderQaList(kind='study') {
           <div class="qa-card-meta">${myTag}${fTag}<span class="qa-open-badge">🔓 回答募集中</span><span style="font-size:.69rem;color:var(--gray-light)">@${escHtml(p.author)} · ${formatTime(p.created_at)}</span></div>
           <div class="qa-card-title">${escHtml(p.title)}</div>
           <div class="qa-card-preview">${escHtml(p.body)}</div>
+          <div class="qa-card-stats"><span>💬 回答 ${ansCount}件</span><span>❤️ ${p.likes||0}</span></div>
         </div>
         <span class="qa-card-toggle-icon" aria-hidden="true">${toggleIcon}</span>
       </div>
       <div class="qa-card-fold">
         <div class="qa-card-body">${escHtml(p.body)}</div>
-        <div class="qa-card-footer"><span>💬 回答 ${ansCount}件</span><span>❤️ ${p.likes||0}</span><button class="btn-submit" style="margin-top:0;padding:4px 10px;font-size:.72rem;" onclick="openQaDetail(${JSON.stringify(p.id)})">詳細</button></div>
+        <div class="qa-card-footer"><button class="btn-submit" style="margin-top:0;padding:4px 10px;font-size:.72rem;" onclick="openQaDetail(${JSON.stringify(p.id)})">詳細</button></div>
       </div>
     </div>`;
   };
