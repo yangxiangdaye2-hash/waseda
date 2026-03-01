@@ -2099,6 +2099,8 @@ async function submitContactMessage() {
   };
 
   let stored = false;
+  let storedInDb = false;
+  let dbInsertError = null;
   try {
     if (db) {
       let { error } = await db.from('contact_messages').insert([payload]);
@@ -2114,11 +2116,25 @@ async function submitContactMessage() {
         };
         ({ error } = await db.from('contact_messages').insert([fallbackPayload]));
       }
+      if (error && isMissingColumnError(error)) {
+        const minimalPayload = {
+          email: payload.email,
+          subject: payload.subject,
+          body: payload.body,
+          nickname: payload.nickname
+        };
+        ({ error } = await db.from('contact_messages').insert([minimalPayload]));
+      }
       if (error) throw error;
       stored = true;
+      storedInDb = true;
     }
-  } catch {}
+  } catch (e) {
+    dbInsertError = e;
+    console.warn('[Contact] DB insert failed, fallback to local storage:', e);
+  }
 
+  let storedLocal = false;
   if (!stored) {
     try {
       const raw = localStorage.getItem(LOCAL_CONTACT_MESSAGES_KEY) || '[]';
@@ -2126,7 +2142,16 @@ async function submitContactMessage() {
       const next = Array.isArray(arr) ? arr : [];
       next.unshift({ ...payload, id: `local_${Date.now()}` });
       localStorage.setItem(LOCAL_CONTACT_MESSAGES_KEY, JSON.stringify(next.slice(0, 500)));
-    } catch {}
+      stored = true;
+      storedLocal = true;
+    } catch (e) {
+      console.error('[Contact] Local fallback store failed:', e);
+    }
+  }
+
+  if (!stored) {
+    alert('お問い合わせの送信に失敗しました。通信環境を確認して再度お試しください。');
+    return;
   }
 
   const emailEl = document.getElementById('contactEmail');
@@ -2136,7 +2161,12 @@ async function submitContactMessage() {
   if (subjectEl) subjectEl.value = '';
   if (bodyEl) bodyEl.value = '';
   closeContactModal();
-  alert('お問い合わせを送信しました。');
+  if (storedInDb) {
+    alert('お問い合わせを送信しました。');
+  } else if (storedLocal) {
+    const reason = dbInsertError?.message ? `\n（DB保存失敗: ${dbInsertError.message}）` : '';
+    alert('お問い合わせは一時保存しました。現在DBへ保存できていないため、管理側に届かない可能性があります。時間をおいて再送してください。' + reason);
+  }
 }
 
 async function loadMyPagePosts(forceReload = false) {
