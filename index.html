@@ -144,6 +144,11 @@
   .tabs-inner::-webkit-scrollbar { height: 3px; }
   .tabs-inner::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); }
   .tabs-inner::-webkit-scrollbar-thumb { background: rgba(139,0,0,0.2); border-radius: 2px; }
+  .lecture-subtabs { display: none; align-items: center; gap: 0.5rem; margin: 0.3rem 0 0.9rem; flex-wrap: wrap; }
+  .lecture-subtab { border: 1.5px solid var(--border); background: #fff; color: var(--gray); border-radius: 999px; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+  .lecture-subtab:hover { border-color: var(--crimson); color: var(--crimson); }
+  .lecture-subtab.active { background: var(--crimson); color: #fff; border-color: var(--crimson); }
+  .lecture-kind-badge { font-size: 0.68rem; background: #f4f4f4; color: var(--gray); padding: 2px 8px; border-radius: 999px; font-weight: 700; }
 
   .tab { display: inline-block; padding: 7px 13px; font-size: 0.82rem; font-weight: 600; background: white; color: var(--crimson); border: 1.5px solid var(--crimson); border-radius: 18px; cursor: pointer; transition: all 0.2s; text-align: center; white-space: nowrap; letter-spacing: 0.01em; user-select: none; flex-shrink: 0; }
   .tab:hover { background: var(--crimson); color: white; transform: translateY(-1px); }
@@ -614,6 +619,10 @@
           <select class="sort-select" id="sortSelect" onchange="updateSort()"><option value="newest">新着順</option><option value="popular">人気順（24時間）</option></select>
         </div>
       </div>
+      <div class="lecture-subtabs" id="lectureSubtabs">
+        <button class="lecture-subtab active" id="lectureSubtabReview" onclick="switchLectureMode('review', this)">⭐ 授業レビュー</button>
+        <button class="lecture-subtab" id="lectureSubtabMemo" onclick="switchLectureMode('memo', this)">📝 授業メモ（雰囲気・テスト範囲）</button>
+      </div>
       <div id="posts-container"><div class="loading">読み込み中...</div></div>
     </div>
 
@@ -831,6 +840,14 @@
             <input class="form-input" type="text" id="lectureName" placeholder="例：政治経済学入門">
           </div>
           <div class="form-group">
+            <label class="form-label">投稿タイプ <span style="color:#e74c3c;">*</span></label>
+            <select class="form-select" id="lecturePostKind" onchange="onLecturePostKindChange()">
+              <option value="review">⭐ 授業レビュー（評価つき）</option>
+              <option value="memo">📝 授業メモ（雰囲気・テスト範囲）</option>
+            </select>
+          </div>
+          <div class="form-group" id="lectureStarsWrap">
+          <div class="form-group">
             <label class="form-label">評価 <span style="color:#e74c3c;">*</span></label>
             <div class="star-rating">
               <input type="radio" id="star5" name="lectureStars" value="5"><label for="star5">★</label>
@@ -839,6 +856,7 @@
               <input type="radio" id="star2" name="lectureStars" value="2"><label for="star2">★</label>
               <input type="radio" id="star1" name="lectureStars" value="1"><label for="star1">★</label>
             </div>
+          </div>
           </div>
           <div class="form-group">
             <label class="form-label">レビュー <span style="color:#e74c3c;">*</span></label>
@@ -1222,6 +1240,7 @@
   };
 
   let currentTab = 'all';
+  let currentLectureMode = 'review';
   let currentFaculty = 'all';
   let currentSort = 'newest';
   let currentTrendCategory = 'lecture';
@@ -1643,6 +1662,31 @@
     return labels[category] || category;
   }
 
+  function parseExtraFields(raw) {
+    if (!raw) return {};
+    try {
+      return typeof raw === 'string' ? JSON.parse(raw) : raw;
+    } catch {
+      return {};
+    }
+  }
+
+  function getLecturePostKind(post) {
+    if (!post || post.category !== 'lecture') return null;
+    const ef = parseExtraFields(post.extra_fields);
+    if (ef.kind === 'review' || ef.kind === 'memo') return ef.kind;
+    return post.stars ? 'review' : 'memo';
+  }
+
+  function getLectureKindLabel(kind) {
+    return kind === 'memo' ? '授業メモ' : '授業レビュー';
+  }
+
+  function applyLectureModeFilter(posts) {
+    if (currentTab !== 'lecture') return posts;
+    return (posts || []).filter(p => getLecturePostKind(p) === currentLectureMode);
+  }
+
   function openMyPageModal() {
     document.getElementById('myPageModal').classList.add('open');
     loadMyPagePosts();
@@ -1807,7 +1851,7 @@
         const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
         const { data: recentData, error: recentErr } = await query.gte('created_at', since24h).order('likes', { ascending: false });
         if (!recentErr && recentData && recentData.length > 0) {
-          allPosts = recentData;
+          allPosts = applyLectureModeFilter(recentData);
         } else {
           // 24時間以内に投稿がなければ全期間のいいね数順にフォールバック
           let fbQuery = db.from('posts').select('*');
@@ -1816,13 +1860,13 @@
           if (searchQuery) fbQuery = fbQuery.or(`title.ilike.%${searchQuery}%,body.ilike.%${searchQuery}%`);
           const { data: fbData, error: fbErr } = await fbQuery.order('likes', { ascending: false });
           if (fbErr) throw fbErr;
-          allPosts = fbData || [];
+          allPosts = applyLectureModeFilter(fbData || []);
         }
       } else {
         query = query.order('created_at', { ascending: false });
         const { data, error } = await query;
         if (error) throw error;
-        allPosts = data || [];
+        allPosts = applyLectureModeFilter(data || []);
       }
 
       // answers 件数を別テーブルから取得
@@ -1979,12 +2023,15 @@
       // Category-specific metadata
       let extraMeta = '';
       if (p.category === 'lecture') {
+        const lectureKind = getLecturePostKind(p);
+        const kindLabel = getLectureKindLabel(lectureKind);
+        const kindTag = `<span class="lecture-kind-badge">${kindLabel}</span>`;
         const stars = p.stars ? '⭐'.repeat(p.stars) : '';
         const teacher = p.lecture_teacher ? `<span style="font-size:0.8rem;color:var(--gray);">👨‍🏫 ${escHtml(p.lecture_teacher)}</span>` : '';
         let extraBar = '';
         if (p.extra_fields) {
           try {
-            const ef = typeof p.extra_fields === 'string' ? JSON.parse(p.extra_fields) : p.extra_fields;
+            const ef = parseExtraFields(p.extra_fields);
             const parts = [];
             if (ef.semester) parts.push(ef.semester);
             if (ef.schedule) parts.push(ef.schedule);
@@ -1996,7 +2043,7 @@
             if (parts.length) extraBar = `<div class="extra-fields-bar">${escHtml(parts.join(' | '))}</div>`;
           } catch(e) {}
         }
-        extraMeta = `${teacher}${stars}${extraBar}`;
+        extraMeta = `${kindTag}${teacher}${stars}${extraBar}`;
       } else if (p.category === 'circle') {
         const typeMap = { sports:'運動系', culture:'文化系', other:'その他' };
         const type = p.circle_type ? `<span style="font-size:0.8rem;background:#f0f0f0;padding:2px 8px;border-radius:4px;color:#555;">${typeMap[p.circle_type]||p.circle_type}</span>` : '';
@@ -2518,11 +2565,23 @@
     } else {
       if (mainArea) mainArea.style.display = '';
       jukenPanel.style.display = 'none';
-      const titles = { all:'新着投稿', lecture:'授業口コミ', circle:'サークル情報', campus:'キャンパスライフ', qa:'Q&A' };
+      const titles = { all:'新着投稿', lecture: currentLectureMode === 'memo' ? '授業メモ' : '授業レビュー', circle:'サークル情報', campus:'キャンパスライフ', qa:'Q&A' };
       document.getElementById('section-title').textContent = titles[tab] || tab;
+      const lectureSubtabs = document.getElementById('lectureSubtabs');
+      if (lectureSubtabs) lectureSubtabs.style.display = tab === 'lecture' ? 'flex' : 'none';
       loadPosts();
       const sidebar = document.querySelector('.sidebar');
       if (sidebar) sidebar.style.display = (tab === 'all' ? 'flex' : 'none');
+    }
+  }
+
+  function switchLectureMode(mode, el) {
+    currentLectureMode = mode === 'memo' ? 'memo' : 'review';
+    document.querySelectorAll('.lecture-subtab').forEach(btn => btn.classList.remove('active'));
+    if (el) el.classList.add('active');
+    if (currentTab === 'lecture') {
+      document.getElementById('section-title').textContent = currentLectureMode === 'memo' ? '授業メモ' : '授業レビュー';
+      loadPosts();
     }
   }
   function selectFaculty(f, el) { currentFaculty = f; document.querySelectorAll('.faculty-chip').forEach(c => c.classList.remove('active')); el.classList.add('active'); loadPosts(); }
@@ -2595,6 +2654,7 @@
 
     document.getElementById('postCategory').value = 'lecture';
     document.getElementById('lectureName').value = '';
+    document.getElementById('lecturePostKind').value = 'review';
     document.getElementById('lectureBody').value = '';
     // Reset star radio buttons
     document.querySelectorAll('input[name="lectureStars"]').forEach(r => r.checked = false);
@@ -2624,6 +2684,7 @@
     document.getElementById('qaFaculty').value = '';
     document.getElementById('qaBody').value = '';
     onCategoryChange('lecture');
+    onLecturePostKindChange();
   }
 
   function toggleLectureOptional() {
@@ -2637,7 +2698,15 @@
     if (category === null) category = currentTab === 'all' ? 'lecture' : (currentTab === 'qa' ? 'qa' : currentTab);
     document.getElementById('postModal').classList.add('open');
     resetPostForm();
-    setTimeout(() => { document.getElementById('postCategory').value = category; onCategoryChange(category); }, 0);
+    setTimeout(() => {
+      document.getElementById('postCategory').value = category;
+      onCategoryChange(category);
+      if (category === 'lecture') {
+        const kindSelect = document.getElementById('lecturePostKind');
+        if (kindSelect) kindSelect.value = currentLectureMode;
+        onLecturePostKindChange();
+      }
+    }, 0);
   }
   function closePostModal() { document.getElementById('postModal').classList.remove('open'); }
   
@@ -2651,12 +2720,29 @@
     // Show selected category fields
     if (category === 'lecture') {
       document.getElementById('lecture-fields').style.display = 'block';
+      onLecturePostKindChange();
     } else if (category === 'circle') {
       document.getElementById('circle-fields').style.display = 'block';
     } else if (category === 'campus') {
       document.getElementById('campus-fields').style.display = 'block';
     } else if (category === 'qa') {
       document.getElementById('qa-fields').style.display = 'block';
+    }
+  }
+
+  function onLecturePostKindChange() {
+    const kind = document.getElementById('lecturePostKind')?.value || 'review';
+    const starsWrap = document.getElementById('lectureStarsWrap');
+    const lectureBody = document.getElementById('lectureBody');
+    const optToggle = document.getElementById('lectureOptionalToggle');
+    if (starsWrap) starsWrap.style.display = kind === 'review' ? 'block' : 'none';
+    if (lectureBody) {
+      lectureBody.placeholder = kind === 'review'
+        ? '授業の感想や評価を書いてください...'
+        : '授業の雰囲気・課題量・テスト範囲などを共有してください...';
+    }
+    if (optToggle) {
+      optToggle.textContent = kind === 'review' ? '詳細を追加する' : '時間割・テスト情報を追加する';
     }
   }
 
@@ -2684,11 +2770,16 @@
     if (category === 'lecture') {
       // 授業口コミの場合
       const lectureName = document.getElementById('lectureName').value.trim();
+      const lectureKind = document.getElementById('lecturePostKind').value;
       const starsEl = document.querySelector('input[name="lectureStars"]:checked');
       const lectureBody = document.getElementById('lectureBody').value.trim();
 
-      if (!lectureName || !starsEl || !lectureBody) {
-        alert('授業名、評価（星）、レビューは必須です');
+      if (!lectureName || !lectureBody) {
+        alert('授業名と本文は必須です');
+        return;
+      }
+      if (lectureKind === 'review' && !starsEl) {
+        alert('授業レビューでは評価（星）が必須です');
         return;
       }
 
@@ -2706,6 +2797,7 @@
       faculty = lectureFaculty || null;
 
       const extraFields = {};
+      extraFields.kind = lectureKind;
       if (semester) extraFields.semester = semester;
       if (day && period) extraFields.schedule = `${day}曜${period}限`;
       else if (day) extraFields.day = day;
@@ -2716,7 +2808,7 @@
 
       extraData = {
         lecture_teacher: lectureTeacher || null,
-        stars: parseInt(starsEl.value),
+        stars: lectureKind === 'review' && starsEl ? parseInt(starsEl.value) : null,
         extra_fields: Object.keys(extraFields).length > 0 ? JSON.stringify(extraFields) : null
       };
       
@@ -2873,9 +2965,12 @@
       // Category-specific metadata
       let extraInfo = '';
       if (post.category === 'lecture') {
+        const lectureKind = getLecturePostKind(post);
+        const kindLabel = getLectureKindLabel(lectureKind);
         const stars = post.stars ? '⭐'.repeat(post.stars) : '';
         const teacher = post.lecture_teacher ? `<div style="margin-top:0.8rem;padding:0.8rem;background:#f9f9f9;border-radius:6px;border-left:3px solid var(--crimson);"><strong>👨‍🏫 担当教員：</strong> ${escHtml(post.lecture_teacher)}</div>` : '';
-        extraInfo = `${stars?`<div style="margin-top:0.8rem;font-size:1.1rem;">${stars}</div>`:''}<div style="margin-top:0.5rem;color:var(--gray);font-size:0.9rem;">評価：${stars ? post.stars + '/' : ''}5</div>${teacher}`;
+        const scoreInfo = post.stars ? `<div style="margin-top:0.5rem;color:var(--gray);font-size:0.9rem;">評価：${post.stars}/5</div>` : '';
+        extraInfo = `<div style="margin-top:0.4rem;"><span class="lecture-kind-badge">${escHtml(kindLabel)}</span></div>${stars?`<div style="margin-top:0.8rem;font-size:1.1rem;">${stars}</div>`:''}${scoreInfo}${teacher}`;
       } else if (post.category === 'circle') {
         const typeMap = { sports:'運動系', culture:'文化系', other:'その他' };
         const type = post.circle_type ? `<div style="margin-top:0.8rem;padding:0.6rem 12px;background:#f0f0f0;border-radius:4px;display:inline-block;color:#555;font-weight:600;">${typeMap[post.circle_type]||post.circle_type}</div>` : '';
