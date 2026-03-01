@@ -4034,6 +4034,10 @@
       if (!db) throw new Error('Supabase not initialized');
       let { error } = await db.from('announcements').insert([announcementPayload]);
       if (error && isMissingColumnError(error)) {
+        const hasUsableNickname = !!nickname && nickname !== '匿名' && nickname !== 'ゲスト';
+        if (authUserId && !hasUsableNickname) {
+          throw error;
+        }
         const fallbackAnnouncementPayload = {
           title: announcementPayload.title,
           body: announcementPayload.body,
