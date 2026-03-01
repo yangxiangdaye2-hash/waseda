@@ -998,6 +998,7 @@ function getBoardCommentAuthMode(postId) {
 }
 
 function updateBoardCommentAuthModeUI(postId) {
+  const label = document.getElementById(`boardCommentAuthLabel-${postId}`);
   const optionsWrap = document.getElementById(`boardCommentAuthOptions-${postId}`);
   const loginWrap = document.getElementById(`boardCommentAuthLoginActions-${postId}`);
   const loginRadio = document.getElementById(`boardCommentAuthLogin-${postId}`);
@@ -1007,11 +1008,13 @@ function updateBoardCommentAuthModeUI(postId) {
   if (googleAuthUser?.id) {
     loginRadio.checked = true;
     guestRadio.checked = false;
-    optionsWrap.style.display = 'flex';
+    if (label) label.style.display = 'none';
+    optionsWrap.style.display = 'none';
     loginWrap.style.display = 'none';
     return;
   }
 
+  if (label) label.style.display = 'block';
   if (!loginRadio.checked && !guestRadio.checked) guestRadio.checked = true;
   optionsWrap.style.display = 'flex';
   loginWrap.style.display = loginRadio.checked ? 'block' : 'none';
@@ -1089,6 +1092,7 @@ function getQaAnswerAuthMode(postId) {
 }
 
 function updateQaAnswerAuthModeUI(postId) {
+  const label = document.getElementById(`qaAnswerAuthLabel-${postId}`);
   const optionsWrap = document.getElementById(`qaAnswerAuthOptions-${postId}`);
   const loginWrap = document.getElementById(`qaAnswerAuthLoginActions-${postId}`);
   const loginRadio = document.getElementById(`qaAnswerAuthLogin-${postId}`);
@@ -1098,11 +1102,13 @@ function updateQaAnswerAuthModeUI(postId) {
   if (googleAuthUser?.id) {
     loginRadio.checked = true;
     guestRadio.checked = false;
-    optionsWrap.style.display = 'flex';
+    if (label) label.style.display = 'none';
+    optionsWrap.style.display = 'none';
     loginWrap.style.display = 'none';
     return;
   }
 
+  if (label) label.style.display = 'block';
   if (!loginRadio.checked && !guestRadio.checked) guestRadio.checked = true;
   optionsWrap.style.display = 'flex';
   loginWrap.style.display = loginRadio.checked ? 'block' : 'none';
@@ -2103,7 +2109,7 @@ async function openQaDetail(id) {
       <div class="answers-section"><h4>💬 回答 ${ans.length}件</h4>${ansHtml}</div>
       <div class="answer-input-area">
         <h4>✏️ 回答する</h4>
-        <div class="form-label" style="margin-bottom:.3rem;">投稿方法</div>
+        <div class="form-label" id="qaAnswerAuthLabel-${id}" style="margin-bottom:.3rem;">投稿方法</div>
         <div class="post-auth-options" id="qaAnswerAuthOptions-${id}" style="margin-bottom:.55rem;">
           <label class="post-auth-option"><input type="radio" name="qaAnswerAuthMode-${id}" id="qaAnswerAuthLogin-${id}" value="login" onchange="updateQaAnswerAuthModeUI(${JSON.stringify(id)})"> ログインして投稿（確認・マイページ対応）</label>
           <label class="post-auth-option"><input type="radio" name="qaAnswerAuthMode-${id}" id="qaAnswerAuthGuest-${id}" value="guest" checked onchange="updateQaAnswerAuthModeUI(${JSON.stringify(id)})"> ログインせず投稿（管理対象外）</label>
@@ -2260,7 +2266,7 @@ async function openBoardDetail(postId) {
       </div>
       <div class="answer-input-area" style="margin-top:1rem;">
         <h4>✏️ コメントする</h4>
-        <div class="form-label" style="margin-bottom:.3rem;">投稿方法</div>
+        <div class="form-label" id="boardCommentAuthLabel-${postId}" style="margin-bottom:.3rem;">投稿方法</div>
         <div class="post-auth-options" id="boardCommentAuthOptions-${postId}" style="margin-bottom:.55rem;">
           <label class="post-auth-option"><input type="radio" name="boardCommentAuthMode-${postId}" id="boardCommentAuthLogin-${postId}" value="login" onchange="updateBoardCommentAuthModeUI(${JSON.stringify(postId)})"> ログインして投稿（確認・マイページ対応）</label>
           <label class="post-auth-option"><input type="radio" name="boardCommentAuthMode-${postId}" id="boardCommentAuthGuest-${postId}" value="guest" checked onchange="updateBoardCommentAuthModeUI(${JSON.stringify(postId)})"> ログインせず投稿（管理対象外）</label>

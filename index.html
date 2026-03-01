@@ -1703,6 +1703,7 @@
   }
 
   function updateCommentAuthModeUI(postId) {
+    const label = document.getElementById(`commentAuthLabel-${postId}`);
     const optionsWrap = document.getElementById(`commentAuthOptions-${postId}`);
     const loginWrap = document.getElementById(`commentAuthLoginActions-${postId}`);
     const loginRadio = document.getElementById(`commentAuthLogin-${postId}`);
@@ -1712,11 +1713,13 @@
     if (googleAuthUser?.id) {
       loginRadio.checked = true;
       guestRadio.checked = false;
-      optionsWrap.style.display = 'flex';
+      if (label) label.style.display = 'none';
+      optionsWrap.style.display = 'none';
       loginWrap.style.display = 'none';
       return;
     }
 
+    if (label) label.style.display = 'block';
     if (!loginRadio.checked && !guestRadio.checked) guestRadio.checked = true;
     optionsWrap.style.display = 'flex';
     loginWrap.style.display = loginRadio.checked ? 'block' : 'none';
@@ -1794,6 +1797,7 @@
   }
 
   function updateQaAnswerAuthModeUI(postId) {
+    const label = document.getElementById(`qaAnswerAuthLabel-${postId}`);
     const optionsWrap = document.getElementById(`qaAnswerAuthOptions-${postId}`);
     const loginWrap = document.getElementById(`qaAnswerAuthLoginActions-${postId}`);
     const loginRadio = document.getElementById(`qaAnswerAuthLogin-${postId}`);
@@ -1803,16 +1807,17 @@
     if (googleAuthUser?.id) {
       loginRadio.checked = true;
       guestRadio.checked = false;
-      optionsWrap.style.display = 'flex';
+      if (label) label.style.display = 'none';
+      optionsWrap.style.display = 'none';
       loginWrap.style.display = 'none';
       return;
     }
 
+    if (label) label.style.display = 'block';
     if (!loginRadio.checked && !guestRadio.checked) guestRadio.checked = true;
     optionsWrap.style.display = 'flex';
     loginWrap.style.display = loginRadio.checked ? 'block' : 'none';
   }
-
   async function handleQaAnswerLoginClick(postId) {
     saveQaAnswerDraftBeforeAuth(postId);
     await handleGoogleAuthClick('qa-answer');
@@ -3518,7 +3523,7 @@
           <div class="answers-section"><h4>💬 回答 ${answers.length}件</h4>${ansHtml}</div>
           <div class="answer-input-area">
             <h4>✏️ 回答する</h4>
-            <div class="form-label" style="margin-bottom:0.35rem;">投稿方法</div>
+            <div class="form-label" id="qaAnswerAuthLabel-${id}" style="margin-bottom:0.35rem;">投稿方法</div>
             <div class="post-auth-options" id="qaAnswerAuthOptions-${id}" style="margin:0 0 0.55rem;">
               <label class="post-auth-option"><input type="radio" name="qaAnswerAuthMode-${id}" id="qaAnswerAuthLogin-${id}" value="login" onchange="updateQaAnswerAuthModeUI(${JSON.stringify(id)})"> ログインして投稿（確認・マイページ対応）</label>
               <label class="post-auth-option"><input type="radio" name="qaAnswerAuthMode-${id}" id="qaAnswerAuthGuest-${id}" value="guest" checked onchange="updateQaAnswerAuthModeUI(${JSON.stringify(id)})"> ログインせず投稿（管理対象外）</label>
@@ -3612,7 +3617,7 @@
             ${cmtHtml}
             <div class="comment-input-area">
               <h5>コメントを追加</h5>
-              <div class="form-label" style="margin-bottom:0.35rem;">投稿方法</div>
+              <div class="form-label" id="commentAuthLabel-${postId}" style="margin-bottom:0.35rem;">投稿方法</div>
               <div class="post-auth-options" id="commentAuthOptions-${postId}" style="margin:0 0 0.55rem;">
                 <label class="post-auth-option"><input type="radio" name="commentAuthMode-${postId}" id="commentAuthLogin-${postId}" value="login" onchange="updateCommentAuthModeUI(${JSON.stringify(postId)})"> ログインして投稿（確認・マイページ対応）</label>
                 <label class="post-auth-option"><input type="radio" name="commentAuthMode-${postId}" id="commentAuthGuest-${postId}" value="guest" checked onchange="updateCommentAuthModeUI(${JSON.stringify(postId)})"> ログインせず投稿（管理対象外）</label>
