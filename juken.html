@@ -2248,7 +2248,11 @@ async function openBoardDetail(postId) {
     if (error || !post) return;
     const comments = await loadBoardComments(postId);
     const commentHtml = comments.length
-      ? comments.map(c => `<div style="border:1px solid var(--border);border-radius:8px;padding:.65rem .75rem;margin-bottom:.5rem;background:var(--bg);"><div style="font-size:.8rem;color:var(--dark);line-height:1.6;">${escHtml(c.text || '')}</div><div style="font-size:.7rem;color:var(--gray-light);margin-top:.25rem;">@${escHtml(c.author || '匿名')} · ${formatTime(c.created_at)}</div></div>`).join('')
+      ? comments.map(c => {
+          const canDelete = isMyContent(c);
+          const deleteBtn = canDelete ? `<span class="comment-delete" style="margin-left:auto;" onclick="deleteBoardComment(${JSON.stringify(c.id)}, ${JSON.stringify(postId)})">🗑️</span>` : '';
+          return `<div style="border:1px solid var(--border);border-radius:8px;padding:.65rem .75rem;margin-bottom:.5rem;background:var(--bg);"><div style="font-size:.8rem;color:var(--dark);line-height:1.6;">${escHtml(c.text || '')}</div><div style="font-size:.7rem;color:var(--gray-light);margin-top:.25rem;display:flex;align-items:center;gap:.35rem;">@${escHtml(c.author || '匿名')} · ${formatTime(c.created_at)}${deleteBtn}</div></div>`;
+        }).join('')
       : '<div style="text-align:center;color:var(--gray-light);font-size:.82rem;padding:.6rem 0;">まだコメントはありません</div>';
 
     document.getElementById('board-detail-content').innerHTML = `
@@ -2338,6 +2342,36 @@ async function submitBoardComment(postId, btn) {
     alert('コメント投稿に失敗しました: ' + (e?.message || e?.code || 'unknown error'));
   } finally {
     if (targetBtn) { targetBtn.disabled = false; targetBtn.textContent = 'コメントを投稿'; }
+  }
+}
+
+async function deleteBoardComment(commentId, postId) {
+  if (!confirm('このコメントを削除してもよろしいですか？')) return;
+  try {
+    if (!db) throw new Error('DB未接続');
+    const resolvedUser = await getResolvedAuthUser();
+    const trackingUserId = resolvedUser?.id || getLastAuthUserId();
+    const { data: targetComment, error: getError } = await db.from('comments').select('id,device_id,owner_key,author').eq('id', commentId).single();
+    if (getError) throw getError;
+    const owner = String(targetComment?.owner_key || '').trim();
+    const ownerByAuth = trackingUserId && (owner === `auth:${trackingUserId}` || owner === trackingUserId);
+    const ownerByDevice = !owner && targetComment?.device_id && targetComment.device_id === getDeviceId();
+    const ownerByNick = !owner && (targetComment?.author || '').trim() && (targetComment?.author || '').trim() === (currentUser || '').trim();
+    if (!(ownerByAuth || ownerByDevice || ownerByNick || isMyContent(targetComment))) {
+      throw new Error('削除権限がありません');
+    }
+
+    const { error } = await db.from('comments').delete().eq('id', commentId);
+    if (error) throw error;
+
+    const currentCount = Number(boardAllPosts.find(p => p.id === postId)?.comments || 0);
+    const nextCount = Math.max(0, currentCount - 1);
+    await db.from('posts').update({ comments: nextCount }).eq('id', postId);
+    await loadBoardPosts();
+    await openBoardDetail(postId);
+  } catch (e) {
+    console.error(e);
+    alert('コメント削除に失敗しました: ' + (e?.message || e?.code || 'unknown error'));
   }
 }
 

@@ -2761,13 +2761,21 @@
     try {
       if (!db) throw new Error('Supabase client not initialized');
       if (!isAdmin) {
+        const resolvedUser = await getResolvedAuthUser();
+        const trackingUserId = resolvedUser?.id || getLastAuthUserId();
         const { data: targetComment, error: getError } = await db
           .from('comments')
           .select('id, device_id, owner_key, author')
           .eq('id', commentId)
           .single();
         if (getError) throw getError;
-        if (!canManageComment(targetComment)) throw new Error('削除権限がありません');
+        const owner = String(targetComment?.owner_key || '').trim();
+        const ownerByAuth = trackingUserId && (owner === `auth:${trackingUserId}` || owner === trackingUserId);
+        const ownerByDevice = !owner && targetComment?.device_id && targetComment.device_id === getDeviceId();
+        const ownerByNick = !owner && (targetComment?.author || '').trim() && (targetComment?.author || '').trim() === (currentUser || '').trim();
+        if (!(ownerByAuth || ownerByDevice || ownerByNick || canManageComment(targetComment))) {
+          throw new Error('削除権限がありません');
+        }
       }
       const { error } = await db.from('comments').delete().eq('id', commentId);
       if (error) throw error;
