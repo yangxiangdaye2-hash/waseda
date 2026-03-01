@@ -21,8 +21,8 @@
   header { background: linear-gradient(135deg, var(--crimson) 0%, var(--crimson-dark) 100%); padding: 0 1.2rem; position: sticky; top: 0; z-index: 100; box-shadow: 0 3px 16px rgba(139,0,0,.3); }
   .header-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 58px; gap: .7rem; min-width: 0; }
   .logo { display: flex; align-items: center; gap: 8px; text-decoration: none; flex-shrink: 0; }
-  .logo-jp { font-size: 1.2rem; font-weight: 900; color: #fff; white-space: nowrap; text-shadow: 0 1px 2px rgba(0,0,0,.24); }
-  .logo-badge { font-size: .78rem; background: var(--gold); color: #1a1000; padding: 4px 10px; border-radius: 20px; font-weight: 700; white-space: nowrap; }
+  .logo-jp { font-size: 1.28rem; font-weight: 900; color: #fff; white-space: nowrap; text-shadow: 0 1px 2px rgba(0,0,0,.24); }
+  .logo-badge { font-size: .84rem; background: var(--gold); color: #1a1000; padding: 4px 10px; border-radius: 20px; font-weight: 700; white-space: nowrap; }
   .header-actions { display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: .45rem; min-width: 0; flex: 1; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -ms-overflow-style: none; }
   .header-actions::-webkit-scrollbar { display: none; }
   .header-row { display: flex; align-items: center; gap: .45rem; min-width: 0; flex-wrap: nowrap; }
@@ -32,6 +32,7 @@
   .google-g { width: 18px; height: 18px; border-radius: 50%; background: conic-gradient(#4285f4 0 25%, #34a853 25% 50%, #fbbc05 50% 75%, #ea4335 75% 100%); color: #fff; font-size: 11px; line-height: 18px; text-align: center; font-weight: 900; display: inline-block; }
   .google-user-name { max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .btn-mypage { background: rgba(255,255,255,.14); color: #fff; border: 1.5px solid rgba(255,255,255,.35); padding: 6px 10px; border-radius: 18px; font-size: .72rem; font-weight: 700; cursor: pointer; transition: all .2s; white-space: nowrap; position: relative; overflow: visible; }
+  #noticeBtn { padding: 5px 9px; font-size: .69rem; }
   .btn-mypage:hover { background: rgba(255,255,255,.28); }
   .btn-mypage.has-notification { z-index: 3; }
   .btn-mypage.has-notification::after { content: attr(data-notify-count); position: absolute; top: -7px; right: -7px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #ff2d55; color: #fff; font-size: .67rem; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; line-height: 1; box-shadow: 0 2px 8px rgba(0,0,0,.28); border: 1.5px solid rgba(255,255,255,.85); z-index: 5; }
@@ -356,7 +357,9 @@
     .btn-mypage,
     .nickname-badge,
     .header-back { font-size: .7rem; padding: 6px 9px; }
-    .logo-jp { font-size: 1.14rem; }
+    #noticeBtn { font-size: .67rem; padding: 5px 8px; }
+    .logo-jp { font-size: 1.24rem; }
+    .logo-badge { font-size: .9rem; }
     .tabs-inner { padding-left: .65rem; padding-right: .65rem; }
     .panel-inner { padding: 34px 1rem 52px; }
     .hero { padding: 52px 1rem 44px; }
@@ -381,7 +384,8 @@
     header { padding: 6px .9rem; }
     .header-inner { min-height: auto; height: auto; display: block; }
     .logo { justify-content: center; margin-bottom: .45rem; }
-    .logo-jp { font-size: 1.2rem; }
+    .logo-jp { font-size: 1.3rem; }
+    .logo-badge { font-size: .94rem; }
     .header-actions { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .35rem; overflow: visible; }
     .header-row { display: contents; }
     .header-actions > .header-row > * {
@@ -405,6 +409,7 @@
     .btn-mypage,
     .nickname-badge,
     .header-back { font-size: .72rem; padding: 6px 8px; }
+    #noticeBtn { font-size: .69rem; padding: 5px 7px; }
     .tabs { top: 104px; padding-top: 6px; }
     .tabs-inner { padding-top: .5rem; padding-bottom: .46rem; }
   }
@@ -413,7 +418,8 @@
     header { padding: 6px .8rem; }
     .header-inner { min-height: auto; height: auto; display: block; }
     .logo { justify-content: center; margin-bottom: .55rem; }
-    .logo-jp { font-size: 1.26rem; }
+    .logo-jp { font-size: 1.34rem; }
+    .logo-badge { font-size: .96rem; }
     .header-actions { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .35rem; overflow: visible; }
     .header-row { display: contents; }
     .header-actions > .header-row > * {
@@ -438,6 +444,7 @@
     .btn-mypage,
     .nickname-badge,
     .header-back { font-size: .69rem; padding: 6px 8px; }
+    #noticeBtn { font-size: .66rem; padding: 5px 7px; }
     .tabs { top: 102px; padding-top: 11px; }
     .tabs-inner { padding-top: 0.7rem; padding-bottom: 0.64rem; }
     .panel-inner { padding: 32px 1rem 48px; }
@@ -454,11 +461,13 @@
     .tabs { top: 98px; padding-top: 10px; }
     .tabs-inner { padding-top: 0.64rem; padding-bottom: 0.58rem; }
     .header-actions { gap: .3rem; }
-    .logo-jp { font-size: 1.08rem; }
+    .logo-jp { font-size: 1.16rem; }
+    .logo-badge { font-size: .88rem; padding: 3px 8px; }
     .btn-google-auth,
     .btn-mypage,
     .nickname-badge,
     .header-back { font-size: .66rem; padding: 6px 6px; }
+    #noticeBtn { font-size: .63rem; padding: 5px 6px; }
     .tabs-inner { padding-left: .3rem; padding-right: .3rem; gap: .3rem; }
     .tab { font-size: .7rem; padding: 5px 9px; }
     .hero-title { font-size: 1.2rem; }
