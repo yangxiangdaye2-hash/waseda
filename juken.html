@@ -2159,12 +2159,24 @@ async function loadMyPagePosts(forceReload = false) {
   try {
     summaryEl.textContent = '読み込み中...';
     const ownerKey = `auth:${trackingUserId}`;
-    const postSelect = 'id,category,title,body,likes,comments,created_at,owner_key,device_id,author';
+    const postSelectWithOwner = 'id,category,title,body,likes,comments,created_at,owner_key,device_id,author';
+    const postSelectWithoutOwner = 'id,category,title,body,likes,comments,created_at,device_id,author';
+    let hasOwnerKeyColumn = true;
+    let postSelect = postSelectWithOwner;
     let rows = [];
-    const { data, error } = await db.from('posts').select(postSelect).eq('owner_key', ownerKey).order('created_at',{ascending:false}).limit(120);
-    if (error && !isOwnerKeyColumnError(error)) throw error;
+    let { data, error } = await db.from('posts').select(postSelectWithOwner).eq('owner_key', ownerKey).order('created_at',{ascending:false}).limit(120);
+    if (error) {
+      if (isOwnerKeyColumnError(error)) {
+        hasOwnerKeyColumn = false;
+        postSelect = postSelectWithoutOwner;
+        error = null;
+        data = [];
+      } else {
+        throw error;
+      }
+    }
     rows = data || [];
-    if (!rows.length) {
+    if (hasOwnerKeyColumn && !rows.length) {
       const { data: legacyRows, error: legacyErr } = await db.from('posts').select(postSelect).eq('owner_key', trackingUserId).order('created_at',{ascending:false}).limit(120);
       if (!legacyErr && Array.isArray(legacyRows) && legacyRows.length) rows = legacyRows;
     }
@@ -2185,20 +2197,26 @@ async function loadMyPagePosts(forceReload = false) {
     const deviceQueryResult = shouldCheckLegacyByDevice
       ? await db.from('posts').select(postSelect).eq('device_id', getDeviceId()).order('created_at',{ascending:false}).limit(140)
       : { data: [], error: null };
-    if (deviceQueryResult.error) throw deviceQueryResult.error;
+    if (deviceQueryResult.error) {
+      if (isOwnerKeyColumnError(deviceQueryResult.error)) {
+        hasOwnerKeyColumn = false;
+      } else {
+        throw deviceQueryResult.error;
+      }
+    }
     if (Array.isArray(deviceQueryResult.data) && deviceQueryResult.data.length) {
       const legacyRows = deviceQueryResult.data.filter(p => {
-        const owner = (p.owner_key || '').trim();
-        if (owner === ownerKey || owner === trackingUserId) return true;
-        if (owner) return false;
+        const owner = hasOwnerKeyColumn ? (p.owner_key || '').trim() : '';
+        if (hasOwnerKeyColumn && (owner === ownerKey || owner === trackingUserId)) return true;
+        if (hasOwnerKeyColumn && owner) return false;
         const authorLower = String(p.author || '').trim().toLowerCase();
         if (!authorLower) return true;
         if (!nicknameSet.size) return true;
         return nicknameSet.has(authorLower);
       });
 
-      const adoptIds = legacyRows.filter(p => !p.owner_key).map(p => p.id).filter(Boolean);
-      if (adoptIds.length) {
+      const adoptIds = hasOwnerKeyColumn ? legacyRows.filter(p => !p.owner_key).map(p => p.id).filter(Boolean) : [];
+      if (hasOwnerKeyColumn && adoptIds.length) {
         try {
           const { error: adoptErr } = await db.from('posts').update({ owner_key: ownerKey }).in('id', adoptIds).is('owner_key', null);
           if (adoptErr && !isOwnerKeyColumnError(adoptErr)) console.warn('owner adopt failed', adoptErr);
@@ -2209,7 +2227,7 @@ async function loadMyPagePosts(forceReload = false) {
 
       const merged = new Map(rows.map(p => [String(p.id), p]));
       legacyRows.forEach(p => {
-        if (!p.owner_key) p.owner_key = ownerKey;
+        if (hasOwnerKeyColumn && !p.owner_key) p.owner_key = ownerKey;
         merged.set(String(p.id), p);
         rememberOwnedPostId(p.id, trackingUserId);
         if (p.author) rememberOwnedNickname(p.author, trackingUserId);
