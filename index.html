@@ -643,6 +643,13 @@
         <button class="qa-sort-tab" onclick="setMainQaSortMode('newest', this)">🆕 新着</button>
         <button class="qa-sort-tab" onclick="setMainQaSortMode('hot', this)">🔥 人気</button>
       </div>
+      <div class="qa-sort-tabs" id="qaTopicTabsMain" style="display:none; margin-top:-0.2rem;">
+        <button class="qa-sort-tab active" onclick="setMainQaTopicFilter('all', this)">すべて</button>
+        <button class="qa-sort-tab" onclick="setMainQaTopicFilter('lecture', this)">授業</button>
+        <button class="qa-sort-tab" onclick="setMainQaTopicFilter('campus', this)">大学生活</button>
+        <button class="qa-sort-tab" onclick="setMainQaTopicFilter('circle', this)">サークル</button>
+        <button class="qa-sort-tab" onclick="setMainQaTopicFilter('other', this)">その他</button>
+      </div>
       <div id="posts-container"><div class="loading">読み込み中...</div></div>
     </div>
 
@@ -1280,6 +1287,7 @@
   let currentFaculty = 'all';
   let currentSort = 'newest';
   let mainQaSortMode = 'unanswered';
+  let mainQaTopicFilter = 'all';
   let currentTrendCategory = 'lecture';
   let searchQuery = '';
   let currentUser = localStorage.getItem('waseda_nickname') || 'ゲスト';
@@ -2363,6 +2371,7 @@
       answersCountMap = await fetchAnswerCountsByPostIds(ids);
 
       if (currentTab === 'qa') {
+        allPosts = filterMainQaByTopic(allPosts);
         allPosts = sortMainQaPosts(allPosts);
       } else if (currentSort === 'popular') {
         allPosts = sortMainFeedHotPosts(allPosts);
@@ -3298,6 +3307,24 @@
     if (currentTab === 'qa') loadPosts();
   }
 
+  function filterMainQaByTopic(posts) {
+    const selected = String(mainQaTopicFilter || 'all');
+    if (selected === 'all') return [...(posts || [])];
+    return (posts || []).filter(post => {
+      const ef = parseExtraFields(post?.extra_fields);
+      const topic = String(ef?.qa_topic || '').trim() || 'other';
+      return topic === selected;
+    });
+  }
+
+  function setMainQaTopicFilter(topic, el) {
+    mainQaTopicFilter = String(topic || 'all');
+    const wrap = document.getElementById('qaTopicTabsMain');
+    if (wrap) wrap.querySelectorAll('.qa-sort-tab').forEach(btn => btn.classList.remove('active'));
+    if (el) el.classList.add('active');
+    if (currentTab === 'qa') loadPosts();
+  }
+
   // タブ・学部切替
   function switchTab(tab, el) {
     currentTab = tab;
@@ -3318,6 +3345,8 @@
       if (lectureSubtabs) lectureSubtabs.style.display = tab === 'lecture' ? 'flex' : 'none';
       const qaSortTabs = document.getElementById('qaSortTabsMain');
       if (qaSortTabs) qaSortTabs.style.display = tab === 'qa' ? 'flex' : 'none';
+      const qaTopicTabs = document.getElementById('qaTopicTabsMain');
+      if (qaTopicTabs) qaTopicTabs.style.display = tab === 'qa' ? 'flex' : 'none';
       const feedSortTabs = document.getElementById('feedSortTabsMain');
       if (feedSortTabs) feedSortTabs.style.display = tab === 'qa' ? 'none' : 'inline-flex';
       loadPosts();
