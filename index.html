@@ -1984,7 +1984,18 @@
   function renderPosts(posts) {
     const container = document.getElementById('posts-container');
     if (!posts.length) { container.innerHTML = '<div class="empty-tab"><div class="empty-icon">📭</div><div class="empty-title">まだ投稿がありません</div><div class="empty-text">このカテゴリで最初の投稿者になりませんか？<br/>あなたの経験やエピソードをシェアしてください。</div><button class="empty-action" onclick="openPostModalWithCategory()">+ 投稿を作成</button></div>'; return; }
-    const catMap = { lecture:['cat-lecture','📚 授業口コミ'], circle:['cat-circle','🎯 サークル'], campus:['cat-campus','🏫 キャンパスライフ'], qa:['cat-qa','❓ Q&A'], job:['cat-job','💼 求人'] };
+    const catMap = {
+      lecture:['cat-lecture','📚 授業口コミ'],
+      circle:['cat-circle','🎯 サークル'],
+      campus:['cat-campus','🏫 キャンパスライフ'],
+      qa:['cat-qa','❓ Q&A'],
+      job:['cat-job','💼 求人'],
+      juken:['cat-qa','🎓 受験生サポート'],
+      juken_qa:['cat-qa','🎓 受験生サポート'],
+      juken_life_qa:['cat-qa','🎓 受験生サポート'],
+      taikenki:['cat-qa','🎓 受験生サポート'],
+      faculty_comment:['cat-qa','🎓 受験生サポート']
+    };
 
     // Sort: pinned first, then by created_at
     const sorted = posts.sort((a, b) => {
@@ -2956,7 +2967,17 @@
       if (error || !post || post.category === 'qa') return;
 
       const comments = await loadComments(postId);
-      const catMap = { lecture: ['📚 授業口コミ', 'cat-lecture'], circle: ['🎯 サークル情報', 'cat-circle'], campus: ['🏫 キャンパスライフ', 'cat-campus'], job:['💼 求人', 'cat-job'] };
+      const catMap = {
+        lecture: ['📚 授業口コミ', 'cat-lecture'],
+        circle: ['🎯 サークル情報', 'cat-circle'],
+        campus: ['🏫 キャンパスライフ', 'cat-campus'],
+        job:['💼 求人', 'cat-job'],
+        juken:['🎓 受験生サポート', 'cat-qa'],
+        juken_qa:['🎓 受験生サポート', 'cat-qa'],
+        juken_life_qa:['🎓 受験生サポート', 'cat-qa'],
+        taikenki:['🎓 受験生サポート', 'cat-qa'],
+        faculty_comment:['🎓 受験生サポート', 'cat-qa']
+      };
       const [catLabel, catCls] = catMap[post.category] || ['その他', 'cat-campus'];
       const fTag = post.faculty ? `<span class="faculty-tag">${FACULTIES[post.faculty]||post.faculty}</span>` : '';
       const timeStr = formatTime(post.created_at);
