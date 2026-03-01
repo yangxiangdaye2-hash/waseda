@@ -18,13 +18,14 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--dark); min-height: 100vh; line-height: 1.6; }
 
-  header { background: linear-gradient(135deg, var(--crimson) 0%, var(--crimson-dark) 100%); padding: 0 1.2rem; position: sticky; top: 0; z-index: 100; box-shadow: 0 3px 16px rgba(139, 0, 0, 0.3); }
-  .header-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 60px; gap: 0.5rem; }
+  header { background: linear-gradient(135deg, var(--crimson) 0%, var(--crimson-dark) 100%); padding: 0 1rem; position: sticky; top: 0; z-index: 100; box-shadow: 0 3px 16px rgba(139, 0, 0, 0.3); overflow: hidden; }
+  .header-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 60px; gap: 0.4rem; min-width: 0; }
   .logo { display: flex; align-items: center; gap: 8px; text-decoration: none; flex-shrink: 0; }
   .logo-jp { font-size: 1.35rem; font-weight: 900; color: var(--white); letter-spacing: 0.05em; white-space: nowrap; line-height: 1; }
   .logo-en { font-family: 'Playfair Display', serif; font-size: 0.65rem; color: var(--gold-light); letter-spacing: 0.12em; white-space: nowrap; }
-  .header-right { display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0; }
-  .btn-google-auth { background: #fff; color: #333; border: 1.5px solid #dadce0; border-radius: 18px; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+  .header-right { display: flex; align-items: center; justify-content: flex-end; gap: 0.45rem; min-width: 0; flex: 1; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 2px; }
+  .header-right::-webkit-scrollbar { display: none; }
+  .btn-google-auth { background: #fff; color: #333; border: 1.5px solid #dadce0; border-radius: 18px; padding: 6px 10px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: all 0.2s; white-space: nowrap; max-width: 185px; }
   .btn-google-auth:hover { border-color: #c4c7cc; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
   .btn-google-auth.logged-in { background: #f8f9fa; }
   .google-g { width: 18px; height: 18px; border-radius: 50%; background: conic-gradient(#4285f4 0 25%, #34a853 25% 50%, #fbbc05 50% 75%, #ea4335 75% 100%); color: #fff; font-size: 11px; line-height: 18px; text-align: center; font-weight: 900; display: inline-block; }
@@ -111,9 +112,9 @@
       background: rgba(255, 255, 255, 0.6);
       transform: rotate(90deg);
     }
-  .nickname-badge { background: rgba(255,255,255,0.18); border: 1.5px solid rgba(255,255,255,0.35); color: white; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; font-weight: 500; white-space: nowrap; }
+  .nickname-badge { background: rgba(255,255,255,0.18); border: 1.5px solid rgba(255,255,255,0.35); color: white; padding: 6px 12px; border-radius: 20px; font-size: 0.78rem; cursor: pointer; transition: all 0.2s; font-weight: 500; white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
   .nickname-badge:hover { background: rgba(255,255,255,0.28); }
-  .btn-mypage { background: rgba(255,255,255,0.14); color: #fff; border: 1.5px solid rgba(255,255,255,0.35); padding: 6px 12px; border-radius: 18px; font-size: 0.77rem; font-weight: 700; cursor: pointer; transition: all 0.2s; white-space: nowrap; position: relative; }
+  .btn-mypage { background: rgba(255,255,255,0.14); color: #fff; border: 1.5px solid rgba(255,255,255,0.35); padding: 6px 10px; border-radius: 18px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: all 0.2s; white-space: nowrap; position: relative; }
   .btn-mypage:hover { background: rgba(255,255,255,0.28); }
   .btn-mypage.has-notification::after { content: attr(data-notify-count); position: absolute; top: -7px; right: -7px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #ff2d55; color: #fff; font-size: 0.67rem; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; line-height: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.28); border: 1.5px solid rgba(255,255,255,0.85); }
   .btn-post { background: var(--gold); color: var(--crimson-dark); border: none; padding: 8px 18px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; transition: all 0.2s; white-space: nowrap; }
@@ -438,8 +439,9 @@
       .header-inner { height: 54px; }
       .tabs { top: 54px; }
       .logo-jp { font-size: 1.2rem; }
-      .nickname-badge { padding: 5px 11px; font-size: 0.76rem; }
+      .nickname-badge { padding: 5px 10px; font-size: 0.74rem; max-width: 140px; }
       .btn-mypage { padding: 5px 10px; font-size: 0.72rem; }
+      .btn-google-auth { max-width: 150px; }
       .btn-post { padding: 7px 14px; font-size: 0.8rem; }
       .btn-admin { padding: 5px 10px; font-size: 0.78rem; }
 
@@ -487,8 +489,9 @@
       .tabs { top: 52px; }
       .logo-en { display: none; }
       .logo-jp { font-size: 1.15rem; }
-      .nickname-badge { padding: 5px 10px; font-size: 0.74rem; }
+      .nickname-badge { padding: 5px 9px; font-size: 0.72rem; max-width: 110px; }
       .btn-mypage { padding: 5px 9px; font-size: 0.7rem; }
+      .btn-google-auth { max-width: 120px; padding: 5px 8px; font-size: 0.69rem; }
     }
 
     @media (max-width: 480px) {
@@ -1567,7 +1570,7 @@
         : '現在は未ログインです。クリックでニックネームを設定できます。';
     }
     if (myPageBtn) {
-      myPageBtn.textContent = googleAuthUser ? '📌 マイページ（投稿管理ON）' : '📌 マイページ（ログインで投稿管理）';
+      myPageBtn.textContent = '📌 マイページ';
       myPageBtn.title = googleAuthUser ? 'あなたの投稿を確認・削除できます' : 'ログインするとあなたの投稿を確認・削除できます';
     }
     renderMyPageNotificationBadge();
