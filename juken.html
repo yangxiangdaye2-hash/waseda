@@ -2163,36 +2163,35 @@ async function submitContactMessage() {
         await storeContactViaReportFallback(payload);
         stored = true;
         storedInDb = true;
-        return;
-      }
-
-      let { error } = await db.from(contactTable).insert([payload]);
-      if (error && isMissingColumnError(error)) {
-        const fallbackPayload = {
-          email: payload.email,
-          subject: payload.subject,
-          body: payload.body,
-          nickname: payload.nickname,
-          ip: payload.ip,
-          status: payload.status,
-          created_at: payload.created_at
-        };
-        ({ error } = await db.from(contactTable).insert([fallbackPayload]));
-      }
-      if (error && isMissingColumnError(error)) {
-        const minimalPayload = {
-          email: payload.email,
-          subject: payload.subject,
-          body: payload.body,
-          nickname: payload.nickname
-        };
-        ({ error } = await db.from(contactTable).insert([minimalPayload]));
-      }
-      if (error) {
-        if (isContactTableMissingError(error)) {
-          await storeContactViaReportFallback(payload);
-        } else {
-          throw error;
+      } else {
+        let { error } = await db.from(contactTable).insert([payload]);
+        if (error && isMissingColumnError(error)) {
+          const fallbackPayload = {
+            email: payload.email,
+            subject: payload.subject,
+            body: payload.body,
+            nickname: payload.nickname,
+            ip: payload.ip,
+            status: payload.status,
+            created_at: payload.created_at
+          };
+          ({ error } = await db.from(contactTable).insert([fallbackPayload]));
+        }
+        if (error && isMissingColumnError(error)) {
+          const minimalPayload = {
+            email: payload.email,
+            subject: payload.subject,
+            body: payload.body,
+            nickname: payload.nickname
+          };
+          ({ error } = await db.from(contactTable).insert([minimalPayload]));
+        }
+        if (error) {
+          if (isContactTableMissingError(error)) {
+            await storeContactViaReportFallback(payload);
+          } else {
+            throw error;
+          }
         }
       }
       stored = true;
