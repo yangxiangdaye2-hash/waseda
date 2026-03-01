@@ -1519,6 +1519,16 @@
     return user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'ログイン中ユーザー';
   }
 
+  function getPreferredContactNickname(user = googleAuthUser) {
+    const currentNick = String(currentUser || '').trim();
+    if (currentNick && currentNick !== 'ゲスト') return currentNick;
+    const savedNick = String(localStorage.getItem('waseda_nickname') || '').trim();
+    if (savedNick && savedNick !== 'ゲスト') return savedNick;
+    const display = getGoogleDisplayName(user).trim();
+    if (display) return display.slice(0, 20);
+    return '匿名';
+  }
+
   function rememberLastAuthUserId(userOrId) {
     const userId = typeof userOrId === 'string' ? userOrId : userOrId?.id;
     if (!userId) return;
@@ -3770,7 +3780,7 @@
       email: email || null,
       subject,
       body,
-      nickname: currentUser || getGoogleDisplayName(resolvedUser) || '匿名',
+      nickname: getPreferredContactNickname(resolvedUser),
       ip: await getClientIpAddress(),
       status: 'unread',
       owner_key: getOwnerKey(resolvedUser),

@@ -2144,7 +2144,7 @@ async function submitContactMessage() {
     email: email || null,
     subject,
     body,
-    nickname: currentUser || getGoogleDisplayName(resolvedUser) || '匿名',
+    nickname: getPreferredNickname() || getGoogleDisplayName(resolvedUser) || '匿名',
     ip: null,
     status: 'unread',
     owner_key: getOwnerKey(),
