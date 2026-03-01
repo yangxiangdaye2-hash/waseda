@@ -123,7 +123,7 @@
   /* Q&A post form */
   .qa-form-box { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 1.3rem; margin-bottom: 1.4rem; }
   .qa-form-title { font-size: .95rem; font-weight: 700; margin-bottom: 1rem; }
-  .qa-post-box { position: static; }
+  .qa-post-box { position: static; top: auto; margin-bottom: 1.4rem; }
   .qa-post-box .post-form-title { cursor: pointer; margin-bottom: 0; }
   .qa-post-box .post-form-toggle-icon { display: inline-block !important; }
   .qa-post-box.open .post-form-toggle-icon { transform: rotate(180deg); }
@@ -346,7 +346,7 @@
     <p class="sec-sub">在学生に受験のことを直接質問できます。早稲田生が経験をもとに回答します。</p>
     <div class="qa-layout">
       <!-- 投稿フォーム -->
-      <div class="qa-form-box qa-post-box" id="qaFormBoxStudy">
+      <div class="post-form-box qa-post-box" id="qaFormBoxStudy">
         <div class="post-form-title" onclick="toggleQaForm('study')">
           <span>📝 投稿する</span>
           <span class="post-form-toggle-icon">▼</span>
@@ -407,7 +407,7 @@
     <div class="sec-div"></div>
     <p class="sec-sub">キャンパスの雰囲気、時間割、通学、一人暮らし、サークル参加など大学生活について質問できます。</p>
     <div class="qa-layout">
-      <div class="qa-form-box qa-post-box" id="qaFormBoxLife">
+      <div class="post-form-box qa-post-box" id="qaFormBoxLife">
         <div class="post-form-title" onclick="toggleQaForm('life')">
           <span>📝 投稿する</span>
           <span class="post-form-toggle-icon">▼</span>
