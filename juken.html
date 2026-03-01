@@ -554,6 +554,10 @@
       <span class="chip" data-type="雑談" onclick="filterBoard('雑談',this)">雑談</span>
     </div>
     <div class="filter-bar" id="board-faculty-filter"><!-- JS --></div>
+    <div class="qa-sort-tabs" id="board-sort-tabs">
+      <button type="button" class="qa-sort-tab active" onclick="setBoardSortMode('newest', this)">🆕 新着</button>
+      <button type="button" class="qa-sort-tab" onclick="setBoardSortMode('hot', this)">🔥 人気</button>
+    </div>
     <div class="board-layout">
       <div class="post-form-box" id="boardFormBox">
         <div class="post-form-title">
@@ -2292,6 +2296,35 @@ function closeQaModal() { document.getElementById('qaModal').classList.remove('o
 let boardAllPosts = [];
 let boardTypeFilter = 'all';
 let boardFacFilter = 'all';
+let boardSortMode = 'newest';
+
+function calcBoardHotScore(post) {
+  const likes = Number(post?.likes || 0);
+  const comments = Number(post?.comments || 0);
+  const createdAt = new Date(post?.created_at || Date.now()).getTime();
+  const elapsedHours = Math.max(0, (Date.now() - createdAt) / 3600000);
+  return (likes * 2 + comments) / Math.pow(elapsedHours + 2, 1.5);
+}
+
+function sortBoardPosts(posts) {
+  const list = Array.isArray(posts) ? [...posts] : [];
+  if (boardSortMode === 'hot') {
+    return list.sort((a, b) => {
+      const diff = calcBoardHotScore(b) - calcBoardHotScore(a);
+      if (Math.abs(diff) > 1e-9) return diff;
+      return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    });
+  }
+  return list.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+}
+
+function setBoardSortMode(mode, el) {
+  boardSortMode = mode === 'hot' ? 'hot' : 'newest';
+  const tabs = document.querySelectorAll('#board-sort-tabs .qa-sort-tab');
+  tabs.forEach(tab => tab.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderBoardPosts();
+}
 
 async function loadBoardPosts() {
   const el = document.getElementById('board-posts');
@@ -2316,6 +2349,7 @@ function renderBoardPosts() {
   let posts = boardAllPosts;
   if (boardTypeFilter !== 'all') posts = posts.filter(p=>p.circle_type===boardTypeFilter);
   if (boardFacFilter  !== 'all') posts = posts.filter(p=>p.faculty===boardFacFilter);
+  posts = sortBoardPosts(posts);
   if (!posts.length) { el.innerHTML=`<div class="empty-state"><div class="empty-state-icon">💬</div><div class="empty-state-title">投稿がありません</div><div class="empty-state-text">最初の投稿者になりませんか？</div></div>`; return; }
   const likedSet = getLikedPosts();
   el.innerHTML = posts.map(p => {
@@ -2642,6 +2676,13 @@ async function loadTaikenki() {
 
 function filterTk(fac, el) { setActiveChip('tk-faculty-filter', el); tkFacFilter=fac; renderTaikenki(); }
 
+function calcTaikenkiHotScore(post) {
+  const likes = Number(post?.likes || 0);
+  const createdAt = new Date(post?.created_at || Date.now()).getTime();
+  const elapsedHours = Math.max(0, (Date.now() - createdAt) / 3600000);
+  return likes / Math.pow(elapsedHours + 2, 1.0);
+}
+
 function renderTaikenki() {
   const el = document.getElementById('taikenki-list');
   const list = tkFacFilter==='all' ? tkAllData : tkAllData.filter(t=>t.faculty===tkFacFilter);
@@ -2649,7 +2690,12 @@ function renderTaikenki() {
     el.innerHTML = emptyState('🏆','まだ体験記がありません','在学生掲示板の「受験生サポート」タブから投稿できます',true);
     return;
   }
-  el.innerHTML = list.map(t => {
+  const sortedList = [...list].sort((a, b) => {
+    const diff = calcTaikenkiHotScore(b) - calcTaikenkiHotScore(a);
+    if (Math.abs(diff) > 1e-9) return diff;
+    return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+  });
+  el.innerHTML = sortedList.map(t => {
     const fTag = t.faculty ? `<span class="tk-faculty-tag">${escHtml(FACULTIES[t.faculty]||t.faculty)}</span>` : '';
     const eTag = t.exam_type ? `<span class="tk-exam-tag">${escHtml(t.exam_type)}</span>` : '';
     return `<div class="tk-card" onclick="openTkDetail(${JSON.stringify(t.id)})">
