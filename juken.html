@@ -122,6 +122,12 @@
   /* Q&A post form */
   .qa-form-box { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 1.3rem; margin-bottom: 1.4rem; }
   .qa-form-title { font-size: .95rem; font-weight: 700; margin-bottom: 1rem; }
+  .qa-post-box { position: static; }
+  .qa-post-box .post-form-title { cursor: pointer; margin-bottom: 0; }
+  .qa-post-box .post-form-toggle-icon { display: inline-block !important; }
+  .qa-post-box.open .post-form-toggle-icon { transform: rotate(180deg); }
+  .qa-post-box .post-form-body { margin-top: 1rem; display: none !important; }
+  .qa-post-box.open .post-form-body { display: block !important; }
   .auth-hint { font-size: .74rem; color: var(--gray); line-height: 1.6; margin: -.25rem 0 .9rem; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: .45rem .6rem; }
   .post-auth-options { display: flex; gap: .6rem; flex-wrap: wrap; margin-bottom: .8rem; }
   .post-auth-option { display: inline-flex; align-items: center; gap: 6px; font-size: .78rem; color: var(--dark); background: #fff; border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; }
@@ -339,7 +345,12 @@
     <p class="sec-sub">在学生に受験のことを直接質問できます。早稲田生が経験をもとに回答します。</p>
     <div class="qa-layout">
       <!-- 投稿フォーム -->
-      <div class="qa-form-box">
+      <div class="qa-form-box qa-post-box" id="qaFormBoxStudy">
+        <div class="post-form-title" onclick="toggleQaForm('study')">
+          <span>📝 投稿する</span>
+          <span class="post-form-toggle-icon">▼</span>
+        </div>
+        <div class="post-form-body">
         <div class="qa-form-title">❓ 質問を投稿する</div>
         <div class="auth-hint" id="authHintQa">ログインして投稿すると確認・削除・マイページが使えます。未ログイン投稿は管理対象外です。</div>
         <div class="post-auth-options" id="authOptionsQa">
@@ -376,6 +387,7 @@
         </div>
         <button class="btn-submit" onclick="submitJukenQa(this, 'study')">質問を投稿する</button>
         <p class="form-notice">良識ある投稿をお願いします。</p>
+        </div>
       </div>
       <!-- Q&A一覧 -->
       <div>
@@ -394,7 +406,12 @@
     <div class="sec-div"></div>
     <p class="sec-sub">キャンパスの雰囲気、時間割、通学、一人暮らし、サークル参加など大学生活について質問できます。</p>
     <div class="qa-layout">
-      <div class="qa-form-box">
+      <div class="qa-form-box qa-post-box" id="qaFormBoxLife">
+        <div class="post-form-title" onclick="toggleQaForm('life')">
+          <span>📝 投稿する</span>
+          <span class="post-form-toggle-icon">▼</span>
+        </div>
+        <div class="post-form-body">
         <div class="qa-form-title">🏫 大学生活について質問する</div>
         <div class="auth-hint" id="authHintQaLife">ログインして投稿すると確認・削除・マイページが使えます。未ログイン投稿は管理対象外です。</div>
         <div class="post-auth-options" id="authOptionsQaLife">
@@ -431,6 +448,7 @@
         </div>
         <button class="btn-submit" onclick="submitJukenQa(this, 'life')">質問を投稿する</button>
         <p class="form-notice">良識ある投稿をお願いします。</p>
+        </div>
       </div>
       <div>
         <div class="filter-bar" id="qa-life-faculty-filter"><!-- JS --></div>
@@ -1638,6 +1656,13 @@ async function likeBoardPost(id, el) {
 function toggleBoardForm() {
   if (window.innerWidth > 860) return;
   document.getElementById('boardFormBox').classList.toggle('open');
+}
+
+function toggleQaForm(kind = 'study') {
+  const boxId = kind === 'life' ? 'qaFormBoxLife' : 'qaFormBoxStudy';
+  const box = document.getElementById(boxId);
+  if (!box) return;
+  box.classList.toggle('open');
 }
 
 async function submitBoardPost(btn) {
