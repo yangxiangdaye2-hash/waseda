@@ -1261,6 +1261,9 @@
   const COMMENT_AUTH_RETURN_KEY = 'waseda_comment_auth_return';
   const COMMENT_AUTH_DRAFT_KEY = 'waseda_comment_auth_draft';
   const COMMENT_AUTH_DRAFT_TS_KEY = 'waseda_comment_auth_draft_ts';
+  const QA_ANSWER_AUTH_RETURN_KEY = 'waseda_qa_answer_auth_return';
+  const QA_ANSWER_AUTH_DRAFT_KEY = 'waseda_qa_answer_auth_draft';
+  const QA_ANSWER_AUTH_DRAFT_TS_KEY = 'waseda_qa_answer_auth_draft_ts';
   const MY_PAGE_NOTIFY_PREFIX = 'waseda_mypage_notify_state_';
   const MY_PAGE_NOTIFY_INTERVAL_MS = 60000;
   let myPageNotifyCount = 0;
@@ -1709,7 +1712,7 @@
     if (googleAuthUser?.id) {
       loginRadio.checked = true;
       guestRadio.checked = false;
-      optionsWrap.style.display = 'none';
+      optionsWrap.style.display = 'flex';
       loginWrap.style.display = 'none';
       return;
     }
@@ -1722,6 +1725,97 @@
   async function handleCommentLoginClick(postId) {
     saveCommentDraftBeforeAuth(postId);
     await handleGoogleAuthClick('comment');
+  }
+
+  function saveQaAnswerDraftBeforeAuth(postId) {
+    const input = document.getElementById(`answerInput-${postId}`);
+    const modeNode = document.querySelector(`input[name="qaAnswerAuthMode-${postId}"]:checked`);
+    const draft = {
+      postId,
+      authMode: modeNode?.value || 'guest',
+      text: input?.value || ''
+    };
+    const nowTs = String(Date.now());
+    const draftStr = JSON.stringify(draft);
+    sessionStorage.setItem(QA_ANSWER_AUTH_DRAFT_KEY, draftStr);
+    sessionStorage.setItem(QA_ANSWER_AUTH_RETURN_KEY, '1');
+    sessionStorage.setItem(QA_ANSWER_AUTH_DRAFT_TS_KEY, nowTs);
+    localStorage.setItem(QA_ANSWER_AUTH_DRAFT_KEY, draftStr);
+    localStorage.setItem(QA_ANSWER_AUTH_RETURN_KEY, '1');
+    localStorage.setItem(QA_ANSWER_AUTH_DRAFT_TS_KEY, nowTs);
+  }
+
+  async function restoreQaAnswerDraftAfterAuthIfNeeded() {
+    const sessionReturn = sessionStorage.getItem(QA_ANSWER_AUTH_RETURN_KEY) === '1';
+    const localReturn = localStorage.getItem(QA_ANSWER_AUTH_RETURN_KEY) === '1';
+    if (!(sessionReturn || localReturn)) return;
+    if (!googleAuthUser?.id) return;
+
+    const tsRaw = sessionStorage.getItem(QA_ANSWER_AUTH_DRAFT_TS_KEY) || localStorage.getItem(QA_ANSWER_AUTH_DRAFT_TS_KEY) || '0';
+    const ageMs = Date.now() - Number(tsRaw || 0);
+    if (Number.isFinite(ageMs) && ageMs > 10 * 60 * 1000) {
+      sessionStorage.removeItem(QA_ANSWER_AUTH_RETURN_KEY);
+      sessionStorage.removeItem(QA_ANSWER_AUTH_DRAFT_KEY);
+      sessionStorage.removeItem(QA_ANSWER_AUTH_DRAFT_TS_KEY);
+      localStorage.removeItem(QA_ANSWER_AUTH_RETURN_KEY);
+      localStorage.removeItem(QA_ANSWER_AUTH_DRAFT_KEY);
+      localStorage.removeItem(QA_ANSWER_AUTH_DRAFT_TS_KEY);
+      return;
+    }
+
+    sessionStorage.removeItem(QA_ANSWER_AUTH_RETURN_KEY);
+    localStorage.removeItem(QA_ANSWER_AUTH_RETURN_KEY);
+    let draft = null;
+    try {
+      const draftStr = sessionStorage.getItem(QA_ANSWER_AUTH_DRAFT_KEY) || localStorage.getItem(QA_ANSWER_AUTH_DRAFT_KEY) || '{}';
+      draft = JSON.parse(draftStr);
+    } catch {
+      draft = null;
+    }
+    sessionStorage.removeItem(QA_ANSWER_AUTH_DRAFT_KEY);
+    sessionStorage.removeItem(QA_ANSWER_AUTH_DRAFT_TS_KEY);
+    localStorage.removeItem(QA_ANSWER_AUTH_DRAFT_KEY);
+    localStorage.removeItem(QA_ANSWER_AUTH_DRAFT_TS_KEY);
+
+    if (!draft?.postId) return;
+    await openQaDetail(draft.postId);
+    const loginRadio = document.getElementById(`qaAnswerAuthLogin-${draft.postId}`);
+    const guestRadio = document.getElementById(`qaAnswerAuthGuest-${draft.postId}`);
+    if (loginRadio) loginRadio.checked = true;
+    if (guestRadio) guestRadio.checked = false;
+    const input = document.getElementById(`answerInput-${draft.postId}`);
+    if (input && typeof draft.text === 'string') input.value = draft.text;
+    updateQaAnswerAuthModeUI(draft.postId);
+  }
+
+  function getQaAnswerAuthMode(postId) {
+    const checked = document.querySelector(`input[name="qaAnswerAuthMode-${postId}"]:checked`);
+    return checked?.value || 'guest';
+  }
+
+  function updateQaAnswerAuthModeUI(postId) {
+    const optionsWrap = document.getElementById(`qaAnswerAuthOptions-${postId}`);
+    const loginWrap = document.getElementById(`qaAnswerAuthLoginActions-${postId}`);
+    const loginRadio = document.getElementById(`qaAnswerAuthLogin-${postId}`);
+    const guestRadio = document.getElementById(`qaAnswerAuthGuest-${postId}`);
+    if (!optionsWrap || !loginWrap || !loginRadio || !guestRadio) return;
+
+    if (googleAuthUser?.id) {
+      loginRadio.checked = true;
+      guestRadio.checked = false;
+      optionsWrap.style.display = 'flex';
+      loginWrap.style.display = 'none';
+      return;
+    }
+
+    if (!loginRadio.checked && !guestRadio.checked) guestRadio.checked = true;
+    optionsWrap.style.display = 'flex';
+    loginWrap.style.display = loginRadio.checked ? 'block' : 'none';
+  }
+
+  async function handleQaAnswerLoginClick(postId) {
+    saveQaAnswerDraftBeforeAuth(postId);
+    await handleGoogleAuthClick('qa-answer');
   }
 
   async function handleGoogleAuthClick(source = 'header') {
@@ -1779,6 +1873,7 @@
     renderGoogleAuthButton();
     restorePostDraftAfterAuthIfNeeded();
     restoreCommentDraftAfterAuthIfNeeded();
+    restoreQaAnswerDraftAfterAuthIfNeeded();
     refreshMyPageNotificationCount();
     startMyPageNotificationPolling();
 
@@ -1789,6 +1884,7 @@
       renderGoogleAuthButton();
       restorePostDraftAfterAuthIfNeeded();
       restoreCommentDraftAfterAuthIfNeeded();
+      restoreQaAnswerDraftAfterAuthIfNeeded();
       refreshMyPageNotificationCount();
     });
   }
@@ -3422,11 +3518,20 @@
           <div class="answers-section"><h4>💬 回答 ${answers.length}件</h4>${ansHtml}</div>
           <div class="answer-input-area">
             <h4>✏️ 回答する</h4>
+            <div class="form-label" style="margin-bottom:0.35rem;">投稿方法</div>
+            <div class="post-auth-options" id="qaAnswerAuthOptions-${id}" style="margin:0 0 0.55rem;">
+              <label class="post-auth-option"><input type="radio" name="qaAnswerAuthMode-${id}" id="qaAnswerAuthLogin-${id}" value="login" onchange="updateQaAnswerAuthModeUI(${JSON.stringify(id)})"> ログインして投稿（確認・マイページ対応）</label>
+              <label class="post-auth-option"><input type="radio" name="qaAnswerAuthMode-${id}" id="qaAnswerAuthGuest-${id}" value="guest" checked onchange="updateQaAnswerAuthModeUI(${JSON.stringify(id)})"> ログインせず投稿（管理対象外）</label>
+            </div>
+            <div class="post-auth-login-actions" id="qaAnswerAuthLoginActions-${id}" style="display:none;margin:0 0 0.55rem;">
+              <button type="button" class="btn-login-inline" onclick="handleQaAnswerLoginClick(${JSON.stringify(id)})">この画面のままGoogleでログイン</button>
+            </div>
             <textarea class="form-textarea" id="answerInput-${id}" placeholder="あなたの知識や経験をシェアしてください..." style="margin-bottom:0.7rem"></textarea>
             <button class="btn-submit" style="margin-top:0" onclick="submitAnswer(${JSON.stringify(id)})">回答を投稿</button>
           </div>
         </div>`;
       document.getElementById('qaModal').classList.add('open');
+      updateQaAnswerAuthModeUI(id);
     } catch (e) { console.error(e); }
   }
 
@@ -3507,6 +3612,7 @@
             ${cmtHtml}
             <div class="comment-input-area">
               <h5>コメントを追加</h5>
+              <div class="form-label" style="margin-bottom:0.35rem;">投稿方法</div>
               <div class="post-auth-options" id="commentAuthOptions-${postId}" style="margin:0 0 0.55rem;">
                 <label class="post-auth-option"><input type="radio" name="commentAuthMode-${postId}" id="commentAuthLogin-${postId}" value="login" onchange="updateCommentAuthModeUI(${JSON.stringify(postId)})"> ログインして投稿（確認・マイページ対応）</label>
                 <label class="post-auth-option"><input type="radio" name="commentAuthMode-${postId}" id="commentAuthGuest-${postId}" value="guest" checked onchange="updateCommentAuthModeUI(${JSON.stringify(postId)})"> ログインせず投稿（管理対象外）</label>
@@ -3589,12 +3695,24 @@
   }
 
   async function submitAnswer(postId) {
+    const resolvedUser = await getResolvedAuthUser();
+    let authMode = resolvedUser?.id ? 'login' : getQaAnswerAuthMode(postId);
+    if (!resolvedUser?.id && authMode === 'login') {
+      alert('「この画面のままGoogleでログイン」ボタンでログイン後、もう一度投稿してください。');
+      return;
+    }
     const input = document.getElementById('answerInput-' + postId);
     const text = input.value.trim();
     if (!text) { alert('回答を入力してください'); return; }
     try {
       if (!db) throw new Error('Supabase client not initialized');
-      let payload = createOwnerPayload({ post_id: postId, author: currentUser, text });
+      const author = (currentUser || localStorage.getItem('waseda_nickname') || '').trim() || '匿名';
+      localStorage.setItem('waseda_nickname', author);
+      currentUser = author;
+      updateNicknameBadge();
+      let payload = authMode === 'login' && resolvedUser?.id
+        ? { post_id: postId, author, text, device_id: getDeviceId(), owner_key: `auth:${resolvedUser.id}` }
+        : { post_id: postId, author, text, device_id: getDeviceId(), owner_key: null };
       let insertRes = await db.from('answers').insert([payload]);
       if (insertRes.error && isOwnerKeyColumnError(insertRes.error)) {
         delete payload.owner_key;
