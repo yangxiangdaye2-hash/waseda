@@ -29,8 +29,9 @@
   .btn-google-auth.logged-in { background: #f8f9fa; }
   .google-g { width: 18px; height: 18px; border-radius: 50%; background: conic-gradient(#4285f4 0 25%, #34a853 25% 50%, #fbbc05 50% 75%, #ea4335 75% 100%); color: #fff; font-size: 11px; line-height: 18px; text-align: center; font-weight: 900; display: inline-block; }
   .google-user-name { max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .btn-mypage { background: rgba(255,255,255,.14); color: #fff; border: 1.5px solid rgba(255,255,255,.35); padding: 6px 10px; border-radius: 18px; font-size: .72rem; font-weight: 700; cursor: pointer; transition: all .2s; white-space: nowrap; }
+  .btn-mypage { background: rgba(255,255,255,.14); color: #fff; border: 1.5px solid rgba(255,255,255,.35); padding: 6px 10px; border-radius: 18px; font-size: .72rem; font-weight: 700; cursor: pointer; transition: all .2s; white-space: nowrap; position: relative; }
   .btn-mypage:hover { background: rgba(255,255,255,.28); }
+  .btn-mypage.has-notification::after { content: attr(data-notify-count); position: absolute; top: -7px; right: -7px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #ff2d55; color: #fff; font-size: .67rem; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; line-height: 1; box-shadow: 0 2px 8px rgba(0,0,0,.28); border: 1.5px solid rgba(255,255,255,.85); }
   .nickname-badge { background: rgba(255,255,255,0.18); border: 1.5px solid rgba(255,255,255,0.35); color: white; padding: 6px 10px; border-radius: 20px; font-size: 0.74rem; cursor: pointer; transition: all 0.2s; font-weight: 500; white-space: nowrap; max-width: 190px; overflow: hidden; text-overflow: ellipsis; }
   .nickname-badge:hover { background: rgba(255,255,255,0.28); }
   .header-back { color: rgba(255,255,255,.75); font-size: .82rem; text-decoration: none; display: flex; align-items: center; gap: 4px; white-space: nowrap; transition: color .2s; flex-shrink: 0; }
@@ -688,6 +689,11 @@ try {
 let googleAuthUser = null;
 let currentUser = localStorage.getItem('waseda_nickname') || 'ゲスト';
 const LAST_AUTH_USER_KEY = 'waseda_last_auth_user_id';
+const MY_PAGE_NOTIFY_PREFIX = 'waseda_mypage_notify_state_';
+const MY_PAGE_NOTIFY_INTERVAL_MS = 60000;
+let myPageNotifyCount = 0;
+let myPageNotifyTimer = null;
+let myPageNotifyInFlight = false;
 
 // ── 定数 ──
 const FACULTIES = {
@@ -1028,8 +1034,209 @@ function renderAccountSummary() {
   if (myPageBtn) {
     myPageBtn.textContent = googleAuthUser ? '📌 マイページ（投稿管理ON）' : '📌 マイページ（ログインで投稿管理）';
   }
+  renderMyPageNotificationBadge();
   updateAuthHints();
 }
+
+function getMyPageNotifyStateKey(userId) {
+  return `${MY_PAGE_NOTIFY_PREFIX}${userId}`;
+}
+function getEmptyNotifySnapshot() {
+  return { posts: {}, answers: {}, comments: {}, updatedAt: new Date().toISOString() };
+}
+function readMyPageNotifySnapshot(userId) {
+  if (!userId) return null;
+  try {
+    const raw = localStorage.getItem(getMyPageNotifyStateKey(userId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return {
+      posts: parsed.posts && typeof parsed.posts === 'object' ? parsed.posts : {},
+      answers: parsed.answers && typeof parsed.answers === 'object' ? parsed.answers : {},
+      comments: parsed.comments && typeof parsed.comments === 'object' ? parsed.comments : {},
+      updatedAt: parsed.updatedAt || null
+    };
+  } catch {
+    return null;
+  }
+}
+function writeMyPageNotifySnapshot(userId, snapshot) {
+  if (!userId || !snapshot) return;
+  try { localStorage.setItem(getMyPageNotifyStateKey(userId), JSON.stringify(snapshot)); } catch {}
+}
+function renderMyPageNotificationBadge() {
+  const myPageBtn = document.getElementById('myPageBtn');
+  if (!myPageBtn) return;
+  const count = Number(myPageNotifyCount) || 0;
+  if (count > 0) {
+    myPageBtn.dataset.notifyCount = count > 99 ? '99+' : String(count);
+    myPageBtn.classList.add('has-notification');
+  } else {
+    delete myPageBtn.dataset.notifyCount;
+    myPageBtn.classList.remove('has-notification');
+  }
+}
+function calcNotifyDelta(current, seen) {
+  let total = 0;
+  const curr = current || getEmptyNotifySnapshot();
+  const base = seen || getEmptyNotifySnapshot();
+  Object.keys(curr.posts || {}).forEach(id => {
+    const c = curr.posts[id] || {};
+    const b = (base.posts || {})[id] || {};
+    total += Math.max(0, Number(c.likes || 0) - Number(b.likes || 0));
+    total += Math.max(0, Number(c.comments || 0) - Number(b.comments || 0));
+    total += Math.max(0, Number(c.answers || 0) - Number(b.answers || 0));
+  });
+  Object.keys(curr.answers || {}).forEach(id => {
+    const c = curr.answers[id] || {};
+    const b = (base.answers || {})[id] || {};
+    total += Math.max(0, Number(c.likes || 0) - Number(b.likes || 0));
+  });
+  Object.keys(curr.comments || {}).forEach(id => {
+    const c = curr.comments[id] || {};
+    const b = (base.comments || {})[id] || {};
+    total += Math.max(0, Number(c.likes || 0) - Number(b.likes || 0));
+  });
+  return total;
+}
+async function queryRowsWithLikeFallback(table, selectWithLikes, selectWithoutLikes, applyQuery) {
+  let { data, error } = await applyQuery(db.from(table).select(selectWithLikes));
+  if (error && isLikesColumnError(error)) {
+    ({ data, error } = await applyQuery(db.from(table).select(selectWithoutLikes)));
+  }
+  return { data: data || [], error };
+}
+async function fetchOwnedInteractionRows(table, trackingUserId, nicknameCandidates = []) {
+  const merged = new Map();
+  let ownerKeyUsable = true;
+  const ownerKeys = [`auth:${trackingUserId}`, trackingUserId];
+
+  for (const key of ownerKeys) {
+    const { data, error } = await queryRowsWithLikeFallback(
+      table,
+      'id,likes,author,owner_key,device_id',
+      'id,author,owner_key,device_id',
+      q => q.eq('owner_key', key).limit(300)
+    );
+    if (error) {
+      if (isOwnerKeyColumnError(error)) {
+        ownerKeyUsable = false;
+        break;
+      }
+      throw error;
+    }
+    (data || []).forEach(row => merged.set(String(row.id), row));
+  }
+
+  const nicknameSet = new Set((nicknameCandidates || []).map(v => String(v).trim()).filter(Boolean));
+  const fallbackSelectWithOwner = ownerKeyUsable ? 'id,likes,author,owner_key,device_id' : 'id,likes,author,device_id';
+  const fallbackSelectWithoutLikes = ownerKeyUsable ? 'id,author,owner_key,device_id' : 'id,author,device_id';
+  const { data: deviceRows, error: deviceErr } = await queryRowsWithLikeFallback(
+    table,
+    fallbackSelectWithOwner,
+    fallbackSelectWithoutLikes,
+    q => q.eq('device_id', getDeviceId()).limit(300)
+  );
+  if (deviceErr) throw deviceErr;
+  (deviceRows || []).forEach(row => {
+    const owner = String(row.owner_key || '').trim();
+    if (owner && owner !== `auth:${trackingUserId}` && owner !== trackingUserId) return;
+    if (nicknameSet.size) {
+      const author = String(row.author || '').trim();
+      if (!author || !nicknameSet.has(author)) return;
+    }
+    merged.set(String(row.id), row);
+  });
+
+  return [...merged.values()];
+}
+async function collectMyPageNotifySnapshot(trackingUserId, resolvedUser) {
+  const snapshot = getEmptyNotifySnapshot();
+  if (!db || !trackingUserId) return snapshot;
+
+  const postMap = new Map();
+  const ownerKeys = [`auth:${trackingUserId}`, trackingUserId];
+  for (const key of ownerKeys) {
+    const { data, error } = await db.from('posts').select('id,likes,comments,owner_key').eq('owner_key', key).limit(300);
+    if (error) {
+      if (isOwnerKeyColumnError(error)) break;
+      throw error;
+    }
+    (data || []).forEach(row => postMap.set(String(row.id), row));
+  }
+
+  const localOwnedIds = getOwnedPostIds(trackingUserId).filter(Boolean);
+  if (localOwnedIds.length) {
+    const { data: localPosts, error: localErr } = await db.from('posts').select('id,likes,comments').in('id', localOwnedIds).limit(400);
+    if (!localErr && Array.isArray(localPosts)) {
+      localPosts.forEach(row => postMap.set(String(row.id), row));
+    }
+  }
+
+  const postIds = [...postMap.keys()];
+  const ansMap = await fetchAnswerCountsByPostIds(postIds);
+  postIds.forEach(id => {
+    const row = postMap.get(id) || {};
+    snapshot.posts[id] = {
+      likes: Number(row.likes || 0),
+      comments: Number(row.comments || 0),
+      answers: Number(ansMap[id] || 0)
+    };
+  });
+
+  const nicknameCandidates = getAccountNicknameCandidates(resolvedUser || { id: trackingUserId });
+  const answerRows = await fetchOwnedInteractionRows('answers', trackingUserId, nicknameCandidates);
+  answerRows.forEach(row => {
+    snapshot.answers[String(row.id)] = { likes: Number(row.likes || 0) };
+  });
+
+  const commentRows = await fetchOwnedInteractionRows('comments', trackingUserId, nicknameCandidates);
+  commentRows.forEach(row => {
+    snapshot.comments[String(row.id)] = { likes: Number(row.likes || 0) };
+  });
+
+  snapshot.updatedAt = new Date().toISOString();
+  return snapshot;
+}
+async function refreshMyPageNotificationCount(options = {}) {
+  const { markAsRead = false } = options;
+  if (!db || myPageNotifyInFlight) return;
+  myPageNotifyInFlight = true;
+  try {
+    const resolvedUser = await getResolvedAuthUser();
+    const trackingUserId = resolvedUser?.id || getLastAuthUserId();
+    if (!trackingUserId) {
+      myPageNotifyCount = 0;
+      renderMyPageNotificationBadge();
+      return;
+    }
+
+    const currentSnapshot = await collectMyPageNotifySnapshot(trackingUserId, resolvedUser);
+    const seenSnapshot = readMyPageNotifySnapshot(trackingUserId);
+    if (!seenSnapshot || markAsRead) {
+      writeMyPageNotifySnapshot(trackingUserId, currentSnapshot);
+      myPageNotifyCount = 0;
+    } else {
+      myPageNotifyCount = calcNotifyDelta(currentSnapshot, seenSnapshot);
+    }
+    renderMyPageNotificationBadge();
+  } catch (e) {
+    console.warn('refreshMyPageNotificationCount failed', e);
+  } finally {
+    myPageNotifyInFlight = false;
+  }
+}
+function startMyPageNotificationPolling() {
+  if (myPageNotifyTimer) return;
+  myPageNotifyTimer = setInterval(() => {
+    refreshMyPageNotificationCount();
+  }, MY_PAGE_NOTIFY_INTERVAL_MS);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') refreshMyPageNotificationCount();
+  });
+}
+
 function updateAuthHints() {
   const msg = googleAuthUser
     ? '現在はログイン投稿モードです。投稿は自動で確認・削除・マイページ対応になります。'
@@ -1093,6 +1300,8 @@ async function initGoogleAuth() {
   syncNicknameFromGoogle();
   renderGoogleAuthButton();
   restoreJukenDraftAfterAuthIfNeeded();
+  refreshMyPageNotificationCount();
+  startMyPageNotificationPolling();
 
   db.auth.onAuthStateChange((_event, session) => {
     googleAuthUser = session?.user || null;
@@ -1100,6 +1309,7 @@ async function initGoogleAuth() {
     syncNicknameFromGoogle();
     renderGoogleAuthButton();
     restoreJukenDraftAfterAuthIfNeeded();
+    refreshMyPageNotificationCount();
   });
 }
 function updateNicknameBadge() { renderAccountSummary(); }
@@ -1120,8 +1330,9 @@ function saveNickname() {
   updateNicknameBadge();
   closeNicknameModal();
 }
-function openMyPageModal() {
+async function openMyPageModal() {
   document.getElementById('myPageModal').classList.add('open');
+  await refreshMyPageNotificationCount({ markAsRead: true });
   loadMyPagePosts();
 }
 function closeMyPageModal() { document.getElementById('myPageModal').classList.remove('open'); }
