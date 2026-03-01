@@ -1047,6 +1047,27 @@ function isMissingColumnError(error) {
   return /(column|schema|does not exist|unknown)/i.test(msg);
 }
 
+async function storeContactViaReportFallback(payload) {
+  if (!db) throw new Error('Supabase not initialized');
+  const packed = {
+    subject: payload?.subject || '',
+    body: payload?.body || '',
+    email: payload?.email || null,
+    nickname: payload?.nickname || '匿名',
+    source_site: payload?.source_site || 'exam',
+    created_at: payload?.created_at || new Date().toISOString()
+  };
+  const report = {
+    post_id: null,
+    comment_id: null,
+    reason: `CONTACT|${JSON.stringify(packed)}`,
+    reporter_nickname: packed.nickname,
+    resolved: false
+  };
+  const { error } = await db.from('reports').insert([report]);
+  if (error) throw error;
+}
+
 function isContactTableMissingError(error) {
   const msg = `${error?.message || ''} ${error?.details || ''} ${error?.hint || ''}`;
   return /(could not find the table|relation .* does not exist|table .* does not exist|schema cache)/i.test(msg);
@@ -2162,7 +2183,13 @@ async function submitContactMessage() {
         };
         ({ error } = await db.from(contactTable).insert([minimalPayload]));
       }
-      if (error) throw error;
+      if (error) {
+        if (isContactTableMissingError(error)) {
+          await storeContactViaReportFallback(payload);
+        } else {
+          throw error;
+        }
+      }
       stored = true;
       storedInDb = true;
     }

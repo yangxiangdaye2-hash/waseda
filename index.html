@@ -1502,6 +1502,7 @@
   const LOCAL_NOTICE_MESSAGES_KEY = 'waseda_local_notice_messages';
   const LOCAL_BANNED_IPS_KEY = 'waseda_local_banned_ips';
   const LOCAL_CONTACT_MESSAGES_KEY = 'waseda_local_contact_messages';
+  const REPORT_CONTACT_STATE_KEY = 'waseda_report_contact_state';
   const CONTACT_TABLE_CANDIDATES = ['contact_messages', 'contacts', 'inquiries', 'contact_inquiries'];
   let myPageNotifyCount = 0;
   let noticeNotifyCount = 0;
@@ -2287,6 +2288,78 @@
   function isMissingColumnError(error) {
     const msg = `${error?.message || ''} ${error?.details || ''}`;
     return /(column|schema|does not exist|unknown)/i.test(msg);
+  }
+
+  function readReportContactState() {
+    try {
+      const raw = localStorage.getItem(REPORT_CONTACT_STATE_KEY) || '{}';
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function writeReportContactState(state) {
+    try { localStorage.setItem(REPORT_CONTACT_STATE_KEY, JSON.stringify(state || {})); } catch {}
+  }
+
+  function updateReportContactState(reportId, patch) {
+    const key = String(reportId || '').replace(/^report_contact_/, '');
+    if (!key) return;
+    const state = readReportContactState();
+    state[key] = { ...(state[key] || {}), ...(patch || {}) };
+    writeReportContactState(state);
+  }
+
+  function parseContactRowFromReport(reportRow) {
+    const reason = String(reportRow?.reason || '');
+    if (!reason.startsWith('CONTACT|')) return null;
+    const rawId = String(reportRow?.id || '').trim();
+    if (!rawId) return null;
+    let parsed = {};
+    try {
+      parsed = JSON.parse(reason.slice('CONTACT|'.length) || '{}');
+    } catch {
+      parsed = {};
+    }
+    const state = readReportContactState();
+    const s = state[rawId] || {};
+    return {
+      id: `report_contact_${rawId}`,
+      subject: parsed.subject || '(件名なし)',
+      body: parsed.body || '',
+      nickname: parsed.nickname || reportRow?.reporter_nickname || '匿名',
+      email: parsed.email || null,
+      source_site: parsed.source_site || 'student',
+      created_at: parsed.created_at || reportRow?.created_at,
+      status: s.status || 'unread',
+      reply_body: s.reply_body || null,
+      replied_at: s.replied_at || null,
+      replied_by: s.replied_by || null,
+      _reportFallback: true
+    };
+  }
+
+  async function storeContactViaReportFallback(payload) {
+    if (!db) throw new Error('Supabase not initialized');
+    const packed = {
+      subject: payload?.subject || '',
+      body: payload?.body || '',
+      email: payload?.email || null,
+      nickname: payload?.nickname || '匿名',
+      source_site: payload?.source_site || 'student',
+      created_at: payload?.created_at || new Date().toISOString()
+    };
+    const report = {
+      post_id: null,
+      comment_id: null,
+      reason: `CONTACT|${JSON.stringify(packed)}`,
+      reporter_nickname: packed.nickname,
+      resolved: false
+    };
+    const { error } = await db.from('reports').insert([report]);
+    if (error) throw error;
   }
 
   function isContactTableMissingError(error) {
@@ -3735,7 +3808,13 @@
           };
           ({ error } = await db.from(contactTable).insert([minimalPayload]));
         }
-        if (error) throw error;
+        if (error) {
+          if (isContactTableMissingError(error)) {
+            await storeContactViaReportFallback(payload);
+          } else {
+            throw error;
+          }
+        }
         stored = true;
         storedInDb = true;
       }
@@ -3787,6 +3866,13 @@
         if (contactTable) {
           const { data, error } = await db.from(contactTable).select('*').order('created_at', { ascending: false }).limit(500);
           if (!error && Array.isArray(data)) rows = data;
+        }
+        if (!rows.length) {
+          const { data: reportRows, error: reportErr } = await db.from('reports').select('id,reason,reporter_nickname,created_at,resolved').eq('resolved', false).order('created_at', { ascending: false }).limit(500);
+          if (!reportErr && Array.isArray(reportRows)) {
+            const contactRows = reportRows.map(parseContactRowFromReport).filter(Boolean);
+            if (contactRows.length) rows = contactRows;
+          }
         }
       }
     } catch {}
@@ -3878,6 +3964,13 @@
           ? { ...r, status: 'replied', reply_body: replyBody, replied_at: new Date().toISOString(), replied_by: currentUser }
           : r);
         localStorage.setItem(LOCAL_CONTACT_MESSAGES_KEY, JSON.stringify(next.slice(0, 500)));
+      } else if (String(contactId || '').startsWith('report_contact_')) {
+        updateReportContactState(contactId, {
+          status: 'replied',
+          reply_body: replyBody,
+          replied_at: new Date().toISOString(),
+          replied_by: currentUser
+        });
       } else if (db) {
         const contactTable = await resolveContactTableName();
         if (!contactTable) throw new Error('お問い合わせテーブルが見つかりません');
@@ -3905,6 +3998,11 @@
 
   async function markContactRead(id) {
     try {
+      if (String(id || '').startsWith('report_contact_')) {
+        updateReportContactState(id, { status: 'read' });
+        loadAdminContacts();
+        return;
+      }
       if (!db) return;
       const contactTable = await resolveContactTableName();
       if (!contactTable) {
