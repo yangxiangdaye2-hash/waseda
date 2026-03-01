@@ -1341,6 +1341,11 @@
       </div>
       <div class="modal-body">
         <p style="font-size:.84rem;color:var(--gray);margin-bottom:1rem;">不具合報告・要望はこちらから送信できます。</p>
+        <div id="contactAuthHint" style="font-size:.78rem;color:var(--gray);margin-bottom:.65rem;">お問い合わせはログイン必須です。Googleログイン後に送信できます。</div>
+        <div class="post-auth-actions" id="contactAuthActions" style="margin-bottom:.9rem;display:none;">
+          <button type="button" class="btn-login-inline" onclick="handleGoogleAuthClick('contact-modal')">この画面のままGoogleでログイン</button>
+          <span class="post-auth-hint">ログイン完了後はこの画面に戻り、入力内容も復元されます。</span>
+        </div>
         <div class="form-group">
           <label class="form-label">メール（任意）</label>
           <input class="form-input" id="contactEmail" type="email" placeholder="you@example.com">
@@ -1353,7 +1358,7 @@
           <label class="form-label">内容</label>
           <textarea class="form-textarea" id="contactBody" placeholder="お問い合わせ内容"></textarea>
         </div>
-        <button class="btn-submit" onclick="submitContactMessage()">送信する</button>
+        <button class="btn-submit" id="contactSubmitBtn" onclick="submitContactMessage()">送信する</button>
       </div>
     </div>
   </div>
@@ -1485,6 +1490,9 @@
   const QA_ANSWER_AUTH_RETURN_KEY = 'waseda_qa_answer_auth_return';
   const QA_ANSWER_AUTH_DRAFT_KEY = 'waseda_qa_answer_auth_draft';
   const QA_ANSWER_AUTH_DRAFT_TS_KEY = 'waseda_qa_answer_auth_draft_ts';
+  const CONTACT_AUTH_RETURN_KEY = 'waseda_contact_auth_return';
+  const CONTACT_AUTH_DRAFT_KEY = 'waseda_contact_auth_draft';
+  const CONTACT_AUTH_DRAFT_TS_KEY = 'waseda_contact_auth_draft_ts';
   const MY_PAGE_NOTIFY_PREFIX = 'waseda_mypage_notify_state_';
   const MY_PAGE_NOTIFY_INTERVAL_MS = 60000;
   const NOTICE_SEEN_AT_PREFIX = 'waseda_notice_seen_at_';
@@ -1606,6 +1614,7 @@
     }
     renderMyPageNotificationBadge();
     renderNoticeNotificationBadge();
+    updateContactAuthUI();
   }
 
   function getMyPageNotifyStateKey(userId) {
@@ -2155,6 +2164,7 @@
       return;
     }
     if (source === 'post-modal') savePostDraftBeforeAuth();
+    if (source === 'contact-modal') saveContactDraftBeforeAuth();
     const redirectTo = getAuthRedirectUrl();
     const { data, error } = await db.auth.signInWithOAuth({
       provider: 'google',
@@ -2203,6 +2213,7 @@
     restorePostDraftAfterAuthIfNeeded();
     restoreCommentDraftAfterAuthIfNeeded();
     restoreQaAnswerDraftAfterAuthIfNeeded();
+    restoreContactDraftAfterAuthIfNeeded();
     refreshMyPageNotificationCount();
     refreshNoticeNotificationCount();
     startMyPageNotificationPolling();
@@ -2215,6 +2226,7 @@
       restorePostDraftAfterAuthIfNeeded();
       restoreCommentDraftAfterAuthIfNeeded();
       restoreQaAnswerDraftAfterAuthIfNeeded();
+      restoreContactDraftAfterAuthIfNeeded();
       refreshMyPageNotificationCount();
       refreshNoticeNotificationCount();
     });
@@ -2262,6 +2274,11 @@
   function isOwnerKeyColumnError(error) {
     const msg = `${error?.message || ''} ${error?.details || ''}`;
     return /owner_key/i.test(msg) && /(column|schema|does not exist|unknown)/i.test(msg);
+  }
+
+  function isMissingColumnError(error) {
+    const msg = `${error?.message || ''} ${error?.details || ''}`;
+    return /(column|schema|does not exist|unknown)/i.test(msg);
   }
 
   function createOwnerPayload(base) {
@@ -2584,8 +2601,87 @@
     document.getElementById('noticeModal')?.classList.remove('open');
   }
 
+  function updateContactAuthUI() {
+    const authWrap = document.getElementById('contactAuthActions');
+    const submitBtn = document.getElementById('contactSubmitBtn');
+    const hint = document.getElementById('contactAuthHint');
+    if (!authWrap || !submitBtn || !hint) return;
+    if (googleAuthUser?.id) {
+      authWrap.style.display = 'none';
+      submitBtn.disabled = false;
+      hint.textContent = 'ログイン済みです。お問い合わせを送信できます。';
+      return;
+    }
+    authWrap.style.display = 'block';
+    submitBtn.disabled = true;
+    hint.textContent = 'お問い合わせはログイン必須です。Googleログイン後に送信できます。';
+  }
+
+  function saveContactDraftBeforeAuth() {
+    const modal = document.getElementById('contactModal');
+    if (!modal?.classList.contains('open')) return;
+    const draft = {
+      email: document.getElementById('contactEmail')?.value || '',
+      subject: document.getElementById('contactSubject')?.value || '',
+      body: document.getElementById('contactBody')?.value || ''
+    };
+    const nowTs = String(Date.now());
+    const draftStr = JSON.stringify(draft);
+    sessionStorage.setItem(CONTACT_AUTH_DRAFT_KEY, draftStr);
+    sessionStorage.setItem(CONTACT_AUTH_RETURN_KEY, '1');
+    sessionStorage.setItem(CONTACT_AUTH_DRAFT_TS_KEY, nowTs);
+    localStorage.setItem(CONTACT_AUTH_DRAFT_KEY, draftStr);
+    localStorage.setItem(CONTACT_AUTH_RETURN_KEY, '1');
+    localStorage.setItem(CONTACT_AUTH_DRAFT_TS_KEY, nowTs);
+  }
+
+  function restoreContactDraftAfterAuthIfNeeded() {
+    const sessionReturn = sessionStorage.getItem(CONTACT_AUTH_RETURN_KEY) === '1';
+    const localReturn = localStorage.getItem(CONTACT_AUTH_RETURN_KEY) === '1';
+    if (!(sessionReturn || localReturn)) return;
+    if (!googleAuthUser?.id) return;
+
+    const tsRaw = sessionStorage.getItem(CONTACT_AUTH_DRAFT_TS_KEY) || localStorage.getItem(CONTACT_AUTH_DRAFT_TS_KEY) || '0';
+    const ageMs = Date.now() - Number(tsRaw || 0);
+    if (Number.isFinite(ageMs) && ageMs > 10 * 60 * 1000) {
+      sessionStorage.removeItem(CONTACT_AUTH_RETURN_KEY);
+      sessionStorage.removeItem(CONTACT_AUTH_DRAFT_KEY);
+      sessionStorage.removeItem(CONTACT_AUTH_DRAFT_TS_KEY);
+      localStorage.removeItem(CONTACT_AUTH_RETURN_KEY);
+      localStorage.removeItem(CONTACT_AUTH_DRAFT_KEY);
+      localStorage.removeItem(CONTACT_AUTH_DRAFT_TS_KEY);
+      return;
+    }
+
+    sessionStorage.removeItem(CONTACT_AUTH_RETURN_KEY);
+    localStorage.removeItem(CONTACT_AUTH_RETURN_KEY);
+    let draft = null;
+    try {
+      const draftStr = sessionStorage.getItem(CONTACT_AUTH_DRAFT_KEY) || localStorage.getItem(CONTACT_AUTH_DRAFT_KEY) || '{}';
+      draft = JSON.parse(draftStr);
+    } catch {
+      draft = null;
+    }
+    sessionStorage.removeItem(CONTACT_AUTH_DRAFT_KEY);
+    sessionStorage.removeItem(CONTACT_AUTH_DRAFT_TS_KEY);
+    localStorage.removeItem(CONTACT_AUTH_DRAFT_KEY);
+    localStorage.removeItem(CONTACT_AUTH_DRAFT_TS_KEY);
+
+    openContactModal();
+    if (draft) {
+      const emailEl = document.getElementById('contactEmail');
+      const subjectEl = document.getElementById('contactSubject');
+      const bodyEl = document.getElementById('contactBody');
+      if (emailEl && typeof draft.email === 'string') emailEl.value = draft.email;
+      if (subjectEl && typeof draft.subject === 'string') subjectEl.value = draft.subject;
+      if (bodyEl && typeof draft.body === 'string') bodyEl.value = draft.body;
+    }
+    updateContactAuthUI();
+  }
+
   function openContactModal() {
     document.getElementById('contactModal')?.classList.add('open');
+    updateContactAuthUI();
   }
 
   function closeContactModal() {
@@ -3525,6 +3621,13 @@
 
   async function submitContactMessage() {
     if (!(await ensureIpNotBannedOrAlert())) return;
+    const resolvedUser = await getResolvedAuthUser();
+    if (!resolvedUser?.id) {
+      alert('お問い合わせはログイン必須です。Googleログイン後に送信してください。');
+      saveContactDraftBeforeAuth();
+      await handleGoogleAuthClick('contact-modal');
+      return;
+    }
     const email = (document.getElementById('contactEmail')?.value || '').trim();
     const subject = (document.getElementById('contactSubject')?.value || '').trim();
     const body = (document.getElementById('contactBody')?.value || '').trim();
@@ -3533,15 +3636,30 @@
       email: email || null,
       subject,
       body,
-      nickname: currentUser || '匿名',
+      nickname: currentUser || getGoogleDisplayName(resolvedUser) || '匿名',
       ip: await getClientIpAddress(),
       status: 'unread',
+      owner_key: getOwnerKey(resolvedUser),
+      auth_user_id: resolvedUser.id,
+      source_site: 'student',
       created_at: new Date().toISOString()
     };
     let stored = false;
     try {
       if (db) {
-        const { error } = await db.from('contact_messages').insert([payload]);
+        let { error } = await db.from('contact_messages').insert([payload]);
+        if (error && isMissingColumnError(error)) {
+          const fallbackPayload = {
+            email: payload.email,
+            subject: payload.subject,
+            body: payload.body,
+            nickname: payload.nickname,
+            ip: payload.ip,
+            status: payload.status,
+            created_at: payload.created_at
+          };
+          ({ error } = await db.from('contact_messages').insert([fallbackPayload]));
+        }
         if (error) throw error;
         stored = true;
       }
@@ -3589,19 +3707,102 @@
     }
     list.innerHTML = rows.map(r => {
       const status = String(r.status || 'unread');
-      const isRead = status === 'read';
+      const isRead = status === 'read' || status === 'replied';
       const idStr = String(r.id || '');
+      const sourceSite = String(r.source_site || '').trim() || 'student';
+      const siteLabel = sourceSite === 'exam' ? '受験生' : '在学生';
+      const replyInputId = `contactReplyInput-${idStr.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+      const canReply = !!String(r.nickname || '').trim() && String(r.nickname || '').trim() !== '匿名' && String(r.nickname || '').trim() !== 'ゲスト';
+      const repliedAt = r.replied_at ? new Date(r.replied_at).toLocaleString('ja-JP') : '';
       return `<div style="padding:.75rem;background:${isRead ? '#f7f7f7' : '#fff8e8'};border:1px solid var(--border);border-radius:8px;margin-bottom:.55rem;">
         <div style="display:flex;justify-content:space-between;gap:.6rem;align-items:flex-start;">
           <div style="min-width:0;">
             <div style="font-weight:700;font-size:.86rem;color:var(--dark);">${escHtml(r.subject || '(件名なし)')}</div>
-            <div style="font-size:.74rem;color:var(--gray);margin-top:.2rem;">@${escHtml(r.nickname || '匿名')} ${r.email ? ' · ' + escHtml(r.email) : ''} · ${formatTime(r.created_at)}</div>
+            <div style="font-size:.74rem;color:var(--gray);margin-top:.2rem;">@${escHtml(r.nickname || '匿名')} ${r.email ? ' · ' + escHtml(r.email) : ''} · ${siteLabel} · ${formatTime(r.created_at)}</div>
           </div>
           ${idStr.startsWith('local_') ? '' : `<button style="padding:4px 8px;background:${isRead ? '#9e9e9e' : '#4caf50'};color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.74rem;" onclick="markContactRead(${JSON.stringify(r.id)})">${isRead ? '既読' : '既読にする'}</button>`}
         </div>
         <div style="margin-top:.45rem;font-size:.82rem;color:var(--dark);white-space:pre-wrap;line-height:1.6;">${escHtml(r.body || '')}</div>
+        ${r.reply_body ? `<div style="margin-top:.55rem;padding:.55rem .6rem;background:#f4fff4;border:1px solid #d7ecd7;border-radius:8px;"><div style="font-size:.74rem;color:#2e7d32;font-weight:700;">返信済み ${repliedAt ? '· ' + repliedAt : ''}</div><div style="font-size:.8rem;color:#2f2f2f;white-space:pre-wrap;margin-top:.25rem;">${escHtml(r.reply_body)}</div></div>` : ''}
+        <div style="margin-top:.55rem;display:flex;gap:.45rem;align-items:flex-start;flex-wrap:wrap;">
+          <textarea id="${replyInputId}" class="form-textarea" style="margin:0;min-height:72px;flex:1;min-width:220px;" placeholder="このユーザーへの返信を入力"></textarea>
+          <button style="padding:8px 12px;background:#1976d2;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.76rem;white-space:nowrap;" onclick="replyToContact(${JSON.stringify(r.id)}, ${JSON.stringify(r.nickname || '')}, ${JSON.stringify(sourceSite)}, ${JSON.stringify(replyInputId)})" ${canReply ? '' : 'disabled'}>${canReply ? '返信する' : '返信不可'}</button>
+        </div>
       </div>`;
     }).join('');
+  }
+
+  async function replyToContact(contactId, targetNickname, sourceSite, inputId) {
+    const nickname = String(targetNickname || '').trim();
+    if (!nickname || nickname === '匿名' || nickname === 'ゲスト') {
+      alert('返信対象のニックネームが見つかりません。');
+      return;
+    }
+    const input = document.getElementById(inputId);
+    const replyBody = (input?.value || '').trim();
+    if (!replyBody) {
+      alert('返信内容を入力してください。');
+      return;
+    }
+
+    const site = String(sourceSite || '').trim() === 'exam' ? 'exam' : 'student';
+    const announcementPayload = {
+      title: 'お問い合わせへの返信',
+      body: replyBody,
+      active: true,
+      author: currentUser,
+      audience: 'nickname',
+      target_nickname: nickname,
+      target_site: site,
+      created_at: new Date().toISOString()
+    };
+
+    let sent = false;
+    try {
+      if (!db) throw new Error('Supabase not initialized');
+      const { error } = await db.from('announcements').insert([announcementPayload]);
+      if (error) throw error;
+      sent = true;
+    } catch (e) {
+      console.warn('[Contacts] reply announcement DB fallback:', e);
+    }
+
+    if (!sent) {
+      const localRows = readLocalNoticeMessages();
+      localRows.unshift({ ...announcementPayload, id: `local_notice_${Date.now()}` });
+      writeLocalNoticeMessages(localRows);
+    }
+
+    try {
+      if (String(contactId || '').startsWith('local_')) {
+        const raw = localStorage.getItem(LOCAL_CONTACT_MESSAGES_KEY) || '[]';
+        const arr = JSON.parse(raw);
+        const rows = Array.isArray(arr) ? arr : [];
+        const next = rows.map(r => String(r.id) === String(contactId)
+          ? { ...r, status: 'replied', reply_body: replyBody, replied_at: new Date().toISOString(), replied_by: currentUser }
+          : r);
+        localStorage.setItem(LOCAL_CONTACT_MESSAGES_KEY, JSON.stringify(next.slice(0, 500)));
+      } else if (db) {
+        let { error } = await db.from('contact_messages').update({
+          status: 'replied',
+          reply_body: replyBody,
+          replied_at: new Date().toISOString(),
+          replied_by: currentUser
+        }).eq('id', contactId);
+        if (error && isMissingColumnError(error)) {
+          ({ error } = await db.from('contact_messages').update({ status: 'read' }).eq('id', contactId));
+        }
+        if (error) throw error;
+      }
+    } catch (e) {
+      console.warn('[Contacts] reply status update failed:', e);
+    }
+
+    if (input) input.value = '';
+    await refreshAnnouncements();
+    await refreshNoticeNotificationCount();
+    loadAdminContacts();
+    alert(`@${nickname} に返信を送信しました。`);
   }
 
   async function markContactRead(id) {

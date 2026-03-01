@@ -876,6 +876,10 @@
     </div>
     <div class="modal-body">
       <p style="font-size:.84rem;color:var(--gray);margin-bottom:1rem;">不具合報告・要望はこちらから送信できます。</p>
+      <div class="auth-hint" id="contactAuthHint" style="margin-top:-.2rem;margin-bottom:.85rem;">お問い合わせはログイン必須です。Googleログイン後に送信できます。</div>
+      <div id="contactAuthActions" style="display:none;margin-bottom:.85rem;">
+        <button type="button" class="post-auth-login-btn" onclick="handleGoogleAuthClick('contact-form')">この画面のままGoogleでログイン</button>
+      </div>
       <div class="form-group">
         <label class="form-label">メール（任意）</label>
         <input class="form-input" id="contactEmail" type="email" placeholder="you@example.com">
@@ -888,7 +892,7 @@
         <label class="form-label">内容</label>
         <textarea class="form-textarea" id="contactBody" placeholder="お問い合わせ内容"></textarea>
       </div>
-      <button class="btn-submit" onclick="submitContactMessage()">送信する</button>
+      <button class="btn-submit" id="contactSubmitBtn" onclick="submitContactMessage()">送信する</button>
     </div>
   </div>
 </div>
@@ -930,6 +934,9 @@ const BOARD_COMMENT_AUTH_DRAFT_TS_KEY = 'waseda_board_comment_auth_draft_ts';
 const QA_ANSWER_AUTH_RETURN_KEY = 'waseda_qa_answer_auth_return';
 const QA_ANSWER_AUTH_DRAFT_KEY = 'waseda_qa_answer_auth_draft';
 const QA_ANSWER_AUTH_DRAFT_TS_KEY = 'waseda_qa_answer_auth_draft_ts';
+const CONTACT_AUTH_RETURN_KEY = 'waseda_contact_auth_return';
+const CONTACT_AUTH_DRAFT_KEY = 'waseda_contact_auth_draft';
+const CONTACT_AUTH_DRAFT_TS_KEY = 'waseda_contact_auth_draft_ts';
 const NOTICE_SEEN_AT_PREFIX = 'waseda_juken_notice_seen_at_';
 const LOCAL_NOTICE_MESSAGES_KEY = 'waseda_local_notice_messages';
 const LOCAL_CONTACT_MESSAGES_KEY = 'waseda_local_contact_messages';
@@ -1027,6 +1034,10 @@ function getLastAuthUserId() {
 function isOwnerKeyColumnError(error) {
   const msg = `${error?.message || ''} ${error?.details || ''}`;
   return /owner_key/i.test(msg) && /(column|schema|does not exist|unknown)/i.test(msg);
+}
+function isMissingColumnError(error) {
+  const msg = `${error?.message || ''} ${error?.details || ''}`;
+  return /(column|schema|does not exist|unknown)/i.test(msg);
 }
 function createOwnerPayload(base) {
   return { ...base, device_id: getDeviceId(), owner_key: getOwnerKey() };
@@ -1522,7 +1533,86 @@ function renderAccountSummary() {
   }
   renderMyPageNotificationBadge();
   renderNoticeNotificationBadge();
+  updateContactAuthUI();
   updateAuthHints();
+}
+
+function updateContactAuthUI() {
+  const hint = document.getElementById('contactAuthHint');
+  const actions = document.getElementById('contactAuthActions');
+  const submitBtn = document.getElementById('contactSubmitBtn');
+  if (!hint || !actions || !submitBtn) return;
+  if (googleAuthUser?.id) {
+    hint.textContent = 'ログイン済みです。お問い合わせを送信できます。';
+    actions.style.display = 'none';
+    submitBtn.disabled = false;
+    return;
+  }
+  hint.textContent = 'お問い合わせはログイン必須です。Googleログイン後に送信できます。';
+  actions.style.display = 'block';
+  submitBtn.disabled = true;
+}
+
+function saveContactDraftBeforeAuth() {
+  const modal = document.getElementById('contactModal');
+  if (!modal?.classList.contains('open')) return;
+  const draft = {
+    email: document.getElementById('contactEmail')?.value || '',
+    subject: document.getElementById('contactSubject')?.value || '',
+    body: document.getElementById('contactBody')?.value || ''
+  };
+  const draftStr = JSON.stringify(draft);
+  const nowTs = String(Date.now());
+  sessionStorage.setItem(CONTACT_AUTH_DRAFT_KEY, draftStr);
+  sessionStorage.setItem(CONTACT_AUTH_RETURN_KEY, '1');
+  sessionStorage.setItem(CONTACT_AUTH_DRAFT_TS_KEY, nowTs);
+  localStorage.setItem(CONTACT_AUTH_DRAFT_KEY, draftStr);
+  localStorage.setItem(CONTACT_AUTH_RETURN_KEY, '1');
+  localStorage.setItem(CONTACT_AUTH_DRAFT_TS_KEY, nowTs);
+}
+
+function restoreContactDraftAfterAuthIfNeeded() {
+  const shouldReturn = sessionStorage.getItem(CONTACT_AUTH_RETURN_KEY) === '1' || localStorage.getItem(CONTACT_AUTH_RETURN_KEY) === '1';
+  if (!shouldReturn) return;
+  if (!googleAuthUser?.id) return;
+
+  const tsRaw = sessionStorage.getItem(CONTACT_AUTH_DRAFT_TS_KEY) || localStorage.getItem(CONTACT_AUTH_DRAFT_TS_KEY) || '0';
+  const ageMs = Date.now() - Number(tsRaw || 0);
+  if (Number.isFinite(ageMs) && ageMs > 10 * 60 * 1000) {
+    sessionStorage.removeItem(CONTACT_AUTH_RETURN_KEY);
+    sessionStorage.removeItem(CONTACT_AUTH_DRAFT_KEY);
+    sessionStorage.removeItem(CONTACT_AUTH_DRAFT_TS_KEY);
+    localStorage.removeItem(CONTACT_AUTH_RETURN_KEY);
+    localStorage.removeItem(CONTACT_AUTH_DRAFT_KEY);
+    localStorage.removeItem(CONTACT_AUTH_DRAFT_TS_KEY);
+    return;
+  }
+
+  let draft = null;
+  try {
+    const draftStr = sessionStorage.getItem(CONTACT_AUTH_DRAFT_KEY) || localStorage.getItem(CONTACT_AUTH_DRAFT_KEY) || '{}';
+    draft = JSON.parse(draftStr);
+  } catch {
+    draft = null;
+  }
+
+  sessionStorage.removeItem(CONTACT_AUTH_RETURN_KEY);
+  sessionStorage.removeItem(CONTACT_AUTH_DRAFT_KEY);
+  sessionStorage.removeItem(CONTACT_AUTH_DRAFT_TS_KEY);
+  localStorage.removeItem(CONTACT_AUTH_RETURN_KEY);
+  localStorage.removeItem(CONTACT_AUTH_DRAFT_KEY);
+  localStorage.removeItem(CONTACT_AUTH_DRAFT_TS_KEY);
+
+  openContactModal();
+  if (draft) {
+    const emailEl = document.getElementById('contactEmail');
+    const subjectEl = document.getElementById('contactSubject');
+    const bodyEl = document.getElementById('contactBody');
+    if (emailEl && typeof draft.email === 'string') emailEl.value = draft.email;
+    if (subjectEl && typeof draft.subject === 'string') subjectEl.value = draft.subject;
+    if (bodyEl && typeof draft.body === 'string') bodyEl.value = draft.body;
+  }
+  updateContactAuthUI();
 }
 
 function getNoticeUserKey() {
@@ -1876,6 +1966,7 @@ async function handleGoogleAuthClick(source = 'header') {
     return;
   }
   if (source === 'post-form') saveJukenDraftBeforeAuth();
+  if (source === 'contact-form') saveContactDraftBeforeAuth();
   const redirectTo = getAuthRedirectUrl();
   const { data, error } = await db.auth.signInWithOAuth({
     provider: 'google',
@@ -1923,6 +2014,7 @@ async function initGoogleAuth() {
   restoreJukenDraftAfterAuthIfNeeded();
   restoreBoardCommentDraftAfterAuthIfNeeded();
   restoreQaAnswerDraftAfterAuthIfNeeded();
+  restoreContactDraftAfterAuthIfNeeded();
   refreshMyPageNotificationCount();
   refreshNoticeNotificationCount();
   refreshAnnouncements();
@@ -1936,6 +2028,7 @@ async function initGoogleAuth() {
     restoreJukenDraftAfterAuthIfNeeded();
     restoreBoardCommentDraftAfterAuthIfNeeded();
     restoreQaAnswerDraftAfterAuthIfNeeded();
+    restoreContactDraftAfterAuthIfNeeded();
     refreshMyPageNotificationCount();
     refreshNoticeNotificationCount();
     refreshAnnouncements();
@@ -1969,12 +2062,20 @@ async function openMyPageModal() {
 function closeMyPageModal() { document.getElementById('myPageModal').classList.remove('open'); }
 function openContactModal() {
   document.getElementById('contactModal')?.classList.add('open');
+  updateContactAuthUI();
 }
 function closeContactModal() {
   document.getElementById('contactModal')?.classList.remove('open');
 }
 
 async function submitContactMessage() {
+  const resolvedUser = await getResolvedAuthUser();
+  if (!resolvedUser?.id) {
+    alert('お問い合わせはログイン必須です。Googleログイン後に送信してください。');
+    saveContactDraftBeforeAuth();
+    await handleGoogleAuthClick('contact-form');
+    return;
+  }
   const email = (document.getElementById('contactEmail')?.value || '').trim();
   const subject = (document.getElementById('contactSubject')?.value || '').trim();
   const body = (document.getElementById('contactBody')?.value || '').trim();
@@ -1984,16 +2085,31 @@ async function submitContactMessage() {
     email: email || null,
     subject,
     body,
-    nickname: currentUser || '匿名',
+    nickname: currentUser || getGoogleDisplayName(resolvedUser) || '匿名',
     ip: null,
     status: 'unread',
+    owner_key: getOwnerKey(),
+    auth_user_id: resolvedUser.id,
+    source_site: 'exam',
     created_at: new Date().toISOString()
   };
 
   let stored = false;
   try {
     if (db) {
-      const { error } = await db.from('contact_messages').insert([payload]);
+      let { error } = await db.from('contact_messages').insert([payload]);
+      if (error && isMissingColumnError(error)) {
+        const fallbackPayload = {
+          email: payload.email,
+          subject: payload.subject,
+          body: payload.body,
+          nickname: payload.nickname,
+          ip: payload.ip,
+          status: payload.status,
+          created_at: payload.created_at
+        };
+        ({ error } = await db.from('contact_messages').insert([fallbackPayload]));
+      }
       if (error) throw error;
       stored = true;
     }
