@@ -1728,12 +1728,53 @@ function readLocalNoticeMessages() {
     return [];
   }
 }
+
+function parseReplyNoticeFromReport(reportRow) {
+  const reason = String(reportRow?.reason || '');
+  if (!reason.startsWith('REPLY_NOTICE|')) return null;
+  let parsed = {};
+  try {
+    parsed = JSON.parse(reason.slice('REPLY_NOTICE|'.length) || '{}');
+  } catch {
+    parsed = {};
+  }
+  return {
+    id: `reply_notice_${reportRow?.id || Date.now()}`,
+    title: parsed.title || 'お問い合わせへの返信',
+    body: parsed.body || '',
+    active: true,
+    author: parsed.author || null,
+    audience: parsed.audience || 'all',
+    target_nickname: parsed.target_nickname || null,
+    target_auth_user_id: parsed.target_auth_user_id || null,
+    target_site: parsed.target_site || 'exam',
+    created_at: parsed.created_at || reportRow?.created_at || new Date().toISOString()
+  };
+}
+
+async function loadReplyNoticesFromReports() {
+  if (!db) return [];
+  try {
+    const { data, error } = await db
+      .from('reports')
+      .select('id,reason,created_at,resolved')
+      .eq('resolved', false)
+      .order('created_at', { ascending: false })
+      .limit(600);
+    if (error || !Array.isArray(data)) return [];
+    return data.map(parseReplyNoticeFromReport).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
 async function loadUserNotices() {
   const merged = [];
   try {
     if (db) {
       const { data, error } = await db.from('announcements').select('*').eq('active', true).order('created_at', { ascending: false }).limit(200);
       if (!error && Array.isArray(data)) merged.push(...data);
+      const fallbackReplyRows = await loadReplyNoticesFromReports();
+      if (fallbackReplyRows.length) merged.push(...fallbackReplyRows);
     }
   } catch {}
   merged.push(...readLocalNoticeMessages().filter(v => v && v.active !== false));
@@ -1775,9 +1816,12 @@ async function openNoticeModal() {
   renderNoticeNotificationBadge();
   summary.textContent = `${rows.length}件のお知らせ`;
   list.innerHTML = rows.map(r => {
-    const audience = String(r.audience || '').trim() === 'nickname'
+    const audienceType = String(r.audience || '').trim();
+    const audience = audienceType === 'nickname'
       ? `個別: @${escHtml(r.target_nickname || '')}`
-      : '全体';
+      : audienceType === 'auth_user'
+        ? '個別: ログインユーザー'
+        : '全体';
     return `<div style="padding:.8rem .9rem;background:#fff;border:1px solid var(--border);border-radius:10px;margin-bottom:.7rem;">
       <div style="display:flex;justify-content:space-between;gap:.6rem;align-items:flex-start;flex-wrap:wrap;">
         <strong style="font-size:.92rem;">${escHtml(r.title || '')}</strong>

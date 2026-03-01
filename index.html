@@ -2661,12 +2661,76 @@
     try { localStorage.setItem(LOCAL_NOTICE_MESSAGES_KEY, JSON.stringify([...(rows || [])].slice(0, 500))); } catch {}
   }
 
+  function parseReplyNoticeFromReport(reportRow) {
+    const reason = String(reportRow?.reason || '');
+    if (!reason.startsWith('REPLY_NOTICE|')) return null;
+    let parsed = {};
+    try {
+      parsed = JSON.parse(reason.slice('REPLY_NOTICE|'.length) || '{}');
+    } catch {
+      parsed = {};
+    }
+    return {
+      id: `reply_notice_${reportRow?.id || Date.now()}`,
+      title: parsed.title || 'お問い合わせへの返信',
+      body: parsed.body || '',
+      active: true,
+      author: parsed.author || null,
+      audience: parsed.audience || 'all',
+      target_nickname: parsed.target_nickname || null,
+      target_auth_user_id: parsed.target_auth_user_id || null,
+      target_site: parsed.target_site || 'student',
+      created_at: parsed.created_at || reportRow?.created_at || new Date().toISOString()
+    };
+  }
+
+  async function loadReplyNoticesFromReports() {
+    if (!db) return [];
+    try {
+      const { data, error } = await db
+        .from('reports')
+        .select('id,reason,created_at,resolved')
+        .eq('resolved', false)
+        .order('created_at', { ascending: false })
+        .limit(600);
+      if (error || !Array.isArray(data)) return [];
+      return data.map(parseReplyNoticeFromReport).filter(Boolean);
+    } catch {
+      return [];
+    }
+  }
+
+  async function storeReplyNoticeViaReportFallback(payload) {
+    if (!db) throw new Error('Supabase not initialized');
+    const packed = {
+      title: payload?.title || 'お問い合わせへの返信',
+      body: payload?.body || '',
+      author: payload?.author || currentUser,
+      audience: payload?.audience || 'all',
+      target_nickname: payload?.target_nickname || null,
+      target_auth_user_id: payload?.target_auth_user_id || null,
+      target_site: payload?.target_site || 'student',
+      created_at: payload?.created_at || new Date().toISOString()
+    };
+    const report = {
+      post_id: null,
+      comment_id: null,
+      reason: `REPLY_NOTICE|${JSON.stringify(packed)}`,
+      reporter_nickname: packed.author || 'system',
+      resolved: false
+    };
+    const { error } = await db.from('reports').insert([report]);
+    if (error) throw error;
+  }
+
   async function loadUserNotices() {
     const merged = [];
     try {
       if (db) {
         const { data, error } = await db.from('announcements').select('*').eq('active', true).order('created_at', { ascending: false }).limit(200);
         if (!error && Array.isArray(data)) merged.push(...data);
+        const fallbackReplyRows = await loadReplyNoticesFromReports();
+        if (fallbackReplyRows.length) merged.push(...fallbackReplyRows);
       }
     } catch {}
     merged.push(...readLocalNoticeMessages().filter(v => v && v.active !== false));
@@ -2710,9 +2774,12 @@
     renderNoticeNotificationBadge();
     summary.textContent = `${rows.length}件のお知らせ`;
     list.innerHTML = rows.map(r => {
-      const audience = String(r.audience || '').trim() === 'nickname'
+      const audienceType = String(r.audience || '').trim();
+      const audience = audienceType === 'nickname'
         ? `個別: @${escHtml(r.target_nickname || '')}`
-        : '全体';
+        : audienceType === 'auth_user'
+          ? '個別: ログインユーザー'
+          : '全体';
       return `<div style="padding:.8rem .9rem;background:#fff;border:1px solid var(--border);border-radius:10px;margin-bottom:.7rem;">
         <div style="display:flex;justify-content:space-between;gap:.6rem;align-items:flex-start;flex-wrap:wrap;">
           <strong style="font-size:.92rem;">${escHtml(r.title || '')}</strong>
@@ -3965,11 +4032,30 @@
     let sent = false;
     try {
       if (!db) throw new Error('Supabase not initialized');
-      const { error } = await db.from('announcements').insert([announcementPayload]);
+      let { error } = await db.from('announcements').insert([announcementPayload]);
+      if (error && isMissingColumnError(error)) {
+        const fallbackAnnouncementPayload = {
+          title: announcementPayload.title,
+          body: announcementPayload.body,
+          active: true,
+          author: announcementPayload.author,
+          audience: 'nickname',
+          target_nickname: nickname || null,
+          target_site: announcementPayload.target_site,
+          created_at: announcementPayload.created_at
+        };
+        ({ error } = await db.from('announcements').insert([fallbackAnnouncementPayload]));
+      }
       if (error) throw error;
       sent = true;
     } catch (e) {
       console.warn('[Contacts] reply announcement DB fallback:', e);
+      try {
+        await storeReplyNoticeViaReportFallback(announcementPayload);
+        sent = true;
+      } catch (reportErr) {
+        console.warn('[Contacts] reply report fallback failed:', reportErr);
+      }
     }
 
     if (!sent) {
