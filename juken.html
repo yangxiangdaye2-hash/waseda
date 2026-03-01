@@ -954,6 +954,8 @@ let myPageNotifyCount = 0;
 let noticeNotifyCount = 0;
 let myPageNotifyTimer = null;
 let myPageNotifyInFlight = false;
+const MY_PAGE_CACHE_TTL_MS = 15000;
+let myPageCache = { userId: null, ts: 0, summary: '', html: '' };
 
 // ── 定数 ──
 const FACULTIES = {
@@ -2056,8 +2058,8 @@ function saveNickname() {
 }
 async function openMyPageModal() {
   document.getElementById('myPageModal').classList.add('open');
-  await refreshMyPageNotificationCount({ markAsRead: true });
   loadMyPagePosts();
+  refreshMyPageNotificationCount({ markAsRead: true });
 }
 function closeMyPageModal() { document.getElementById('myPageModal').classList.remove('open'); }
 function openContactModal() {
@@ -2135,7 +2137,7 @@ async function submitContactMessage() {
   alert('お問い合わせを送信しました。');
 }
 
-async function loadMyPagePosts() {
+async function loadMyPagePosts(forceReload = false) {
   const summaryEl = document.getElementById('myPageSummary');
   const listEl = document.getElementById('myPageList');
   if (!summaryEl || !listEl) return;
@@ -2147,20 +2149,26 @@ async function loadMyPagePosts() {
     listEl.innerHTML = '<div style="text-align:center;color:var(--gray);padding:1rem 0;">ログイン投稿のみ確認・削除できます。</div>';
     return;
   }
+  if (!forceReload && myPageCache.userId === trackingUserId && (Date.now() - myPageCache.ts) < MY_PAGE_CACHE_TTL_MS) {
+    summaryEl.textContent = myPageCache.summary;
+    listEl.innerHTML = myPageCache.html;
+    return;
+  }
   try {
     summaryEl.textContent = '読み込み中...';
     const ownerKey = `auth:${trackingUserId}`;
+    const postSelect = 'id,category,title,body,likes,comments,created_at,owner_key,device_id,author';
     let rows = [];
-    const { data, error } = await db.from('posts').select('*').eq('owner_key', ownerKey).order('created_at',{ascending:false}).limit(120);
+    const { data, error } = await db.from('posts').select(postSelect).eq('owner_key', ownerKey).order('created_at',{ascending:false}).limit(120);
     if (error && !isOwnerKeyColumnError(error)) throw error;
     rows = data || [];
     if (!rows.length) {
-      const { data: legacyRows, error: legacyErr } = await db.from('posts').select('*').eq('owner_key', trackingUserId).order('created_at',{ascending:false}).limit(120);
+      const { data: legacyRows, error: legacyErr } = await db.from('posts').select(postSelect).eq('owner_key', trackingUserId).order('created_at',{ascending:false}).limit(120);
       if (!legacyErr && Array.isArray(legacyRows) && legacyRows.length) rows = legacyRows;
     }
     const localIds = getOwnedPostIds(trackingUserId);
     if (localIds.length) {
-      const { data: localRows, error: localErr } = await db.from('posts').select('*').in('id', localIds).limit(200);
+      const { data: localRows, error: localErr } = await db.from('posts').select(postSelect).in('id', localIds).limit(200);
       if (!localErr && Array.isArray(localRows)) {
         const merged = new Map();
         rows.forEach(p => merged.set(String(p.id), p));
@@ -2171,12 +2179,15 @@ async function loadMyPagePosts() {
 
     const nicknameCandidates = getAccountNicknameCandidates(resolvedUser || { id: trackingUserId }).map(v => String(v).trim().toLowerCase()).filter(Boolean);
     const nicknameSet = new Set(nicknameCandidates);
-    const { data: deviceRows, error: deviceErr } = await db.from('posts').select('*').eq('device_id', getDeviceId()).order('created_at',{ascending:false}).limit(200);
-    if (deviceErr) throw deviceErr;
-    if (Array.isArray(deviceRows) && deviceRows.length) {
-      const legacyRows = deviceRows.filter(p => {
+    const shouldCheckLegacyByDevice = rows.length < 120;
+    const deviceQueryResult = shouldCheckLegacyByDevice
+      ? await db.from('posts').select(postSelect).eq('device_id', getDeviceId()).order('created_at',{ascending:false}).limit(140)
+      : { data: [], error: null };
+    if (deviceQueryResult.error) throw deviceQueryResult.error;
+    if (Array.isArray(deviceQueryResult.data) && deviceQueryResult.data.length) {
+      const legacyRows = deviceQueryResult.data.filter(p => {
         const owner = (p.owner_key || '').trim();
-        if (owner === ownerKey || owner === resolvedUser.id) return true;
+        if (owner === ownerKey || owner === trackingUserId) return true;
         if (owner) return false;
         const authorLower = String(p.author || '').trim().toLowerCase();
         if (!authorLower) return true;
@@ -2207,7 +2218,7 @@ async function loadMyPagePosts() {
     const mergedRowsMap = new Map(rows.map(p => [String(p.id), p]));
     const trackedCommentPostIds = getCommentTrackedPostIds(trackingUserId).filter(Boolean);
     if (trackedCommentPostIds.length) {
-      const { data: trackedRows, error: trackedErr } = await db.from('posts').select('*').in('id', trackedCommentPostIds).limit(300);
+      const { data: trackedRows, error: trackedErr } = await db.from('posts').select(postSelect).in('id', trackedCommentPostIds).limit(200);
       if (!trackedErr && Array.isArray(trackedRows)) {
         trackedRows.forEach(p => {
           const key = String(p.id);
@@ -2220,9 +2231,10 @@ async function loadMyPagePosts() {
     const ownPostCount = rows.filter(p => !p.__commentTracked).length;
     const trackedPostCount = rows.filter(p => !!p.__commentTracked).length;
     const trackingMode = resolvedUser?.id ? 'Google連携' : 'ローカル管理（再ログイン推奨）';
-    summaryEl.textContent = `${trackingMode} | ニックネーム: @${localStorage.getItem('waseda_nickname') || '未設定'} | 投稿数: ${ownPostCount} | コメント先: ${trackedPostCount}`;
+    const summaryText = `${trackingMode} | ニックネーム: @${localStorage.getItem('waseda_nickname') || '未設定'} | 投稿数: ${ownPostCount} | コメント先: ${trackedPostCount}`;
+    summaryEl.textContent = summaryText;
     if (!rows.length) { listEl.innerHTML = '<div style="text-align:center;color:var(--gray);padding:1rem 0;">まだあなたの投稿がありません</div>'; return; }
-    listEl.innerHTML = rows.map(p => {
+    const html = rows.map(p => {
       const isQa = p.category === 'juken_qa' || p.category === 'juken_life_qa';
       const isCommentTracked = !!p.__commentTracked;
       const openAction = isQa
@@ -2243,6 +2255,8 @@ async function loadMyPagePosts() {
         </div>
       </div>`;
     }).join('');
+    listEl.innerHTML = html;
+    myPageCache = { userId: trackingUserId, ts: Date.now(), summary: summaryText, html };
   } catch (e) {
     console.error(e);
     summaryEl.textContent = '読み込みに失敗しました';
@@ -2253,8 +2267,8 @@ async function deleteMyPagePost(postId) {
   if (!confirm('この投稿を削除してもよろしいですか？')) return;
   const resolvedUser = await getResolvedAuthUser();
   const trackingUserId = resolvedUser?.id || getLastAuthUserId();
-  if (!trackingUserId || !resolvedUser?.id) {
-    alert('削除にはGoogleログインが必要です。再ログイン後にもう一度お試しください。');
+  if (!trackingUserId) {
+    alert('削除するにはログイン履歴のある端末で実行してください。');
     return;
   }
   try {
@@ -2275,9 +2289,11 @@ async function deleteMyPagePost(postId) {
     const isDeviceLegacy = !target?.owner_key && target?.device_id && target.device_id === getDeviceId();
     const localOwnedSet = new Set(getOwnedPostIds(trackingUserId).map(String));
     const isOwnedByLocalRecord = localOwnedSet.has(String(postId));
-    if (!(target?.owner_key === ownerKey || isLegacyOwner || isDeviceLegacy || isOwnedByLocalRecord)) { alert('この投稿は削除できません'); return; }
+    const currentNick = String(currentUser || '').trim();
+    const isNickLegacy = !target?.owner_key && !!currentNick && String(target?.author || '').trim() === currentNick;
+    if (!(target?.owner_key === ownerKey || isLegacyOwner || isDeviceLegacy || isOwnedByLocalRecord || isNickLegacy)) { alert('この投稿は削除できません'); return; }
 
-    if (hasOwnerKeyColumn && (isDeviceLegacy || isLegacyOwner || isOwnedByLocalRecord) && target?.owner_key !== ownerKey) {
+    if (hasOwnerKeyColumn && resolvedUser?.id && (isDeviceLegacy || isLegacyOwner || isOwnedByLocalRecord || isNickLegacy) && target?.owner_key !== ownerKey) {
       try {
         const { error: adoptErr } = await db.from('posts').update({ owner_key: ownerKey }).eq('id', postId);
         if (adoptErr && !isOwnerKeyColumnError(adoptErr)) throw adoptErr;
@@ -2289,8 +2305,9 @@ async function deleteMyPagePost(postId) {
     const { error } = await db.from('posts').delete().eq('id', postId);
     if (error) throw error;
     removeOwnedPostId(postId, trackingUserId);
+    myPageCache = { userId: null, ts: 0, summary: '', html: '' };
     if (target?.author) rememberOwnedNickname(target.author, trackingUserId);
-    await loadMyPagePosts();
+    await loadMyPagePosts(true);
     if (target?.category === 'juken_life_qa') await loadQaList('life');
     else if (target?.category === 'juken_qa') await loadQaList('study');
     else if (target?.category === 'juken') await loadBoardPosts();
