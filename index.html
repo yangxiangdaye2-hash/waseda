@@ -182,9 +182,10 @@
     .posts-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; gap: 1.5rem; }
     .posts-header h2 { font-size: 1.3rem; font-weight: 700; color: var(--dark); letter-spacing: 0.02em; }
     .posts-header-controls { display: flex; gap: 1rem; align-items: center; }
-    .sort-select { border: 1.5px solid var(--border); padding: 8px 14px; border-radius: 8px; font-size: 0.88rem; color: var(--gray); background: white; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; font-weight: 500; transition: all 0.2s; }
-    .sort-select:hover { border-color: var(--crimson); color: var(--dark); }
-    .sort-select:focus { outline: none; border-color: var(--crimson); box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.1); }
+    .feed-sort-tabs { display: inline-flex; align-items: center; gap: 0.45rem; }
+    .feed-sort-tab { border: 1.5px solid #cfd6df; background: #f3f5f8; color: #3f4854; border-radius: 999px; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+    .feed-sort-tab:hover { border-color: var(--crimson); color: var(--crimson); background: #fff; }
+    .feed-sort-tab.active { background: var(--crimson); color: #fff; border-color: var(--crimson); box-shadow: 0 2px 8px rgba(139,0,0,0.18); }
 
     .post-card { background: white; border: 1px solid var(--border); border-left: 4px solid var(--gold); border-radius: 12px; padding: 1.5rem 1.7rem; margin-bottom: 1.3rem; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; position: relative; overflow: hidden; }
     .post-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--gold), transparent); opacity: 0; transition: opacity 0.3s; }
@@ -626,7 +627,10 @@
         <h2 id="section-title">新着投稿</h2>
         <div class="posts-header-controls">
           <button class="btn-post" id="categoryPostBtn" style="margin: 0;" onclick="openPostModalWithCategory()">＋ 投稿する</button>
-          <select class="sort-select" id="sortSelect" onchange="updateSort()"><option value="newest">新着順</option><option value="popular">人気順（24時間）</option></select>
+            <div class="feed-sort-tabs" id="feedSortTabsMain">
+              <button class="feed-sort-tab active" onclick="setMainFeedSortMode('newest', this)">🆕 新着</button>
+              <button class="feed-sort-tab" onclick="setMainFeedSortMode('popular', this)">🔥 人気</button>
+            </div>
         </div>
       </div>
       <div class="lecture-subtabs" id="lectureSubtabs">
@@ -2325,22 +2329,6 @@
         const { data, error } = await query;
         if (error) throw error;
         allPosts = applyLectureModeFilter(data || []);
-      } else if (currentSort === 'popular') {
-        // 24時間以内の投稿をいいね数順で取得
-        const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-        const { data: recentData, error: recentErr } = await query.gte('created_at', since24h).order('likes', { ascending: false });
-        if (!recentErr && recentData && recentData.length > 0) {
-          allPosts = applyLectureModeFilter(recentData);
-        } else {
-          // 24時間以内に投稿がなければ全期間のいいね数順にフォールバック
-          let fbQuery = db.from('posts').select('*');
-          if (currentTab !== 'all') fbQuery = fbQuery.eq('category', currentTab);
-          if (currentFaculty !== 'all') fbQuery = fbQuery.eq('faculty', currentFaculty);
-          if (searchQuery) fbQuery = fbQuery.or(`title.ilike.%${searchQuery}%,body.ilike.%${searchQuery}%`);
-          const { data: fbData, error: fbErr } = await fbQuery.order('likes', { ascending: false });
-          if (fbErr) throw fbErr;
-          allPosts = applyLectureModeFilter(fbData || []);
-        }
       } else {
         query = query.order('created_at', { ascending: false });
         const { data, error } = await query;
@@ -2354,6 +2342,8 @@
 
       if (currentTab === 'qa') {
         allPosts = sortMainQaPosts(allPosts);
+      } else if (currentSort === 'popular') {
+        allPosts = sortMainFeedHotPosts(allPosts);
       }
 
       renderPosts(allPosts);
@@ -3202,6 +3192,32 @@
   // ソート更新
   function updateSort() { currentSort = document.getElementById('sortSelect').value || 'newest'; loadPosts(); }
 
+  function getMainFeedHotScore(post) {
+    const likes = Number(post?.likes || 0);
+    const comments = Number(post?.comments || 0);
+    const signal = likes * 2 + comments;
+    if (signal <= 0) return 0;
+    const created = new Date(post?.created_at || 0).getTime();
+    const ageHours = created ? Math.max(0, Date.now() - created) / (1000 * 60 * 60) : 0;
+    return signal / Math.pow(ageHours + 2, 1.2);
+  }
+
+  function sortMainFeedHotPosts(posts) {
+    return [...(posts || [])].sort((a, b) => {
+      const scoreDiff = getMainFeedHotScore(b) - getMainFeedHotScore(a);
+      if (scoreDiff !== 0) return scoreDiff;
+      return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    });
+  }
+
+  function setMainFeedSortMode(mode, el) {
+    currentSort = mode === 'popular' ? 'popular' : 'newest';
+    const wrap = document.getElementById('feedSortTabsMain');
+    if (wrap) wrap.querySelectorAll('.feed-sort-tab').forEach(btn => btn.classList.remove('active'));
+    if (el) el.classList.add('active');
+    if (currentTab !== 'qa') loadPosts();
+  }
+
   function getPostAgeHours(post) {
     const created = new Date(post?.created_at || 0).getTime();
     if (!created) return 0;
@@ -3276,8 +3292,8 @@
       if (lectureSubtabs) lectureSubtabs.style.display = tab === 'lecture' ? 'flex' : 'none';
       const qaSortTabs = document.getElementById('qaSortTabsMain');
       if (qaSortTabs) qaSortTabs.style.display = tab === 'qa' ? 'flex' : 'none';
-      const sortSelect = document.getElementById('sortSelect');
-      if (sortSelect) sortSelect.style.display = tab === 'qa' ? 'none' : '';
+      const feedSortTabs = document.getElementById('feedSortTabsMain');
+      if (feedSortTabs) feedSortTabs.style.display = tab === 'qa' ? 'none' : 'inline-flex';
       loadPosts();
       const sidebar = document.querySelector('.sidebar');
       if (sidebar) sidebar.style.display = (tab === 'all' ? 'flex' : 'none');
