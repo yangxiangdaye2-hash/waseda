@@ -151,6 +151,8 @@
   .answers-section h4 { font-size: .9rem; font-weight: 700; margin-bottom: .6rem; color: var(--dark); }
   .answer-item { border: 1px solid var(--border); border-radius: 8px; padding: .7rem; margin-bottom: .5rem; background: var(--bg); }
   .answer-meta { display: flex; gap: 8px; align-items: center; margin-bottom: .3rem; font-size: .75rem; color: var(--gray-light); }
+  .answer-like { font-size: .78rem; color: var(--gray-light); margin-left: auto; cursor: pointer; user-select: none; }
+  .answer-like.liked { color: var(--crimson); font-weight: 700; }
   .answer-text { font-size: .85rem; color: var(--dark); line-height: 1.6; }
   .answer-input-area { margin-top: 1rem; padding-top: 1rem; border-top: 1.5px solid var(--border); }
   .answer-input-area h4 { font-size: .9rem; font-weight: 700; margin-bottom: .6rem; }
@@ -1252,6 +1254,66 @@ function rememberMyQuestionId(id) {
 function getLikedPosts() { try{return new Set(JSON.parse(localStorage.getItem('waseda_liked')||'[]'));}catch{return new Set();} }
 function setPostLiked(id,liked) { const s=getLikedPosts(); liked?s.add(String(id)):s.delete(String(id)); localStorage.setItem('waseda_liked',JSON.stringify([...s])); }
 
+function isLikesColumnError(error) {
+  const msg = `${error?.message || ''} ${error?.details || ''}`;
+  return /likes/i.test(msg) && /(column|schema|does not exist|unknown)/i.test(msg);
+}
+function getEntityLikedSet(key) {
+  try { return new Set(JSON.parse(localStorage.getItem(key) || '[]')); }
+  catch { return new Set(); }
+}
+function setEntityLikedSet(key, setObj) {
+  localStorage.setItem(key, JSON.stringify([...setObj]));
+}
+function getEntityLikeCountMap(key) {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key) || '{}');
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+function setEntityLikeCountMap(key, mapObj) {
+  localStorage.setItem(key, JSON.stringify(mapObj));
+}
+function getAnswerLikeCount(answer) {
+  if (typeof answer?.likes === 'number') return answer.likes;
+  const map = getEntityLikeCountMap('waseda_answer_like_counts');
+  return Number(map[String(answer?.id)] || 0);
+}
+async function likeAnswer(id, el) {
+  try {
+    if (!db) throw new Error('DB未接続');
+    const likedSet = getEntityLikedSet('waseda_liked_answers');
+    const alreadyLiked = likedSet.has(String(id));
+    const countEl = el && el.querySelector ? el.querySelector('.like-count') : null;
+    const cur = countEl ? parseInt(countEl.textContent || '0') : 0;
+    const next = alreadyLiked ? Math.max(0, cur - 1) : cur + 1;
+
+    if (countEl) countEl.textContent = next;
+    el.classList.toggle('liked', !alreadyLiked);
+    if (alreadyLiked) likedSet.delete(String(id)); else likedSet.add(String(id));
+    setEntityLikedSet('waseda_liked_answers', likedSet);
+
+    const { error } = await db.from('answers').update({ likes: next }).eq('id', id);
+    if (error) {
+      if (isLikesColumnError(error)) {
+        const map = getEntityLikeCountMap('waseda_answer_like_counts');
+        map[String(id)] = next;
+        setEntityLikeCountMap('waseda_answer_like_counts', map);
+        return;
+      }
+      if (countEl) countEl.textContent = cur;
+      el.classList.toggle('liked', alreadyLiked);
+      if (alreadyLiked) likedSet.add(String(id)); else likedSet.delete(String(id));
+      setEntityLikedSet('waseda_liked_answers', likedSet);
+      throw error;
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
 // ── タブ切替 ──
 let currentTab = 'faculties-tab';
 const loaded = new Set();
@@ -1544,9 +1606,14 @@ async function openQaDetail(id) {
     if (!post) return;
     const { data: answers } = await db.from('answers').select('*').eq('post_id',id).order('created_at',{ascending:true});
     const ans = answers || [];
+    const likedAnswerSet = getEntityLikedSet('waseda_liked_answers');
     const ansHtml = !ans.length
       ? '<p style="color:#aaa;font-size:.84rem;text-align:center;padding:1rem">まだ回答がありません。最初に回答しよう！</p>'
-      : ans.map(a=>`<div class="answer-item"><div class="answer-meta"><span>@${escHtml(a.author)}</span><span>${formatTime(a.created_at)}</span></div><div class="answer-text">${escHtml(a.text)}</div></div>`).join('');
+      : ans.map(a=>{
+          const likedCls = likedAnswerSet.has(String(a.id)) ? ' liked' : '';
+          const likeCount = getAnswerLikeCount(a);
+          return `<div class="answer-item"><div class="answer-meta"><span>@${escHtml(a.author)}</span><span>${formatTime(a.created_at)}</span><span class="answer-like${likedCls}" onclick="likeAnswer(${JSON.stringify(a.id)}, this)">❤️ <span class="like-count">${likeCount}</span></span></div><div class="answer-text">${escHtml(a.text)}</div></div>`;
+        }).join('');
     document.getElementById('qa-detail-content').innerHTML = `
       <div class="qa-question-box">
         <div class="q-label">❓ 質問</div>
