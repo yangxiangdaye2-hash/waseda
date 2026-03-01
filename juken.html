@@ -39,6 +39,70 @@
   .header-back { color: rgba(255,255,255,.75); font-size: .82rem; text-decoration: none; display: flex; align-items: center; gap: 4px; white-space: nowrap; transition: color .2s; flex-shrink: 0; }
   .header-back:hover { color: #fff; }
 
+  .announcement-banner {
+    display: none;
+    width: 100%;
+    background: linear-gradient(135deg, #fff4e6 0%, #ffefd5 100%);
+    border-top: 1px solid #ffe0b2;
+    border-bottom: 1px solid #ffcc80;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    animation: slideDown 0.35s ease-out;
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .announcement-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+  }
+  .announcement-icon {
+    font-size: 28px;
+    color: #e65100;
+    flex-shrink: 0;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+  }
+  .announcement-content { flex: 1; min-width: 0; }
+  .announcement-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #bf360c;
+    margin-bottom: 4px;
+  }
+  .announcement-body {
+    font-size: 0.9rem;
+    color: #5d4037;
+    line-height: 1.5;
+  }
+  .announcement-close {
+    background: transparent;
+    border: none;
+    color: #8d6e63;
+    font-size: 24px;
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .announcement-close:hover {
+    background: rgba(141,110,99,0.15);
+    color: #5d4037;
+  }
+
   /* HERO */
   .hero { background: linear-gradient(160deg, var(--crimson-dark) 0%, var(--crimson) 60%, #a52020 100%); padding: 56px 1.2rem 48px; }
   .hero-inner { max-width: 680px; margin: 0 auto; text-align: center; }
@@ -310,7 +374,6 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    #nicknameBadge { grid-column: span 2; }
     .header-back {
       background: rgba(255,255,255,.14);
       color: #fff;
@@ -343,7 +406,6 @@
     .btn-mypage,
     .nickname-badge,
     .header-back { font-size: .66rem; padding: 6px 6px; }
-    #nicknameBadge { grid-column: span 2; }
     .tabs-inner { padding: .4rem .3rem; gap: .3rem; }
     .tab { font-size: .7rem; padding: 4px 8px; }
     .hero-title { font-size: 1.2rem; }
@@ -367,15 +429,27 @@
       <div class="header-row header-row-top">
         <button class="btn-google-auth" id="googleAuthBtn" onclick="handleGoogleAuthClick()">Googleでログイン</button>
         <button class="btn-mypage" id="myPageBtn" onclick="openMyPageModal()">📌 マイページ</button>
-        <button class="btn-mypage" id="contactBtn" onclick="openContactModal()">📩 お問い合わせ</button>
+        <button class="btn-mypage" id="noticeBtn" onclick="openNoticeModal()">📣 お知らせ</button>
       </div>
       <div class="header-row header-row-bottom">
+        <button class="btn-mypage" id="contactBtn" onclick="openContactModal()">📩 お問い合わせ</button>
         <div class="nickname-badge" id="nicknameBadge" onclick="openNicknameModal()">👤 ニックネームを設定</div>
         <a href="https://waseda-ten.vercel.app/" class="header-back">← 在学生掲示板へ</a>
       </div>
     </div>
   </div>
 </header>
+
+<div id="announcementBanner" class="announcement-banner" style="display:none;">
+  <div class="announcement-container">
+    <span class="announcement-icon">📢</span>
+    <div class="announcement-content">
+      <div class="announcement-title" id="announcementTitle"></div>
+      <div class="announcement-body" id="announcementBody"></div>
+    </div>
+    <button class="announcement-close" onclick="closeAnnouncementBanner()">✕</button>
+  </div>
+</div>
 
 <!-- HERO -->
 <section class="hero">
@@ -781,6 +855,19 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="noticeModal">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-header">
+      <h3>📣 お知らせ</h3>
+      <button class="modal-close" onclick="closeNoticeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="noticeSummary" style="font-size:.86rem;color:var(--gray);margin-bottom:1rem;">読み込み中...</div>
+      <div id="noticeList"></div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="contactModal">
   <div class="modal" style="max-width:520px;">
     <div class="modal-header">
@@ -843,6 +930,8 @@ const BOARD_COMMENT_AUTH_DRAFT_TS_KEY = 'waseda_board_comment_auth_draft_ts';
 const QA_ANSWER_AUTH_RETURN_KEY = 'waseda_qa_answer_auth_return';
 const QA_ANSWER_AUTH_DRAFT_KEY = 'waseda_qa_answer_auth_draft';
 const QA_ANSWER_AUTH_DRAFT_TS_KEY = 'waseda_qa_answer_auth_draft_ts';
+const NOTICE_SEEN_AT_PREFIX = 'waseda_juken_notice_seen_at_';
+const LOCAL_NOTICE_MESSAGES_KEY = 'waseda_local_notice_messages';
 const LOCAL_CONTACT_MESSAGES_KEY = 'waseda_local_contact_messages';
 let db;
 try {
@@ -855,6 +944,7 @@ const LAST_AUTH_USER_KEY = 'waseda_last_auth_user_id';
 const MY_PAGE_NOTIFY_PREFIX = 'waseda_mypage_notify_state_';
 const MY_PAGE_NOTIFY_INTERVAL_MS = 60000;
 let myPageNotifyCount = 0;
+let noticeNotifyCount = 0;
 let myPageNotifyTimer = null;
 let myPageNotifyInFlight = false;
 
@@ -1428,10 +1518,145 @@ function renderAccountSummary() {
     nick.textContent = name && name !== 'ゲスト' ? `👤 ニックネーム: ${name}` : '👤 ニックネームを設定';
   }
   if (myPageBtn) {
-    myPageBtn.textContent = googleAuthUser ? '📌 マイページ（投稿管理ON）' : '📌 マイページ（ログインで投稿管理）';
+    myPageBtn.textContent = '📌 マイページ';
   }
   renderMyPageNotificationBadge();
+  renderNoticeNotificationBadge();
   updateAuthHints();
+}
+
+function getNoticeUserKey() {
+  const nick = String(currentUser || '').trim();
+  return nick && nick !== 'ゲスト' ? nick.toLowerCase() : 'guest';
+}
+function getNoticeSeenAtKey() {
+  return `${NOTICE_SEEN_AT_PREFIX}${getNoticeUserKey()}`;
+}
+function readNoticeSeenAt() {
+  try {
+    return Number(localStorage.getItem(getNoticeSeenAtKey()) || '0') || 0;
+  } catch {
+    return 0;
+  }
+}
+function writeNoticeSeenAt(ts = Date.now()) {
+  try { localStorage.setItem(getNoticeSeenAtKey(), String(ts)); } catch {}
+}
+function renderNoticeNotificationBadge() {
+  const noticeBtn = document.getElementById('noticeBtn');
+  if (!noticeBtn) return;
+  const count = Number(noticeNotifyCount) || 0;
+  if (count > 0) {
+    noticeBtn.dataset.notifyCount = count > 99 ? '99+' : String(count);
+    noticeBtn.classList.add('has-notification');
+  } else {
+    delete noticeBtn.dataset.notifyCount;
+    noticeBtn.classList.remove('has-notification');
+  }
+}
+function isNoticeForCurrentUser(notice) {
+  const audience = String(notice?.audience || '').trim();
+  const targetNick = String(notice?.target_nickname || '').trim().toLowerCase();
+  const currentNick = String(currentUser || '').trim().toLowerCase();
+  if (!audience || audience === 'all') return true;
+  if (audience === 'nickname') return !!currentNick && !!targetNick && targetNick === currentNick;
+  return true;
+}
+function isNoticeForCurrentSite(notice) {
+  const site = String(notice?.target_site || '').trim();
+  if (!site) return false;
+  return site === 'exam' || site === 'both';
+}
+function readLocalNoticeMessages() {
+  try {
+    const raw = localStorage.getItem(LOCAL_NOTICE_MESSAGES_KEY) || '[]';
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+async function loadUserNotices() {
+  const merged = [];
+  try {
+    if (db) {
+      const { data, error } = await db.from('announcements').select('*').eq('active', true).order('created_at', { ascending: false }).limit(200);
+      if (!error && Array.isArray(data)) merged.push(...data);
+    }
+  } catch {}
+  merged.push(...readLocalNoticeMessages().filter(v => v && v.active !== false));
+  const filtered = merged.filter(isNoticeForCurrentUser).filter(isNoticeForCurrentSite);
+  filtered.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+  return filtered;
+}
+async function refreshNoticeNotificationCount() {
+  try {
+    const rows = await loadUserNotices();
+    const seenAt = readNoticeSeenAt();
+    noticeNotifyCount = rows.filter(r => new Date(r.created_at || 0).getTime() > seenAt).length;
+    renderNoticeNotificationBadge();
+  } catch {
+    noticeNotifyCount = 0;
+    renderNoticeNotificationBadge();
+  }
+}
+async function openNoticeModal() {
+  const modal = document.getElementById('noticeModal');
+  const summary = document.getElementById('noticeSummary');
+  const list = document.getElementById('noticeList');
+  if (!modal || !summary || !list) return;
+  modal.classList.add('open');
+  summary.textContent = '読み込み中...';
+  list.innerHTML = '';
+  const rows = await loadUserNotices();
+  if (!rows.length) {
+    summary.textContent = '受信したお知らせはありません';
+    list.innerHTML = '<div style="text-align:center;color:var(--gray);padding:1rem 0;">新しいお知らせはまだありません。</div>';
+    writeNoticeSeenAt();
+    noticeNotifyCount = 0;
+    renderNoticeNotificationBadge();
+    return;
+  }
+  const latestTs = Math.max(...rows.map(r => new Date(r.created_at || 0).getTime()).filter(Number.isFinite));
+  if (Number.isFinite(latestTs) && latestTs > 0) writeNoticeSeenAt(latestTs);
+  noticeNotifyCount = 0;
+  renderNoticeNotificationBadge();
+  summary.textContent = `${rows.length}件のお知らせ`;
+  list.innerHTML = rows.map(r => {
+    const audience = String(r.audience || '').trim() === 'nickname'
+      ? `個別: @${escHtml(r.target_nickname || '')}`
+      : '全体';
+    return `<div style="padding:.8rem .9rem;background:#fff;border:1px solid var(--border);border-radius:10px;margin-bottom:.7rem;">
+      <div style="display:flex;justify-content:space-between;gap:.6rem;align-items:flex-start;flex-wrap:wrap;">
+        <strong style="font-size:.92rem;">${escHtml(r.title || '')}</strong>
+        <span style="font-size:.72rem;color:var(--gray);">${escHtml(audience)}</span>
+      </div>
+      <div style="font-size:.84rem;color:var(--dark);margin-top:.35rem;line-height:1.65;">${escHtml(r.body || '')}</div>
+      <div style="font-size:.74rem;color:var(--gray-light);margin-top:.45rem;">${new Date(r.created_at || Date.now()).toLocaleString('ja-JP')}</div>
+    </div>`;
+  }).join('');
+}
+function closeNoticeModal() {
+  document.getElementById('noticeModal')?.classList.remove('open');
+}
+async function refreshAnnouncements() {
+  const ann = await loadUserNotices();
+  const banner = document.getElementById('announcementBanner');
+  if (!banner) return;
+  if (ann && ann.length) {
+    const latest = ann[0];
+    const titleEl = document.getElementById('announcementTitle');
+    const bodyEl = document.getElementById('announcementBody');
+    if (titleEl) titleEl.textContent = escHtml(latest.title);
+    if (bodyEl) bodyEl.textContent = escHtml(latest.body);
+    banner.style.display = 'block';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+function closeAnnouncementBanner() {
+  const banner = document.getElementById('announcementBanner');
+  if (banner) banner.style.display = 'none';
 }
 
 function getMyPageNotifyStateKey(userId) {
@@ -1699,6 +1924,8 @@ async function initGoogleAuth() {
   restoreBoardCommentDraftAfterAuthIfNeeded();
   restoreQaAnswerDraftAfterAuthIfNeeded();
   refreshMyPageNotificationCount();
+  refreshNoticeNotificationCount();
+  refreshAnnouncements();
   startMyPageNotificationPolling();
 
   db.auth.onAuthStateChange((_event, session) => {
@@ -1710,6 +1937,8 @@ async function initGoogleAuth() {
     restoreBoardCommentDraftAfterAuthIfNeeded();
     restoreQaAnswerDraftAfterAuthIfNeeded();
     refreshMyPageNotificationCount();
+    refreshNoticeNotificationCount();
+    refreshAnnouncements();
   });
 }
 function updateNicknameBadge() { renderAccountSummary(); }
@@ -1728,6 +1957,8 @@ function saveNickname() {
   if (googleAuthUser?.id) rememberOwnedNickname(val, googleAuthUser.id);
   fillNicknameInputs();
   updateNicknameBadge();
+  refreshNoticeNotificationCount();
+  refreshAnnouncements();
   closeNicknameModal();
 }
 async function openMyPageModal() {
@@ -2880,6 +3111,7 @@ document.getElementById('qaModal').addEventListener('click', e => { if(e.target=
 document.getElementById('tkModal').addEventListener('click', e => { if(e.target===document.getElementById('tkModal')) closeTkModal(); });
 document.getElementById('nicknameModal').addEventListener('click', e => { if(e.target===document.getElementById('nicknameModal')) closeNicknameModal(); });
 document.getElementById('myPageModal').addEventListener('click', e => { if(e.target===document.getElementById('myPageModal')) closeMyPageModal(); });
+document.getElementById('noticeModal').addEventListener('click', e => { if(e.target===document.getElementById('noticeModal')) closeNoticeModal(); });
 document.getElementById('boardDetailModal').addEventListener('click', e => { if(e.target===document.getElementById('boardDetailModal')) closeBoardDetailModal(); });
 
 // ── 初期ロード ──
@@ -2892,6 +3124,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('tabsInner').addEventListener('scroll', updateScrollBtn);
   window.addEventListener('resize', updateScrollBtn);
   updateScrollBtn();
+  refreshNoticeNotificationCount();
+  refreshAnnouncements();
 });
 </script>
 </body>

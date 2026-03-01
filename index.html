@@ -1232,6 +1232,14 @@
               <option value="nickname">個別（ニックネーム）</option>
             </select>
           </div>
+          <div class="form-group">
+            <label class="form-label">配信先サイト</label>
+            <select class="form-select" id="announceSiteTarget">
+              <option value="student">在学生向け</option>
+              <option value="exam">受験生向け</option>
+              <option value="both">両方</option>
+            </select>
+          </div>
           <div class="form-group" id="announceTargetWrap" style="display:none;">
             <label class="form-label">対象ニックネーム</label>
             <input class="form-input" type="text" id="announceTargetNickname" placeholder="例：waseda_taro">
@@ -2490,6 +2498,12 @@
     return true;
   }
 
+  function isNoticeForCurrentSite(notice) {
+    const site = String(notice?.target_site || '').trim();
+    if (!site || site === 'student') return true;
+    return site === 'both';
+  }
+
   function readLocalNoticeMessages() {
     try {
       const raw = localStorage.getItem(LOCAL_NOTICE_MESSAGES_KEY) || '[]';
@@ -2513,7 +2527,7 @@
       }
     } catch {}
     merged.push(...readLocalNoticeMessages().filter(v => v && v.active !== false));
-    const filtered = merged.filter(isNoticeForCurrentUser);
+    const filtered = merged.filter(isNoticeForCurrentUser).filter(isNoticeForCurrentSite);
     filtered.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
     return filtered;
   }
@@ -3721,7 +3735,7 @@
       if (!db) { console.warn('[Announcements] DB not initialized'); return []; }
       const { data, error } = await db.from('announcements').select('*').eq('active', true).order('created_at', { ascending: false });
       if (error) { console.error('[Announcements] loadAnnouncements error:', error); return []; }
-      return Array.isArray(data) ? data : [];
+      return Array.isArray(data) ? data.filter(isNoticeForCurrentSite) : [];
     } catch (e) { console.error('[Announcements] loadAnnouncements exception:', e); return []; }
   }
 
@@ -3771,6 +3785,7 @@
     const body = document.getElementById('announceBody')?.value?.trim();
     const active = document.getElementById('announceActive')?.checked ?? true;
     const audience = document.getElementById('announceAudience')?.value || 'all';
+    const targetSite = document.getElementById('announceSiteTarget')?.value || 'student';
     const targetNickname = (document.getElementById('announceTargetNickname')?.value || '').trim();
     if (!title || !body) { alert('タイトルと内容を入力してください'); return; }
     if (audience === 'nickname' && !targetNickname) { alert('個別配信では対象ニックネームを入力してください'); return; }
@@ -3781,6 +3796,7 @@
       active,
       author: currentUser,
       audience,
+      target_site: targetSite,
       target_nickname: audience === 'nickname' ? targetNickname : null,
       created_at: new Date().toISOString()
     };
@@ -3807,6 +3823,8 @@
     document.getElementById('announceActive').checked = true;
     const audienceEl = document.getElementById('announceAudience');
     if (audienceEl) audienceEl.value = 'all';
+    const siteEl = document.getElementById('announceSiteTarget');
+    if (siteEl) siteEl.value = 'student';
     const targetEl = document.getElementById('announceTargetNickname');
     if (targetEl) targetEl.value = '';
     onAnnouncementAudienceChange();
@@ -3870,6 +3888,7 @@
           <strong>${escHtml(a.title)}</strong>
           <div style="color:#666;font-size:0.85rem;margin-top:4px;">${escHtml(a.body)}</div>
           <div style="color:#999;font-size:0.8rem;margin-top:4px;">配信先: ${String(a.audience || '').trim() === 'nickname' ? '@' + escHtml(a.target_nickname || '') : '全体'}</div>
+          <div style="color:#999;font-size:0.8rem;margin-top:2px;">サイト: ${String(a.target_site || '').trim() === 'exam' ? '受験生' : (String(a.target_site || '').trim() === 'both' ? '両方' : '在学生')}</div>
           <div style="color:#999;font-size:0.8rem;margin-top:2px;">閉📋 ${new Date(a.created_at).toLocaleString('ja-JP')}</div>
         </div>
         <div style="display:flex;gap:6px;">
