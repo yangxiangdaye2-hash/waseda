@@ -1502,6 +1502,7 @@
   const LOCAL_NOTICE_MESSAGES_KEY = 'waseda_local_notice_messages';
   const LOCAL_BANNED_IPS_KEY = 'waseda_local_banned_ips';
   const LOCAL_CONTACT_MESSAGES_KEY = 'waseda_local_contact_messages';
+  const CONTACT_TABLE_CANDIDATES = ['contact_messages', 'contacts', 'inquiries', 'contact_inquiries'];
   let myPageNotifyCount = 0;
   let noticeNotifyCount = 0;
   let myPageNotifyTimer = null;
@@ -1510,6 +1511,8 @@
   let myPageCache = { userId: null, ts: 0, summary: '', html: '' };
   let clientIpAddress = null;
   let bannedIpCache = null;
+  let resolvedContactTableName = null;
+  let contactTableResolved = false;
 
   function getGoogleDisplayName(user) {
     return user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'ログイン中ユーザー';
@@ -2284,6 +2287,37 @@
   function isMissingColumnError(error) {
     const msg = `${error?.message || ''} ${error?.details || ''}`;
     return /(column|schema|does not exist|unknown)/i.test(msg);
+  }
+
+  function isContactTableMissingError(error) {
+    const msg = `${error?.message || ''} ${error?.details || ''} ${error?.hint || ''}`;
+    return /(could not find the table|relation .* does not exist|table .* does not exist|schema cache)/i.test(msg);
+  }
+
+  async function resolveContactTableName(force = false) {
+    if (!db) return null;
+    if (!force && contactTableResolved) return resolvedContactTableName;
+
+    for (const tableName of CONTACT_TABLE_CANDIDATES) {
+      try {
+        const { error } = await db.from(tableName).select('id').limit(1);
+        if (!error || !isContactTableMissingError(error)) {
+          resolvedContactTableName = tableName;
+          contactTableResolved = true;
+          return tableName;
+        }
+      } catch (e) {
+        if (!isContactTableMissingError(e)) {
+          resolvedContactTableName = tableName;
+          contactTableResolved = true;
+          return tableName;
+        }
+      }
+    }
+
+    resolvedContactTableName = null;
+    contactTableResolved = true;
+    return null;
   }
 
   function createOwnerPayload(base) {
@@ -3676,7 +3710,10 @@
     let dbInsertError = null;
     try {
       if (db) {
-        let { error } = await db.from('contact_messages').insert([payload]);
+        const contactTable = await resolveContactTableName();
+        if (!contactTable) throw new Error('お問い合わせテーブルが見つかりません（contact_messages / contacts など）');
+
+        let { error } = await db.from(contactTable).insert([payload]);
         if (error && isMissingColumnError(error)) {
           const fallbackPayload = {
             email: payload.email,
@@ -3687,7 +3724,7 @@
             status: payload.status,
             created_at: payload.created_at
           };
-          ({ error } = await db.from('contact_messages').insert([fallbackPayload]));
+          ({ error } = await db.from(contactTable).insert([fallbackPayload]));
         }
         if (error && isMissingColumnError(error)) {
           const minimalPayload = {
@@ -3696,7 +3733,7 @@
             body: payload.body,
             nickname: payload.nickname
           };
-          ({ error } = await db.from('contact_messages').insert([minimalPayload]));
+          ({ error } = await db.from(contactTable).insert([minimalPayload]));
         }
         if (error) throw error;
         stored = true;
@@ -3746,8 +3783,11 @@
     let rows = [];
     try {
       if (db) {
-        const { data, error } = await db.from('contact_messages').select('*').order('created_at', { ascending: false }).limit(500);
-        if (!error && Array.isArray(data)) rows = data;
+        const contactTable = await resolveContactTableName();
+        if (contactTable) {
+          const { data, error } = await db.from(contactTable).select('*').order('created_at', { ascending: false }).limit(500);
+          if (!error && Array.isArray(data)) rows = data;
+        }
       }
     } catch {}
     if (!rows.length) {
@@ -3839,14 +3879,16 @@
           : r);
         localStorage.setItem(LOCAL_CONTACT_MESSAGES_KEY, JSON.stringify(next.slice(0, 500)));
       } else if (db) {
-        let { error } = await db.from('contact_messages').update({
+        const contactTable = await resolveContactTableName();
+        if (!contactTable) throw new Error('お問い合わせテーブルが見つかりません');
+        let { error } = await db.from(contactTable).update({
           status: 'replied',
           reply_body: replyBody,
           replied_at: new Date().toISOString(),
           replied_by: currentUser
         }).eq('id', contactId);
         if (error && isMissingColumnError(error)) {
-          ({ error } = await db.from('contact_messages').update({ status: 'read' }).eq('id', contactId));
+          ({ error } = await db.from(contactTable).update({ status: 'read' }).eq('id', contactId));
         }
         if (error) throw error;
       }
@@ -3864,7 +3906,12 @@
   async function markContactRead(id) {
     try {
       if (!db) return;
-      const { error } = await db.from('contact_messages').update({ status: 'read' }).eq('id', id);
+      const contactTable = await resolveContactTableName();
+      if (!contactTable) {
+        alert('お問い合わせテーブルが見つかりません。Supabaseのテーブル名を確認してください。');
+        return;
+      }
+      const { error } = await db.from(contactTable).update({ status: 'read' }).eq('id', id);
       if (error) throw error;
       loadAdminContacts();
     } catch (e) {

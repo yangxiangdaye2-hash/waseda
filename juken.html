@@ -942,6 +942,7 @@ const CONTACT_AUTH_DRAFT_TS_KEY = 'waseda_contact_auth_draft_ts';
 const NOTICE_SEEN_AT_PREFIX = 'waseda_juken_notice_seen_at_';
 const LOCAL_NOTICE_MESSAGES_KEY = 'waseda_local_notice_messages';
 const LOCAL_CONTACT_MESSAGES_KEY = 'waseda_local_contact_messages';
+const CONTACT_TABLE_CANDIDATES = ['contact_messages', 'contacts', 'inquiries', 'contact_inquiries'];
 let db;
 try {
   if (typeof createClient === 'function') db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -958,6 +959,8 @@ let myPageNotifyTimer = null;
 let myPageNotifyInFlight = false;
 const MY_PAGE_CACHE_TTL_MS = 15000;
 let myPageCache = { userId: null, ts: 0, summary: '', html: '' };
+let resolvedContactTableName = null;
+let contactTableResolved = false;
 
 // ── 定数 ──
 const FACULTIES = {
@@ -1042,6 +1045,37 @@ function isOwnerKeyColumnError(error) {
 function isMissingColumnError(error) {
   const msg = `${error?.message || ''} ${error?.details || ''}`;
   return /(column|schema|does not exist|unknown)/i.test(msg);
+}
+
+function isContactTableMissingError(error) {
+  const msg = `${error?.message || ''} ${error?.details || ''} ${error?.hint || ''}`;
+  return /(could not find the table|relation .* does not exist|table .* does not exist|schema cache)/i.test(msg);
+}
+
+async function resolveContactTableName(force = false) {
+  if (!db) return null;
+  if (!force && contactTableResolved) return resolvedContactTableName;
+
+  for (const tableName of CONTACT_TABLE_CANDIDATES) {
+    try {
+      const { error } = await db.from(tableName).select('id').limit(1);
+      if (!error || !isContactTableMissingError(error)) {
+        resolvedContactTableName = tableName;
+        contactTableResolved = true;
+        return tableName;
+      }
+    } catch (e) {
+      if (!isContactTableMissingError(e)) {
+        resolvedContactTableName = tableName;
+        contactTableResolved = true;
+        return tableName;
+      }
+    }
+  }
+
+  resolvedContactTableName = null;
+  contactTableResolved = true;
+  return null;
 }
 function createOwnerPayload(base) {
   return { ...base, device_id: getDeviceId(), owner_key: getOwnerKey() };
@@ -2103,7 +2137,10 @@ async function submitContactMessage() {
   let dbInsertError = null;
   try {
     if (db) {
-      let { error } = await db.from('contact_messages').insert([payload]);
+      const contactTable = await resolveContactTableName();
+      if (!contactTable) throw new Error('お問い合わせテーブルが見つかりません（contact_messages / contacts など）');
+
+      let { error } = await db.from(contactTable).insert([payload]);
       if (error && isMissingColumnError(error)) {
         const fallbackPayload = {
           email: payload.email,
@@ -2114,7 +2151,7 @@ async function submitContactMessage() {
           status: payload.status,
           created_at: payload.created_at
         };
-        ({ error } = await db.from('contact_messages').insert([fallbackPayload]));
+        ({ error } = await db.from(contactTable).insert([fallbackPayload]));
       }
       if (error && isMissingColumnError(error)) {
         const minimalPayload = {
@@ -2123,7 +2160,7 @@ async function submitContactMessage() {
           body: payload.body,
           nickname: payload.nickname
         };
-        ({ error } = await db.from('contact_messages').insert([minimalPayload]));
+        ({ error } = await db.from(contactTable).insert([minimalPayload]));
       }
       if (error) throw error;
       stored = true;
