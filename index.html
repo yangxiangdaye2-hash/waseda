@@ -865,6 +865,20 @@
           <label class="form-label">ニックネーム <span style="color:#e74c3c;">*</span></label>
           <input class="form-input" type="text" id="postNickname" placeholder="例：waseda_taro" maxlength="20">
         </div>
+        <div class="form-group">
+          <label class="form-label">学年</label>
+          <select class="form-select" id="postGrade">
+            <option value="">選択（任意）</option>
+            <option value="freshman">1年</option>
+            <option value="sophomore">2年</option>
+            <option value="junior">3年</option>
+            <option value="senior">4年</option>
+            <option value="m1">修士1年</option>
+            <option value="m2">修士2年</option>
+            <option value="doctor">博士</option>
+            <option value="other">その他</option>
+          </select>
+        </div>
 
         <div class="form-row">
           <div class="form-group">
@@ -913,9 +927,9 @@
           <div class="lecture-optional" id="lectureOptional">
             <div class="lecture-optional-inner">
               <div class="form-group">
-                <label class="form-label">学部</label>
+                <label class="form-label">学部 <span style="color:#e74c3c;">*</span></label>
                 <select class="form-select" id="lectureFaculty">
-                  <option value="">学部を選択（任意）</option>
+                  <option value="">学部を選択</option>
                   <option value="seikei">政治経済学部</option>
                   <option value="ho">法学部</option>
                   <option value="shogaku">商学部</option>
@@ -1010,6 +1024,25 @@
             <input class="form-input" type="text" id="circleName" placeholder="例：ダンスサークル WASEDA">
           </div>
           <div class="form-group">
+            <label class="form-label">学部</label>
+            <select class="form-select" id="circleFaculty">
+              <option value="">学部を選択（任意）</option>
+              <option value="seikei">政治経済学部</option>
+              <option value="ho">法学部</option>
+              <option value="shogaku">商学部</option>
+              <option value="kyoiku">教育学部</option>
+              <option value="bun">文学部</option>
+              <option value="bunkagaku">文化構想学部</option>
+              <option value="kiso">基幹理工学部</option>
+              <option value="sozo">創造理工学部</option>
+              <option value="sentan">先進理工学部</option>
+              <option value="ningen">人間科学部</option>
+              <option value="sports">スポーツ科学部</option>
+              <option value="kokusai">国際教養学部</option>
+              <option value="shakou">社会科学部</option>
+            </select>
+          </div>
+          <div class="form-group">
             <label class="form-label">サークルの種類</label>
             <select class="form-select" id="circleType">
               <option value="">種類を選択（任意）</option>
@@ -1046,9 +1079,9 @@
             <input class="form-input" type="text" id="campusDateTime" placeholder="例：2月27日（木）14時頃（任意）">
           </div>
           <div class="form-group">
-            <label class="form-label">学部 <span style="color:#e74c3c;">*</span></label>
+            <label class="form-label">学部</label>
             <select class="form-select" id="campusFaculty">
-              <option value="">学部を選択</option>
+              <option value="">学部を選択（任意）</option>
               <option value="seikei">政治経済学部</option>
               <option value="ho">法学部</option>
               <option value="shogaku">商学部</option>
@@ -1078,7 +1111,7 @@
           </div>
           <div class="form-group">
             <label class="form-label">質問カテゴリ <span style="color:#e74c3c;">*</span></label>
-            <select class="form-select" id="qaTopic">
+            <select class="form-select" id="qaTopic" onchange="onQaTopicChange()">
               <option value="">カテゴリを選択</option>
               <option value="lecture">授業</option>
               <option value="campus">大学生活</option>
@@ -1087,9 +1120,9 @@
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">学部 <span style="color:#e74c3c;">*</span></label>
+            <label class="form-label" id="qaFacultyLabel">学部</label>
             <select class="form-select" id="qaFaculty">
-              <option value="">学部を選択</option>
+              <option value="">学部を選択（授業カテゴリでは必須）</option>
               <option value="seikei">政治経済学部</option>
               <option value="ho">法学部</option>
               <option value="shogaku">商学部</option>
@@ -1352,6 +1385,16 @@
     lecture: '授業',
     campus: '大学生活',
     circle: 'サークル',
+    other: 'その他'
+  };
+  const GRADE_LABELS = {
+    freshman: '1年',
+    sophomore: '2年',
+    junior: '3年',
+    senior: '4年',
+    m1: '修士1年',
+    m2: '修士2年',
+    doctor: '博士',
     other: 'その他'
   };
 
@@ -1730,9 +1773,9 @@
       fields: {}
     };
     const fieldIds = [
-      'postNickname', 'postCategory',
+      'postNickname', 'postGrade', 'postCategory',
       'lectureName', 'lectureBody', 'lectureFaculty', 'lectureTeacher', 'lectureSemester', 'lectureDay', 'lecturePeriod', 'lectureExamType', 'lectureAttendance', 'lectureCredits',
-      'circleName', 'circleType', 'circleBody',
+      'circleName', 'circleFaculty', 'circleType', 'circleBody',
       'campusTitle', 'campusLocation', 'campusDateTime', 'campusFaculty', 'campusBody',
       'qaTitle', 'qaTopic', 'qaFaculty', 'qaBody'
     ];
@@ -2286,6 +2329,11 @@
     return QA_TOPICS[key] || 'その他';
   }
 
+  function getGradeLabel(grade) {
+    const key = String(grade || '').trim();
+    return GRADE_LABELS[key] || '';
+  }
+
   function parseExtraFields(raw) {
     if (!raw) return {};
     try {
@@ -2293,6 +2341,16 @@
     } catch {
       return {};
     }
+  }
+
+  function getPostGrade(post) {
+    const ef = parseExtraFields(post?.extra_fields);
+    return getGradeLabel(ef.grade);
+  }
+
+  function formatAuthorWithGrade(author, gradeLabel) {
+    const base = `@${escHtml(author || '匿名')}`;
+    return gradeLabel ? `${base}（${escHtml(gradeLabel)}）` : base;
   }
 
   function getLecturePostKind(post) {
@@ -2646,6 +2704,8 @@
     container.innerHTML = sorted.map(p => {
       const [cls, label] = catMap[p.category] || ['cat-campus','その他'];
       const fTag = p.faculty ? `<span class="faculty-tag">${FACULTIES[p.faculty]||p.faculty}</span>` : '';
+      const gradeLabel = getPostGrade(p);
+      const authorWithGrade = formatAuthorWithGrade(p.author, gradeLabel);
       const timeStr = formatTime(p.created_at);
       const deleteBtn = canManagePost(p) ? `<span class="post-action delete-btn" onclick='event.stopPropagation(); deletePost(${JSON.stringify(p.id)})'>🗑️</span>` : '';
       const likedCls = likedSet.has(String(p.id)) ? ' liked' : '';
@@ -2670,7 +2730,7 @@
           <div class="post-footer">
             <span class="post-action">💬 回答 ${ansCount}件</span>
             <span class="post-action${likedCls}" onclick='event.stopPropagation(); likePost(${JSON.stringify(p.id)}, this)'>❤️ <span class="like-count">${p.likes||0}</span></span>
-            <span class="post-action">@${escHtml(p.author)}</span>
+            <span class="post-action">${authorWithGrade}</span>
             ${deleteBtn}
             <span class="report-btn" onclick='event.stopPropagation(); openReportModal(${JSON.stringify(p.id)}, null)'>🚩 通報</span>
           </div></div>`;
@@ -2713,7 +2773,7 @@
 
       const postCardClass = p.category === 'job' ? 'post-card job' : `post-card ${p.category}`;
       return `<div class="${postCardClass} ${pinnedClass}" id="post-${p.id}" onclick='openPostDetail(${JSON.stringify(p.id)})'>
-        <div class="post-meta"><span class="category-tag ${cls}">${label}${prBadge}</span>${fTag}<span class="author">@${escHtml(p.author)}</span><span class="post-time">${timeStr}</span></div>
+        <div class="post-meta"><span class="category-tag ${cls}">${label}${prBadge}</span>${fTag}<span class="author">${authorWithGrade}</span><span class="post-time">${timeStr}</span></div>
         ${extraMeta ? `<div class="extra-meta">${extraMeta}</div>` : ''}
         <div class="post-title">${escHtml(p.title)}</div>
         <div class="post-body">${escHtml(p.body)}</div>
@@ -3855,6 +3915,7 @@
     }
     fillPostNickname();
     onPostAuthModeChange();
+    document.getElementById('postGrade').value = '';
 
     document.getElementById('postCategory').value = 'lecture';
     document.getElementById('lectureName').value = '';
@@ -3877,6 +3938,7 @@
     if (optEl) optEl.classList.remove('open');
     if (optBtn) { optBtn.classList.remove('open'); optBtn.textContent = '詳細を追加する'; }
     document.getElementById('circleName').value = '';
+    document.getElementById('circleFaculty').value = '';
     document.getElementById('circleType').value = '';
     document.getElementById('circleBody').value = '';
     document.getElementById('campusTitle').value = '';
@@ -3889,6 +3951,7 @@
     document.getElementById('qaFaculty').value = '';
     document.getElementById('qaBody').value = '';
     onCategoryChange('lecture');
+    onQaTopicChange();
     onLecturePostKindChange();
   }
 
@@ -3932,7 +3995,17 @@
       document.getElementById('campus-fields').style.display = 'block';
     } else if (category === 'qa') {
       document.getElementById('qa-fields').style.display = 'block';
+      onQaTopicChange();
     }
+  }
+
+  function onQaTopicChange() {
+    const topic = document.getElementById('qaTopic')?.value || '';
+    const label = document.getElementById('qaFacultyLabel');
+    if (!label) return;
+    label.innerHTML = topic === 'lecture'
+      ? '学部 <span style="color:#e74c3c;">*</span>'
+      : '学部';
   }
 
   function onLecturePostKindChange() {
@@ -3971,6 +4044,7 @@
     updateNicknameBadge();
 
     const category = document.getElementById('postCategory').value;
+    const postGrade = document.getElementById('postGrade')?.value || '';
     let title, body, faculty, extraData = {};
     
     if (category === 'lecture') {
@@ -3998,12 +4072,18 @@
       const attendance = document.getElementById('lectureAttendance').value;
       const credits = document.getElementById('lectureCredits').value;
 
+      if (!lectureFaculty) {
+        alert('授業口コミでは学部が必須です');
+        return;
+      }
+
       title = lectureName;
       body = lectureBody;
-      faculty = lectureFaculty || null;
+      faculty = lectureFaculty;
 
       const extraFields = {};
       extraFields.kind = lectureKind;
+      if (postGrade) extraFields.grade = postGrade;
       if (semester) extraFields.semester = semester;
       if (day && period) extraFields.schedule = `${day}曜${period}限`;
       else if (day) extraFields.day = day;
@@ -4021,6 +4101,7 @@
     } else if (category === 'circle') {
       // サークルの場合
       const circleName = document.getElementById('circleName').value.trim();
+      const circleFaculty = document.getElementById('circleFaculty').value;
       const circleType = document.getElementById('circleType').value;
       const circleBody = document.getElementById('circleBody').value.trim();
       
@@ -4031,9 +4112,12 @@
       
       title = circleName;
       body = circleBody;
-      faculty = null; // サークルは学部非表示
+      faculty = circleFaculty || null;
+      const extraFields = {};
+      if (postGrade) extraFields.grade = postGrade;
       extraData = {
-        circle_type: circleType || null
+        circle_type: circleType || null,
+        extra_fields: Object.keys(extraFields).length ? JSON.stringify(extraFields) : null
       };
       
     } else if (category === 'campus') {
@@ -4044,17 +4128,20 @@
       const campusFaculty = document.getElementById('campusFaculty').value;
       const campusBody = document.getElementById('campusBody').value.trim();
       
-      if (!campusTitle || !campusBody || !campusFaculty) {
-        alert('タイトル、学部、内容は必須です');
+      if (!campusTitle || !campusBody) {
+        alert('タイトルと内容は必須です');
         return;
       }
       
       title = campusTitle;
       body = campusBody;
-      faculty = campusFaculty;
+      faculty = campusFaculty || null;
+      const extraFields = {};
+      if (postGrade) extraFields.grade = postGrade;
       extraData = {
         campus_location: campusLocation || null,
-        campus_datetime: campusDateTime || null
+        campus_datetime: campusDateTime || null,
+        extra_fields: Object.keys(extraFields).length ? JSON.stringify(extraFields) : null
       };
       
     } else if (category === 'qa') {
@@ -4064,16 +4151,23 @@
       const qaFaculty = document.getElementById('qaFaculty').value;
       const qaBody = document.getElementById('qaBody').value.trim();
       
-      if (!qaTitle || !qaBody || !qaFaculty || !qaTopic) {
-        alert('質問タイトル、質問カテゴリ、学部、詳細は必須です');
+      if (!qaTitle || !qaBody || !qaTopic) {
+        alert('質問タイトル、質問カテゴリ、詳細は必須です');
+        return;
+      }
+      if (qaTopic === 'lecture' && !qaFaculty) {
+        alert('授業カテゴリの質問では学部が必須です');
         return;
       }
       
       title = qaTitle;
       body = qaBody;
-      faculty = qaFaculty;
+      faculty = qaFaculty || null;
       extraData = {
-        extra_fields: JSON.stringify({ qa_topic: qaTopic })
+        extra_fields: JSON.stringify({
+          qa_topic: qaTopic,
+          ...(postGrade ? { grade: postGrade } : {})
+        })
       };
     }
 
@@ -4130,6 +4224,7 @@
       const { data: post, error } = await db.from('posts').select('*').eq('id', id).single();
       if (error || !post) return;
       const qaExtra = parseExtraFields(post.extra_fields);
+      const qaGradeLabel = getPostGrade(post);
       const qaTopicText = qaExtra?.qa_topic ? getQaTopicLabel(qaExtra.qa_topic) : null;
 
       const answers = await loadAnswers(id);
@@ -4151,7 +4246,7 @@
             <div class="q-label">❓ 質問</div>
             <div class="q-text">${escHtml(post.title)}</div>
             <div style="font-size:0.85rem;color:var(--gray);margin-top:0.6rem;line-height:1.7">${escHtml(post.body)}</div>
-            <div style="font-size:0.75rem;color:#aaa;margin-top:0.5rem">@${escHtml(post.author)} · ${formatTime(post.created_at)}${post.faculty?' · '+FACULTIES[post.faculty]:''}${qaTopicText ? ' · ' + escHtml(qaTopicText) : ''}${deleteQaIcon}</div>
+            <div style="font-size:0.75rem;color:#aaa;margin-top:0.5rem">${formatAuthorWithGrade(post.author, qaGradeLabel)} · ${formatTime(post.created_at)}${post.faculty?' · '+FACULTIES[post.faculty]:''}${qaTopicText ? ' · ' + escHtml(qaTopicText) : ''}${deleteQaIcon}</div>
           </div>
           <div class="answers-section"><h4>💬 回答 ${answers.length}件</h4>${ansHtml}</div>
           <div class="answer-input-area">
@@ -4196,6 +4291,7 @@
       };
       const [catLabel, catCls] = catMap[post.category] || ['その他', 'cat-campus'];
       const fTag = post.faculty ? `<span class="faculty-tag">${FACULTIES[post.faculty]||post.faculty}</span>` : '';
+      const postGradeLabel = getPostGrade(post);
       const timeStr = formatTime(post.created_at);
       const deletePostIcon = canManagePost(post) ? `<span class="delete-btn" style="cursor:pointer;margin-left:10px;" onclick="deletePost(${JSON.stringify(post.id)})">🗑️</span>` : '';
 
@@ -4236,7 +4332,7 @@
       document.getElementById('post-detail-content').innerHTML = `
         <div class="post-detail">
           <div class="post-detail-header">
-            ${catHtml}${fTag}<span class="post-detail-meta">@${escHtml(post.author)}</span><span class="post-detail-time">${timeStr}</span>${deletePostIcon}
+            ${catHtml}${fTag}<span class="post-detail-meta">${formatAuthorWithGrade(post.author, postGradeLabel)}</span><span class="post-detail-time">${timeStr}</span>${deletePostIcon}
           </div>
           <div class="post-detail-title">${escHtml(post.title)}</div>
           ${extraInfo ? `<div style="margin-bottom:1rem;">${extraInfo}</div>` : ''}
@@ -4448,9 +4544,10 @@
         const isMine = isMyContent(p, myIds);
         const myTag = isMine ? '<span class="juken-qa-my-badge">🧷 あなたの質問</span>' : '';
         const fTag = p.faculty ? `<span class="juken-qa-faculty">${escHtml(FACULTIES[p.faculty]||p.faculty)}</span>` : '';
+        const gradeLabel = getPostGrade(p);
         const ans = jukenAnswerMap[p.id] || answersCountMap[p.id] || 0;
         return `<div class="juken-qa-card${isMine ? ' my-question' : ''}" onclick="openQaDetail(${JSON.stringify(p.id)})">
-          <div class="juken-qa-card-meta">${myTag}${fTag}<span style="font-size:0.7rem;color:var(--gray-light)">@${escHtml(p.author)} · ${formatTime(p.created_at)}</span></div>
+          <div class="juken-qa-card-meta">${myTag}${fTag}<span style="font-size:0.7rem;color:var(--gray-light)">${formatAuthorWithGrade(p.author, gradeLabel)} · ${formatTime(p.created_at)}</span></div>
           <div class="juken-qa-title">${escHtml(p.title)}</div>
           <div class="juken-qa-body">${escHtml(p.body)}</div>
           <div class="juken-qa-footer"><span>💬 回答 ${ans}件</span><span>❤️ ${p.likes||0}</span></div>

@@ -402,6 +402,17 @@
           <input class="form-input" type="text" id="qa-author" placeholder="例：早大志望高3" maxlength="20">
         </div>
         <div class="form-group">
+          <label class="form-label">学年</label>
+          <select class="form-select" id="qa-grade">
+            <option value="">選択（任意）</option>
+            <option value="freshman">高校1年</option>
+            <option value="sophomore">高校2年</option>
+            <option value="junior">高校3年</option>
+            <option value="ronin">浪人</option>
+            <option value="other">その他</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label class="form-label">志望学部</label>
           <select class="form-select" id="qa-faculty">
             <option value="">選択（任意）</option>
@@ -479,6 +490,17 @@
           <input class="form-input" type="text" id="qa-life-author" placeholder="例：早大志望高3" maxlength="20">
         </div>
         <div class="form-group">
+          <label class="form-label">学年</label>
+          <select class="form-select" id="qa-life-grade">
+            <option value="">選択（任意）</option>
+            <option value="freshman">高校1年</option>
+            <option value="sophomore">高校2年</option>
+            <option value="junior">高校3年</option>
+            <option value="ronin">浪人</option>
+            <option value="other">その他</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label class="form-label">志望学部</label>
           <select class="form-select" id="qa-life-faculty">
             <option value="">選択（任意）</option>
@@ -554,6 +576,17 @@
           <div class="form-group">
             <label class="form-label">ニックネーム <span style="color:#e74c3c">*</span></label>
             <input class="form-input" type="text" id="boardNickname" placeholder="例：早稲田志望19歳" maxlength="20">
+          </div>
+          <div class="form-group">
+            <label class="form-label">学年</label>
+            <select class="form-select" id="boardGrade">
+              <option value="">選択（任意）</option>
+              <option value="freshman">高校1年</option>
+              <option value="sophomore">高校2年</option>
+              <option value="junior">高校3年</option>
+              <option value="ronin">浪人</option>
+              <option value="other">その他</option>
+            </select>
           </div>
           <div class="form-group">
             <label class="form-label">志望学部</label>
@@ -747,6 +780,13 @@ const FACULTIES = {
   sentan:'先進理工学部', ningen:'人間科学部', sports:'スポーツ科学部',
   kokusai:'国際教養学部', shakou:'社会科学部'
 };
+const GRADE_LABELS = {
+  freshman: '高校1年',
+  sophomore: '高校2年',
+  junior: '高校3年',
+  ronin: '浪人',
+  other: 'その他'
+};
 const FACULTY_DATA = [
   { key:'seikei',    name:'政治経済学部', eng:'Political Science & Economics',  campus:'早稲田',   vibe:'少人数ゼミが充実。政治・経済・国際の3専攻に分かれる。活発なディスカッション文化。', career:'総合商社・金融・官公庁・コンサル・マスコミが多い。国家公務員志望も。', gender:'男性やや多め（約6:4）', hensachi:'67〜70（一般）' },
   { key:'ho',        name:'法学部',       eng:'Law',                            campus:'早稲田',   vibe:'法律・政治の2学科。自主的な学習が求められる。司法試験サークルが盛ん。', career:'法曹・官公庁・金融・コンサル・大手企業の法務部門。', gender:'男女ほぼ半々', hensachi:'65〜68（一般）' },
@@ -766,6 +806,23 @@ const TYPE_CLASSES = { '相談':'type-soudan', '進捗報告':'type-shinchoku', 
 
 // ── ユーティリティ ──
 function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function parseExtraFields(raw) {
+  if (!raw) return {};
+  try { return typeof raw === 'string' ? JSON.parse(raw) : raw; }
+  catch { return {}; }
+}
+function getGradeLabel(grade) {
+  const key = String(grade || '').trim();
+  return GRADE_LABELS[key] || '';
+}
+function getPostGrade(post) {
+  const ef = parseExtraFields(post?.extra_fields);
+  return getGradeLabel(ef.grade);
+}
+function formatAuthorWithGrade(author, gradeLabel) {
+  const base = `@${escHtml(author || '匿名')}`;
+  return gradeLabel ? `${base}（${escHtml(gradeLabel)}）` : base;
+}
 function formatTime(ts) {
   const d = Math.floor((Date.now()-new Date(ts))/1000);
   if (d<60) return 'たった今'; if (d<3600) return Math.floor(d/60)+'分前';
@@ -898,9 +955,9 @@ function saveJukenDraftBeforeAuth() {
     }
   };
   const ids = [
-    'qa-author', 'qa-faculty', 'qa-title', 'qa-body',
-    'qa-life-author', 'qa-life-faculty', 'qa-life-title', 'qa-life-body',
-    'boardNickname', 'boardFaculty', 'boardType', 'boardBody'
+    'qa-author', 'qa-grade', 'qa-faculty', 'qa-title', 'qa-body',
+    'qa-life-author', 'qa-life-grade', 'qa-life-faculty', 'qa-life-title', 'qa-life-body',
+    'boardNickname', 'boardGrade', 'boardFaculty', 'boardType', 'boardBody'
   ];
   ids.forEach(id => {
     const el = document.getElementById(id);
@@ -2090,6 +2147,7 @@ function renderQaList(kind='study') {
     const isMine = isMyContent(p, myIds);
     const myTag = isMine ? '<span class="qa-my-badge">🧷 あなたの質問</span>' : '';
     const fTag = p.faculty ? `<span class="qa-faculty-tag">${escHtml(FACULTIES[p.faculty]||p.faculty)}</span>` : '';
+    const gradeLabel = getPostGrade(p);
     const ansCount = qaAnswerCountMap[p.id] ?? p.comments ?? 0;
     const urgentBadge = mode === 'unanswered' && isJukenQaUrgentUnanswered(p)
       ? '<span class="qa-urgent-badge">📣 72時間以上・未回答</span>'
@@ -2097,7 +2155,7 @@ function renderQaList(kind='study') {
     return `<div class="qa-card${isMine ? ' my-question' : ''}" onclick="openQaDetail(${JSON.stringify(p.id)})">
       <div class="qa-card-head">
         <div class="qa-card-main">
-          <div class="qa-card-meta">${myTag}${fTag}${urgentBadge}<span class="qa-open-badge">🔓 回答募集中</span><span style="font-size:.69rem;color:var(--gray-light)">@${escHtml(p.author)} · ${formatTime(p.created_at)}</span></div>
+          <div class="qa-card-meta">${myTag}${fTag}${urgentBadge}<span class="qa-open-badge">🔓 回答募集中</span><span style="font-size:.69rem;color:var(--gray-light)">${formatAuthorWithGrade(p.author, gradeLabel)} · ${formatTime(p.created_at)}</span></div>
           <div class="qa-card-title">${escHtml(p.title)}</div>
           <div class="qa-card-preview">${escHtml(p.body)}</div>
           <div class="qa-card-stats"><span>💬 回答 ${ansCount}件</span><span>❤️ ${p.likes||0}</span></div>
@@ -2127,6 +2185,7 @@ async function submitJukenQa(btn, kind='study') {
   if (!auth) return;
   const authorInput = document.getElementById(isLife ? 'qa-life-author' : 'qa-author');
   const author = authorInput.value.trim() || getPreferredNickname();
+  const grade = document.getElementById(isLife ? 'qa-life-grade' : 'qa-grade').value;
   const faculty = document.getElementById(isLife ? 'qa-life-faculty' : 'qa-faculty').value;
   const title  = document.getElementById(isLife ? 'qa-life-title' : 'qa-title').value.trim();
   const body   = document.getElementById(isLife ? 'qa-life-body' : 'qa-body').value.trim();
@@ -2141,9 +2200,10 @@ async function submitJukenQa(btn, kind='study') {
   if (authorInput) authorInput.value = author;
   btn.disabled=true; btn.textContent='投稿中...';
   try {
+    const extraFields = grade ? JSON.stringify({ grade }) : null;
     let payload = auth.mode === 'login'
-      ? { category: isLife ? 'juken_life_qa' : 'juken_qa', author, title, body, faculty:faculty||null, likes:0, comments:0, device_id:getDeviceId(), owner_key:`auth:${auth.user.id}` }
-      : { category: isLife ? 'juken_life_qa' : 'juken_qa', author, title, body, faculty:faculty||null, likes:0, comments:0, device_id:getDeviceId(), owner_key:null };
+      ? { category: isLife ? 'juken_life_qa' : 'juken_qa', author, title, body, faculty:faculty||null, likes:0, comments:0, extra_fields: extraFields, device_id:getDeviceId(), owner_key:`auth:${auth.user.id}` }
+      : { category: isLife ? 'juken_life_qa' : 'juken_qa', author, title, body, faculty:faculty||null, likes:0, comments:0, extra_fields: extraFields, device_id:getDeviceId(), owner_key:null };
     let insertRes = await db.from('posts').insert([payload]).select('id').single();
     if (insertRes.error && isOwnerKeyColumnError(insertRes.error)) {
       delete payload.owner_key;
@@ -2157,7 +2217,7 @@ async function submitJukenQa(btn, kind='study') {
       rememberOwnedNickname(author, auth.user.id);
     }
     const authorId = isLife ? 'qa-life-author' : 'qa-author';
-    const restIds = isLife ? ['qa-life-faculty','qa-life-title','qa-life-body'] : ['qa-faculty','qa-title','qa-body'];
+    const restIds = isLife ? ['qa-life-grade','qa-life-faculty','qa-life-title','qa-life-body'] : ['qa-grade','qa-faculty','qa-title','qa-body'];
     const authorEl = document.getElementById(authorId);
     if (authorEl) authorEl.value = author;
     restIds.forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
@@ -2173,6 +2233,7 @@ async function openQaDetail(id) {
   try {
     const { data: post } = await db.from('posts').select('*').eq('id',id).single();
     if (!post) return;
+    const postGradeLabel = getPostGrade(post);
     const { data: answers } = await db.from('answers').select('*').eq('post_id',id).order('created_at',{ascending:true});
     const ans = answers || [];
     const likedAnswerSet = getEntityLikedSet('waseda_liked_answers');
@@ -2188,7 +2249,7 @@ async function openQaDetail(id) {
         <div class="q-label">❓ 質問</div>
         <div class="q-text">${escHtml(post.title)}</div>
         <div style="font-size:.84rem;color:var(--gray);margin-top:.5rem;line-height:1.65">${escHtml(post.body)}</div>
-        <div style="font-size:.72rem;color:#aaa;margin-top:.4rem">@${escHtml(post.author)} · ${formatTime(post.created_at)}${post.faculty?' · '+FACULTIES[post.faculty]:''}</div>
+        <div style="font-size:.72rem;color:#aaa;margin-top:.4rem">${formatAuthorWithGrade(post.author, postGradeLabel)} · ${formatTime(post.created_at)}${post.faculty?' · '+FACULTIES[post.faculty]:''}</div>
       </div>
       <div class="answers-section"><h4>💬 回答 ${ans.length}件</h4>${ansHtml}</div>
       ${renderQaAnswerGuide(post.category)}`;
@@ -2261,9 +2322,10 @@ function renderBoardPosts() {
     const typeClass = TYPE_CLASSES[p.circle_type]||'type-zatsudan';
     const typeTag = p.circle_type ? `<span class="board-type-tag ${typeClass}">${escHtml(p.circle_type)}</span>` : '';
     const facTag  = p.faculty ? `<span class="board-faculty-tag">${escHtml(FACULTIES[p.faculty]||p.faculty)}</span>` : '';
+    const gradeLabel = getPostGrade(p);
     const likedCls = likedSet.has(String(p.id))?' liked':'';
     return `<div class="board-card" onclick="openBoardDetail(${JSON.stringify(p.id)})">
-      <div class="board-card-meta">${typeTag}${facTag}<span class="board-card-author">@${escHtml(p.author)}</span><span class="board-card-time">${formatTime(p.created_at)}</span></div>
+      <div class="board-card-meta">${typeTag}${facTag}<span class="board-card-author">${formatAuthorWithGrade(p.author, gradeLabel)}</span><span class="board-card-time">${formatTime(p.created_at)}</span></div>
       <div class="board-card-body">${escHtml(p.body)}</div>
       <div class="board-card-footer">
         <span class="board-like${likedCls}" onclick="event.stopPropagation();likeBoardPost(${JSON.stringify(p.id)},this)">❤️ <span class="like-num">${p.likes||0}</span></span>
@@ -2307,6 +2369,7 @@ async function openBoardDetail(postId) {
   try {
     const { data: post, error } = await db.from('posts').select('*').eq('id', postId).single();
     if (error || !post) return;
+    const postGradeLabel = getPostGrade(post);
     const comments = await loadBoardComments(postId);
     const commentHtml = comments.length
       ? comments.map(c => {
@@ -2321,7 +2384,7 @@ async function openBoardDetail(postId) {
         <div style="display:flex;gap:.45rem;align-items:center;flex-wrap:wrap;margin-bottom:.45rem;">
           ${post.circle_type ? `<span class="board-type-tag ${TYPE_CLASSES[post.circle_type] || 'type-zatsudan'}">${escHtml(post.circle_type)}</span>` : ''}
           ${post.faculty ? `<span class="board-faculty-tag">${escHtml(FACULTIES[post.faculty] || post.faculty)}</span>` : ''}
-          <span style="font-size:.72rem;color:var(--gray-light);">@${escHtml(post.author || '匿名')} · ${formatTime(post.created_at)}</span>
+          <span style="font-size:.72rem;color:var(--gray-light);">${formatAuthorWithGrade(post.author || '匿名', postGradeLabel)} · ${formatTime(post.created_at)}</span>
         </div>
         <div style="font-size:.9rem;color:var(--dark);line-height:1.7;white-space:pre-wrap;">${escHtml(post.body || '')}</div>
       </div>
@@ -2519,6 +2582,7 @@ async function submitBoardPost(btn) {
   const auth = await resolvePostAuthMode('board');
   if (!auth) return;
   const nickname = document.getElementById('boardNickname').value.trim();
+  const grade = document.getElementById('boardGrade').value;
   const faculty  = document.getElementById('boardFaculty').value;
   const type     = document.getElementById('boardType').value;
   const body     = document.getElementById('boardBody').value.trim();
@@ -2531,9 +2595,10 @@ async function submitBoardPost(btn) {
   updateNicknameBadge();
   btn.disabled=true; btn.textContent='投稿中...';
   try {
+    const extraFields = grade ? JSON.stringify({ grade }) : null;
     let payload = auth.mode === 'login'
-      ? { category:'juken', author:nickname, title:body.slice(0,40), body, faculty:faculty||null, circle_type:type, likes:0, comments:0, device_id:getDeviceId(), owner_key:`auth:${auth.user.id}` }
-      : { category:'juken', author:nickname, title:body.slice(0,40), body, faculty:faculty||null, circle_type:type, likes:0, comments:0, device_id:getDeviceId(), owner_key:null };
+      ? { category:'juken', author:nickname, title:body.slice(0,40), body, faculty:faculty||null, circle_type:type, likes:0, comments:0, extra_fields: extraFields, device_id:getDeviceId(), owner_key:`auth:${auth.user.id}` }
+      : { category:'juken', author:nickname, title:body.slice(0,40), body, faculty:faculty||null, circle_type:type, likes:0, comments:0, extra_fields: extraFields, device_id:getDeviceId(), owner_key:null };
     let insertRes = await db.from('posts').insert([payload]).select('id').single();
     if (insertRes.error && isOwnerKeyColumnError(insertRes.error)) {
       delete payload.owner_key;
@@ -2547,7 +2612,7 @@ async function submitBoardPost(btn) {
     }
     const boardNick = document.getElementById('boardNickname');
     if (boardNick) boardNick.value = nickname;
-    ['boardFaculty','boardType','boardBody'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+    ['boardGrade','boardFaculty','boardType','boardBody'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
     closeComposerForm('boardFormBox');
     await loadBoardPosts();
     document.getElementById('board-posts').scrollIntoView({behavior:'smooth'});
