@@ -767,6 +767,9 @@ function createOwnerPayload(base) {
 function getOwnedPostIdsKey(userId) {
   return `waseda_owned_post_ids_${userId}`;
 }
+function getCommentTrackedPostIdsKey(userId) {
+  return `waseda_comment_tracked_post_ids_${userId}`;
+}
 function getOwnedNicknamesKey(userId) {
   return `waseda_owned_nicknames_${userId}`;
 }
@@ -787,6 +790,24 @@ function rememberOwnedPostId(postId, userId) {
   const arr = [...set];
   if (arr.length > 500) arr.splice(0, arr.length - 500);
   localStorage.setItem(getOwnedPostIdsKey(userId), JSON.stringify(arr));
+}
+function getCommentTrackedPostIds(userId) {
+  if (!userId) return [];
+  try {
+    const parsed = JSON.parse(localStorage.getItem(getCommentTrackedPostIdsKey(userId)) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+function rememberCommentTrackedPostId(postId, userId) {
+  if (!postId || !userId) return;
+  rememberLastAuthUserId(userId);
+  const set = new Set(getCommentTrackedPostIds(userId).map(String));
+  set.add(String(postId));
+  const arr = [...set];
+  if (arr.length > 500) arr.splice(0, arr.length - 500);
+  localStorage.setItem(getCommentTrackedPostIdsKey(userId), JSON.stringify(arr));
 }
 function getOwnedNicknames(userId) {
   if (!userId) return [];
@@ -1415,23 +1436,42 @@ async function loadMyPagePosts() {
       rows = [...merged.values()];
     }
 
-    rows.sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
+    const mergedRowsMap = new Map(rows.map(p => [String(p.id), p]));
+    const trackedCommentPostIds = getCommentTrackedPostIds(trackingUserId).filter(Boolean);
+    if (trackedCommentPostIds.length) {
+      const { data: trackedRows, error: trackedErr } = await db.from('posts').select('*').in('id', trackedCommentPostIds).limit(300);
+      if (!trackedErr && Array.isArray(trackedRows)) {
+        trackedRows.forEach(p => {
+          const key = String(p.id);
+          if (!mergedRowsMap.has(key)) mergedRowsMap.set(key, { ...p, __commentTracked: true });
+        });
+      }
+    }
+
+    rows = [...mergedRowsMap.values()].sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
+    const ownPostCount = rows.filter(p => !p.__commentTracked).length;
+    const trackedPostCount = rows.filter(p => !!p.__commentTracked).length;
     const trackingMode = resolvedUser?.id ? 'Google連携' : 'ローカル管理（再ログイン推奨）';
-    summaryEl.textContent = `${trackingMode} | ニックネーム: @${localStorage.getItem('waseda_nickname') || '未設定'} | 投稿数: ${rows.length}`;
+    summaryEl.textContent = `${trackingMode} | ニックネーム: @${localStorage.getItem('waseda_nickname') || '未設定'} | 投稿数: ${ownPostCount} | コメント先: ${trackedPostCount}`;
     if (!rows.length) { listEl.innerHTML = '<div style="text-align:center;color:var(--gray);padding:1rem 0;">まだあなたの投稿がありません</div>'; return; }
     listEl.innerHTML = rows.map(p => {
       const isQa = p.category === 'juken_qa' || p.category === 'juken_life_qa';
-      const openAction = isQa ? `closeMyPageModal();openQaDetail(${JSON.stringify(p.id)})` : '';
+      const isCommentTracked = !!p.__commentTracked;
+      const openAction = isQa
+        ? `closeMyPageModal();openQaDetail(${JSON.stringify(p.id)})`
+        : `closeMyPageModal();openBoardDetail(${JSON.stringify(p.id)})`;
+      const canDelete = !isCommentTracked;
+      const categoryLabel = `${p.category || '投稿'}${isCommentTracked ? ' / コメント先' : ''}`;
       return `<div style="border:1px solid var(--border);border-radius:8px;padding:.8rem;margin-bottom:.6rem;">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:.6rem;flex-wrap:wrap;">
-          <span style="font-size:.72rem;color:var(--gray);background:var(--crimson-pale);padding:2px 8px;border-radius:999px;">${escHtml(p.category || '投稿')}</span>
+          <span style="font-size:.72rem;color:var(--gray);background:var(--crimson-pale);padding:2px 8px;border-radius:999px;">${escHtml(categoryLabel)}</span>
           <span style="font-size:.73rem;color:var(--gray-light);">${formatTime(p.created_at)}</span>
         </div>
         <div style="margin-top:.4rem;font-size:.88rem;font-weight:700;color:var(--dark);">${escHtml(p.title || '(タイトルなし)')}</div>
         <div style="margin-top:.2rem;font-size:.8rem;color:var(--gray);">${escHtml((p.body||'').slice(0,120))}</div>
         <div style="margin-top:.55rem;display:flex;gap:.5rem;justify-content:flex-end;">
-          ${isQa ? `<button class="btn-submit" style="margin-top:0;padding:6px 10px;font-size:.74rem;" onclick="${openAction}">詳細</button>` : ''}
-          <button class="btn-submit" style="margin-top:0;padding:6px 10px;font-size:.74rem;background:#9b1c1c;" onclick="deleteMyPagePost(${JSON.stringify(p.id)})">削除</button>
+          <button class="btn-submit" style="margin-top:0;padding:6px 10px;font-size:.74rem;" onclick="${openAction}">詳細</button>
+          ${canDelete ? `<button class="btn-submit" style="margin-top:0;padding:6px 10px;font-size:.74rem;background:#9b1c1c;" onclick="deleteMyPagePost(${JSON.stringify(p.id)})">削除</button>` : ''}
         </div>
       </div>`;
     }).join('');
@@ -2046,6 +2086,10 @@ async function submitBoardComment(postId, btn) {
       insertRes = await db.from('comments').insert([payload]);
     }
     if (insertRes.error) throw insertRes.error;
+    if (auth.mode === 'login' && auth.user?.id) {
+      rememberCommentTrackedPostId(postId, auth.user.id);
+      rememberOwnedNickname(author, auth.user.id);
+    }
 
     const currentCount = Number(boardAllPosts.find(p => p.id === postId)?.comments || 0);
     await db.from('posts').update({ comments: currentCount + 1 }).eq('id', postId);
