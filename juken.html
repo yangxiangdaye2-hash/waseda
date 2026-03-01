@@ -161,6 +161,8 @@
   .board-layout { display: grid; grid-template-columns: 300px 1fr; gap: 1.4rem; align-items: start; }
   .post-form-box { background: #fff; border: 1.5px solid var(--border); border-radius: 14px; padding: 1.3rem; position: sticky; top: 112px; }
   .post-form-title { font-size: .95rem; font-weight: 700; color: var(--dark); display: flex; align-items: center; justify-content: space-between; }
+  .post-open-btn { background: var(--gold); color: var(--crimson-dark); border: none; padding: 8px 18px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; transition: all 0.2s; white-space: nowrap; }
+  .post-open-btn:hover { background: var(--gold-light); transform: translateY(-1px); }
   .post-form-toggle-icon { font-size: .75rem; color: var(--gray-light); transition: transform .2s; }
   .post-form-box.open .post-form-toggle-icon { transform: rotate(180deg); }
   .post-form-body { margin-top: 1rem; }
@@ -350,7 +352,7 @@
       <!-- 投稿フォーム -->
       <div class="post-form-box qa-post-box" id="qaFormBoxStudy">
         <div class="post-form-title" onclick="toggleQaForm('study')">
-          <span>📝 投稿する</span>
+          <span class="post-open-btn">📝 投稿する</span>
           <span class="post-form-toggle-icon">▼</span>
         </div>
         <div class="post-form-body">
@@ -411,7 +413,7 @@
     <div class="qa-layout">
       <div class="post-form-box qa-post-box" id="qaFormBoxLife">
         <div class="post-form-title" onclick="toggleQaForm('life')">
-          <span>📝 投稿する</span>
+          <span class="post-open-btn">📝 投稿する</span>
           <span class="post-form-toggle-icon">▼</span>
         </div>
         <div class="post-form-body">
@@ -479,7 +481,7 @@
     <div class="board-layout">
       <div class="post-form-box" id="boardFormBox">
         <div class="post-form-title" onclick="toggleBoardForm()">
-          <span>📝 投稿する</span>
+          <span class="post-open-btn">📝 投稿する</span>
           <span class="post-form-toggle-icon">▼</span>
         </div>
         <div class="post-form-body">
@@ -1509,24 +1511,18 @@ function renderQaList(kind='study') {
 
   const renderCard = (p) => {
     const isMine = isMyContent(p, myIds);
-    const isExpanded = qaExpandedIds[key].has(String(p.id));
     const myTag = isMine ? '<span class="qa-my-badge">🧷 あなたの質問</span>' : '';
     const fTag = p.faculty ? `<span class="qa-faculty-tag">${escHtml(FACULTIES[p.faculty]||p.faculty)}</span>` : '';
     const ansCount = qaAnswerCountMap[p.id] ?? p.comments ?? 0;
-    const toggleIcon = isExpanded ? '▴' : '▾';
-    return `<div class="qa-card${isMine ? ' my-question' : ''}${isExpanded ? ' expanded' : ''}">
-      <div class="qa-card-head" onclick="toggleQaCard('${key}', ${JSON.stringify(p.id)})">
+    return `<div class="qa-card${isMine ? ' my-question' : ''}" onclick="openQaDetail(${JSON.stringify(p.id)})">
+      <div class="qa-card-head">
         <div class="qa-card-main">
           <div class="qa-card-meta">${myTag}${fTag}<span class="qa-open-badge">🔓 回答募集中</span><span style="font-size:.69rem;color:var(--gray-light)">@${escHtml(p.author)} · ${formatTime(p.created_at)}</span></div>
           <div class="qa-card-title">${escHtml(p.title)}</div>
           <div class="qa-card-preview">${escHtml(p.body)}</div>
           <div class="qa-card-stats"><span>💬 回答 ${ansCount}件</span><span>❤️ ${p.likes||0}</span></div>
         </div>
-        <span class="qa-card-toggle-icon" aria-hidden="true">${toggleIcon}</span>
-      </div>
-      <div class="qa-card-fold">
-        <div class="qa-card-body">${escHtml(p.body)}</div>
-        <div class="qa-card-footer"><button class="btn-submit" style="margin-top:0;padding:4px 10px;font-size:.72rem;" onclick="openQaDetail(${JSON.stringify(p.id)})">詳細</button></div>
+        <span class="qa-card-toggle-icon" aria-hidden="true">›</span>
       </div>
     </div>`;
   };
