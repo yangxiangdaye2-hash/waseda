@@ -928,7 +928,8 @@ function isMyContent(item, myIds) {
   const userId = googleAuthUser?.id || getLastAuthUserId();
   const owner = String(item.owner_key || '').trim();
   if (userId && (owner === `auth:${userId}` || owner === userId)) return true;
-  if (myIds && myIds.has(String(item.id))) return true;
+  const effectiveMyIds = myIds || (userId ? new Set(getOwnedPostIds(userId).map(String)) : null);
+  if (effectiveMyIds && effectiveMyIds.has(String(item.id))) return true;
   const nick = getPreferredNickname();
   if (nick && item.author === nick) return true;
   if (!owner && item.device_id && item.device_id === getDeviceId()) return true;
@@ -1178,7 +1179,9 @@ async function deleteMyPagePost(postId) {
     const ownerKey = `auth:${trackingUserId}`;
     const isLegacyOwner = target?.owner_key === trackingUserId;
     const isDeviceLegacy = !target?.owner_key && target?.device_id && target.device_id === getDeviceId();
-    if (!(target?.owner_key === ownerKey || isLegacyOwner || isDeviceLegacy)) { alert('この投稿は削除できません'); return; }
+    const localOwnedSet = new Set(getOwnedPostIds(trackingUserId).map(String));
+    const isOwnedByLocalRecord = localOwnedSet.has(String(postId));
+    if (!(target?.owner_key === ownerKey || isLegacyOwner || isDeviceLegacy || isOwnedByLocalRecord)) { alert('この投稿は削除できません'); return; }
 
     if (isDeviceLegacy || isLegacyOwner) {
       try {

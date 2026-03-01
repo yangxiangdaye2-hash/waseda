@@ -1508,7 +1508,8 @@
     const userId = googleAuthUser?.id || getLastAuthUserId();
     const owner = String(item.owner_key || '').trim();
     if (userId && (owner === `auth:${userId}` || owner === userId)) return true;
-    if (myIds && myIds.has(String(item.id))) return true;
+    const effectiveMyIds = myIds || (userId ? new Set(getOwnedPostIds(userId).map(String)) : null);
+    if (effectiveMyIds && effectiveMyIds.has(String(item.id))) return true;
     const nick = (currentUser || localStorage.getItem('waseda_nickname') || '').trim();
     if (!owner && item.device_id && item.device_id === getDeviceId()) {
       if (!nick || nick === 'ゲスト') return true;
