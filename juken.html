@@ -124,9 +124,7 @@
   .qa-form-box { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 1.3rem; margin-bottom: 1.4rem; }
   .qa-form-title { font-size: .95rem; font-weight: 700; margin-bottom: 1rem; }
   .qa-post-box { position: static; top: auto; margin-bottom: 1.4rem; }
-  .qa-post-box .post-form-title { cursor: pointer; margin-bottom: 0; }
-  .qa-post-box .post-form-toggle-icon { display: inline-block !important; }
-  .qa-post-box.open .post-form-toggle-icon { transform: rotate(180deg); }
+  .qa-post-box .post-form-title { margin-bottom: 0; }
   .qa-post-box .post-form-body { margin-top: 1rem; display: none !important; }
   .qa-post-box.open .post-form-body { display: block !important; }
   .auth-hint { font-size: .74rem; color: var(--gray); line-height: 1.6; margin: -.25rem 0 .9rem; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: .45rem .6rem; }
@@ -159,22 +157,14 @@
 
   /* ─── BOARD ─── */
   .board-layout { display: grid; grid-template-columns: 300px 1fr; gap: 1.4rem; align-items: start; }
-  .post-form-box { background: #fff; border: 1.5px solid var(--border); border-radius: 14px; padding: 1.3rem; position: sticky; top: 112px; }
-  .post-form-title { font-size: .95rem; font-weight: 700; color: var(--dark); display: flex; align-items: center; justify-content: space-between; }
+  .post-form-box { background: transparent; border: none; border-radius: 0; padding: 0; position: sticky; top: 112px; }
+  .post-form-title { display: flex; align-items: center; justify-content: flex-start; }
   .btn-post { background: var(--gold); color: var(--crimson-dark); border: none; padding: 8px 18px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; transition: all 0.2s; white-space: nowrap; }
   .btn-post:hover { background: var(--gold-light); transform: translateY(-1px); }
-  .post-form-toggle-icon { font-size: .75rem; color: var(--gray-light); transition: transform .2s; }
-  .post-form-box.open .post-form-toggle-icon { transform: rotate(180deg); }
-  .post-form-body { margin-top: 1rem; }
+  .post-form-body { margin-top: 1rem; background: #fff; border: 1.5px solid var(--border); border-radius: 14px; padding: 1.3rem; display: none; }
+  .post-form-box.open .post-form-body { display: block; }
   @media (max-width: 860px) {
-    .post-form-title { cursor: pointer; }
-    .post-form-toggle-icon { display: inline-block; }
-    .post-form-body { display: none; }
-    .post-form-box.open .post-form-body { display: block; }
-  }
-  @media (min-width: 861px) {
-    .post-form-toggle-icon { display: none; }
-    .post-form-body { display: block !important; }
+    .post-form-title { cursor: default; }
   }
   .board-posts { display: flex; flex-direction: column; gap: .7rem; }
   .board-card { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 1rem 1.1rem; transition: border-color .2s; }
@@ -231,9 +221,9 @@
   .form-select:focus { outline: none; border-color: var(--crimson); }
   .form-textarea { width: 100%; border: 1.5px solid var(--border); border-radius: 8px; padding: 9px 10px; font-size: .86rem; font-family: 'Noto Sans JP', sans-serif; resize: vertical; min-height: 90px; background: var(--bg); }
   .form-textarea:focus { outline: none; border-color: var(--crimson); background: #fff; }
-  .btn-submit { width: 100%; background: var(--gold); color: var(--crimson-dark); border: none; border-radius: 8px; padding: 11px; font-size: .88rem; font-weight: 700; cursor: pointer; transition: all .2s; font-family: 'Noto Sans JP', sans-serif; }
-  .btn-submit:hover { background: var(--gold-light); transform: translateY(-1px); }
-  .btn-submit:disabled { background: var(--gray-lighter); cursor: not-allowed; }
+  .btn-submit { width: 100%; background: linear-gradient(135deg, var(--crimson) 0%, var(--crimson-dark) 100%); color: white; border: none; padding: 12px; border-radius: 10px; font-size: 0.98rem; font-weight: 700; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; margin-top: 0.8rem; transition: all 0.2s; box-shadow: 0 4px 12px rgba(139, 0, 0, 0.25); }
+  .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(139, 0, 0, 0.35); }
+  .btn-submit:disabled { background: var(--gray-lighter); cursor: not-allowed; transform: none; }
   .form-notice { font-size: .7rem; color: var(--gray-light); margin-top: .55rem; text-align: center; }
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
 
@@ -353,9 +343,8 @@
     <div class="qa-layout">
       <!-- 投稿フォーム -->
       <div class="post-form-box qa-post-box" id="qaFormBoxStudy">
-        <div class="post-form-title" onclick="toggleQaForm('study')">
-          <button type="button" class="btn-post">＋ 投稿する</button>
-          <span class="post-form-toggle-icon">▼</span>
+        <div class="post-form-title">
+          <button type="button" class="btn-post" onclick="toggleQaForm('study')">＋ 投稿する</button>
         </div>
         <div class="post-form-body">
         <div class="qa-form-title">❓ 質問を投稿する</div>
@@ -414,9 +403,8 @@
     <p class="sec-sub">キャンパスの雰囲気、時間割、通学、一人暮らし、サークル参加など大学生活について質問できます。</p>
     <div class="qa-layout">
       <div class="post-form-box qa-post-box" id="qaFormBoxLife">
-        <div class="post-form-title" onclick="toggleQaForm('life')">
-          <button type="button" class="btn-post">＋ 投稿する</button>
-          <span class="post-form-toggle-icon">▼</span>
+        <div class="post-form-title">
+          <button type="button" class="btn-post" onclick="toggleQaForm('life')">＋ 投稿する</button>
         </div>
         <div class="post-form-body">
         <div class="qa-form-title">🏫 大学生活について質問する</div>
@@ -482,9 +470,8 @@
     <div class="filter-bar" id="board-faculty-filter"><!-- JS --></div>
     <div class="board-layout">
       <div class="post-form-box" id="boardFormBox">
-        <div class="post-form-title" onclick="toggleBoardForm()">
-          <button type="button" class="btn-post">＋ 投稿する</button>
-          <span class="post-form-toggle-icon">▼</span>
+        <div class="post-form-title">
+          <button type="button" class="btn-post" onclick="toggleBoardForm()">＋ 投稿する</button>
         </div>
         <div class="post-form-body">
           <div class="auth-hint" id="authHintBoard">ログインして投稿すると確認・削除・マイページが使えます。未ログイン投稿は管理対象外です。</div>
@@ -1721,7 +1708,6 @@ async function likeBoardPost(id, el) {
 }
 
 function toggleBoardForm() {
-  if (window.innerWidth > 860) return;
   document.getElementById('boardFormBox').classList.toggle('open');
 }
 
