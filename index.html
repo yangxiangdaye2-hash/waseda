@@ -1154,6 +1154,10 @@
         <button class="admin-tab-btn" data-tab="jobs" onclick="switchAdminTab('jobs')">💼 求人・PR管理</button>
         <button class="admin-tab-btn" data-tab="posts" onclick="switchAdminTab('posts')">📝 投稿管理</button>
         <button class="admin-tab-btn" data-tab="reports" onclick="switchAdminTab('reports')">🚩 通報管理</button>
+        <button class="admin-tab-btn" data-tab="stats" onclick="switchAdminTab('stats')">📊 統計</button>
+        <button class="admin-tab-btn" data-tab="qa-admin" onclick="switchAdminTab('qa-admin')">🛡️ 管理者回答</button>
+        <button class="admin-tab-btn" data-tab="ip-ban" onclick="switchAdminTab('ip-ban')">⛔ IP BAN</button>
+        <button class="admin-tab-btn" data-tab="contacts" onclick="switchAdminTab('contacts')">📩 お問い合わせ</button>
       </div>
       <div class="modal-body admin-tab-body">
         <!-- お知らせ管理 tab -->
@@ -1215,9 +1219,59 @@
           <p style="color:#666;margin-bottom:1rem;">未解決の通報を確認・対応できます</p>
           <div id="adminReportList" style="max-height:400px;overflow-y:auto;"></div>
         </div>
+
+        <div id="tab-stats" class="admin-tab-content" style="display:none;">
+          <h4>📊 統計ダッシュボード</h4>
+          <p style="color:#666;margin-bottom:1rem;">投稿・反応・ユーザー推移の概要です</p>
+          <div id="adminStatsCards"></div>
+        </div>
+
+        <div id="tab-qa-admin" class="admin-tab-content" style="display:none;">
+          <h4>🛡️ Q&A 管理者回答</h4>
+          <p style="color:#666;margin-bottom:1rem;">未回答Q&Aに「管理者より」で回答できます</p>
+          <div id="adminQaList" style="max-height:420px;overflow-y:auto;"></div>
+        </div>
+
+        <div id="tab-ip-ban" class="admin-tab-content" style="display:none;">
+          <h4>⛔ IPベースBAN</h4>
+          <div class="form-group">
+            <label class="form-label">BANするIPアドレス</label>
+            <input class="form-input" id="banIpInput" type="text" placeholder="例: 203.0.113.4">
+          </div>
+          <button class="btn-submit" onclick="addBannedIp()">BANに追加</button>
+          <hr style="margin:1rem 0;">
+          <h4>📋 BAN一覧</h4>
+          <div id="adminBanList" style="max-height:320px;overflow-y:auto;"></div>
+        </div>
+
+        <div id="tab-contacts" class="admin-tab-content" style="display:none;">
+          <h4>📩 お問い合わせ受信ボックス</h4>
+          <p style="color:#666;margin-bottom:1rem;">ユーザーからの問い合わせを確認できます</p>
+          <div id="adminContactList" style="max-height:420px;overflow-y:auto;"></div>
+        </div>
       </div>
     </div>
   </div>
+
+  <section style="max-width:1200px;margin:0 auto 2rem;padding:0 2rem;">
+    <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.2rem 1.2rem 1rem;">
+      <h3 style="font-size:1rem;margin-bottom:.7rem;">📩 お問い合わせ</h3>
+      <p style="font-size:.84rem;color:var(--gray);margin-bottom:1rem;">不具合報告・要望はこちらから送信できます。</p>
+      <div class="form-group">
+        <label class="form-label">メール（任意）</label>
+        <input class="form-input" id="contactEmail" type="email" placeholder="you@example.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">件名</label>
+        <input class="form-input" id="contactSubject" type="text" placeholder="お問い合わせ件名">
+      </div>
+      <div class="form-group">
+        <label class="form-label">内容</label>
+        <textarea class="form-textarea" id="contactBody" placeholder="お問い合わせ内容"></textarea>
+      </div>
+      <button class="btn-submit" onclick="submitContactMessage()">送信する</button>
+    </div>
+  </section>
 
   <!-- 投稿詳細モーダル（コメント表示用） -->
   <div class="modal-overlay" id="postDetailModal">
@@ -1325,9 +1379,13 @@
   const QA_ANSWER_AUTH_DRAFT_TS_KEY = 'waseda_qa_answer_auth_draft_ts';
   const MY_PAGE_NOTIFY_PREFIX = 'waseda_mypage_notify_state_';
   const MY_PAGE_NOTIFY_INTERVAL_MS = 60000;
+  const LOCAL_BANNED_IPS_KEY = 'waseda_local_banned_ips';
+  const LOCAL_CONTACT_MESSAGES_KEY = 'waseda_local_contact_messages';
   let myPageNotifyCount = 0;
   let myPageNotifyTimer = null;
   let myPageNotifyInFlight = false;
+  let clientIpAddress = null;
+  let bannedIpCache = null;
 
   function getGoogleDisplayName(user) {
     return user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'ログイン中ユーザー';
@@ -1358,6 +1416,63 @@
       console.warn('redirect URL parse failed:', e);
     }
     return AUTH_REDIRECT_URL;
+  }
+
+  function normalizeIp(ip) {
+    return String(ip || '').trim();
+  }
+
+  async function getClientIpAddress() {
+    if (clientIpAddress) return clientIpAddress;
+    try {
+      const res = await fetch('https://api.ipify.org?format=json', { cache: 'no-store' });
+      if (!res.ok) throw new Error('ip lookup failed');
+      const json = await res.json();
+      clientIpAddress = normalizeIp(json?.ip || '');
+      return clientIpAddress;
+    } catch {
+      return null;
+    }
+  }
+
+  function readLocalBannedIps() {
+    try {
+      const raw = localStorage.getItem(LOCAL_BANNED_IPS_KEY) || '[]';
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr.map(normalizeIp).filter(Boolean) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function writeLocalBannedIps(ips) {
+    try { localStorage.setItem(LOCAL_BANNED_IPS_KEY, JSON.stringify([...(ips || [])])); } catch {}
+  }
+
+  async function loadBannedIpSet(force = false) {
+    if (!force && bannedIpCache instanceof Set) return bannedIpCache;
+    const set = new Set(readLocalBannedIps());
+    try {
+      if (db) {
+        const { data, error } = await db.from('banned_ips').select('ip,active').eq('active', true).limit(1000);
+        if (!error && Array.isArray(data)) {
+          data.forEach(row => set.add(normalizeIp(row.ip)));
+        }
+      }
+    } catch {}
+    bannedIpCache = set;
+    return set;
+  }
+
+  async function ensureIpNotBannedOrAlert() {
+    const ip = await getClientIpAddress();
+    if (!ip) return true;
+    const bannedSet = await loadBannedIpSet();
+    if (bannedSet.has(ip)) {
+      alert('このIPアドレスは利用停止中のため、投稿・コメントできません。');
+      return false;
+    }
+    return true;
   }
 
   function schedulePostDraftRestoreChecks() {
@@ -2923,12 +3038,301 @@
   function switchAdminTab(tab) {
     document.querySelectorAll('.admin-tab-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.admin-tab-content').forEach(content => { content.classList.remove('active'); content.style.display = 'none'; });
-    event.target.classList.add('active');
+    const activeBtn = document.querySelector(`.admin-tab-btn[data-tab="${tab}"]`);
+    if (activeBtn) activeBtn.classList.add('active');
     const contentEl = document.getElementById('tab-' + tab);
     if (contentEl) { contentEl.classList.add('active'); contentEl.style.display = 'block'; }
     if (tab === 'posts') renderAdminPostList();
     if (tab === 'jobs') renderAdminJobList();
     if (tab === 'reports') loadAdminReports();
+    if (tab === 'stats') loadAdminStats();
+    if (tab === 'qa-admin') loadAdminQaList();
+    if (tab === 'ip-ban') renderAdminBanList();
+    if (tab === 'contacts') loadAdminContacts();
+  }
+
+  async function loadAdminStats() {
+    const el = document.getElementById('adminStatsCards');
+    if (!el) return;
+    el.innerHTML = '<div style="color:#999;">集計中...</div>';
+    try {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayTs = todayStart.getTime();
+
+      const [postsRes, answersRes, commentsRes, reportsRes] = await Promise.all([
+        db.from('posts').select('id,category,likes,comments,created_at,author').limit(5000),
+        db.from('answers').select('id,post_id,created_at,author').limit(10000),
+        db.from('comments').select('id,created_at,author').limit(10000),
+        db.from('reports').select('id').limit(10000)
+      ]);
+
+      const posts = Array.isArray(postsRes.data) ? postsRes.data : [];
+      const answers = Array.isArray(answersRes.data) ? answersRes.data : [];
+      const comments = Array.isArray(commentsRes.data) ? commentsRes.data : [];
+      const reports = Array.isArray(reportsRes.data) ? reportsRes.data : [];
+
+      const totalPosts = posts.length;
+      const todayPosts = posts.filter(p => new Date(p.created_at || 0).getTime() >= todayTs).length;
+      const categoryCounts = posts.reduce((acc, p) => {
+        const key = p.category || 'other';
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {});
+      const totalLikes = posts.reduce((sum, p) => sum + Number(p.likes || 0), 0);
+      const totalComments = comments.length;
+      const totalAnswers = answers.length;
+      const qaPostIds = posts.filter(p => p.category === 'qa').map(p => String(p.id));
+      const answeredSet = new Set(answers.map(a => String(a.post_id)));
+      const unansweredQa = qaPostIds.filter(id => !answeredSet.has(id)).length;
+
+      const firstSeen = new Map();
+      const touchUser = (name, ts) => {
+        const key = String(name || '').trim();
+        if (!key) return;
+        const t = new Date(ts || 0).getTime() || Date.now();
+        const cur = firstSeen.get(key);
+        if (!cur || t < cur) firstSeen.set(key, t);
+      };
+      posts.forEach(r => touchUser(r.author, r.created_at));
+      comments.forEach(r => touchUser(r.author, r.created_at));
+      answers.forEach(r => touchUser(r.author, r.created_at));
+      const totalUsers = firstSeen.size;
+      const todayNewUsers = [...firstSeen.values()].filter(ts => ts >= todayTs).length;
+
+      const categoryLabel = {
+        lecture: '授業', circle: 'サークル', campus: 'キャンパス', qa: 'Q&A',
+        job: '求人', juken: '受験掲示板', juken_qa: '受験Q&A(勉強)', juken_life_qa: '受験Q&A(生活)',
+        taikenki: '体験記', faculty_comment: '学部コメント'
+      };
+      const categoryText = Object.entries(categoryCounts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([k, v]) => `${categoryLabel[k] || k}: ${v}`)
+        .join(' / ');
+
+      const cards = [
+        ['総投稿数', totalPosts],
+        ['今日の投稿数', todayPosts],
+        ['通報数', reports.length],
+        ['総いいね数', totalLikes],
+        ['総コメント数', totalComments],
+        ['総回答数', totalAnswers],
+        ['未回答Q&A数', unansweredQa],
+        ['総ユーザー数', totalUsers],
+        ['今日の新規ユーザー数', todayNewUsers]
+      ];
+
+      el.innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.7rem;">
+          ${cards.map(([label, value]) => `<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:.75rem .85rem;"><div style="font-size:.73rem;color:var(--gray);">${escHtml(label)}</div><div style="font-size:1.1rem;font-weight:800;color:var(--dark);margin-top:.2rem;">${escHtml(String(value))}</div></div>`).join('')}
+        </div>
+        <div style="margin-top:.8rem;background:#fff;border:1px solid var(--border);border-radius:10px;padding:.75rem .85rem;">
+          <div style="font-size:.73rem;color:var(--gray);margin-bottom:.15rem;">カテゴリ別投稿数</div>
+          <div style="font-size:.84rem;color:var(--dark);line-height:1.6;">${escHtml(categoryText || 'データなし')}</div>
+        </div>`;
+    } catch (e) {
+      console.error(e);
+      el.innerHTML = '<div style="color:#e53935;">統計の取得に失敗しました</div>';
+    }
+  }
+
+  async function loadAdminQaList() {
+    const list = document.getElementById('adminQaList');
+    if (!list) return;
+    list.innerHTML = '<div style="color:#999;">読み込み中...</div>';
+    try {
+      const { data: posts, error } = await db.from('posts').select('id,title,body,author,created_at').eq('category', 'qa').order('created_at', { ascending: false }).limit(200);
+      if (error) throw error;
+      const qaPosts = Array.isArray(posts) ? posts : [];
+      if (!qaPosts.length) {
+        list.innerHTML = '<div style="color:#999;text-align:center;padding:1rem;">Q&A投稿がありません</div>';
+        return;
+      }
+      const postIds = qaPosts.map(p => p.id).filter(Boolean);
+      const { data: ansRows } = await db.from('answers').select('post_id').in('post_id', postIds);
+      const ansCount = {};
+      (ansRows || []).forEach(r => { ansCount[r.post_id] = (ansCount[r.post_id] || 0) + 1; });
+
+      list.innerHTML = qaPosts.map(p => {
+        const cnt = Number(ansCount[p.id] || 0);
+        return `<div style="padding:.8rem;background:#fff;border:1px solid var(--border);border-radius:8px;margin-bottom:.65rem;">
+          <div style="display:flex;justify-content:space-between;gap:.6rem;align-items:flex-start;">
+            <div style="min-width:0;">
+              <div style="font-size:.86rem;font-weight:700;color:var(--dark);">${escHtml(p.title || '')}</div>
+              <div style="font-size:.75rem;color:var(--gray);margin-top:.2rem;">@${escHtml(p.author || '匿名')} · ${formatTime(p.created_at)} · 回答${cnt}件</div>
+            </div>
+            <button style="padding:4px 8px;background:#f3f5f8;border:1px solid #cfd6df;border-radius:6px;cursor:pointer;font-size:.75rem;" onclick="openQaDetail(${JSON.stringify(p.id)})">開く</button>
+          </div>
+          <textarea id="adminAnswerInput-${p.id}" class="form-textarea" style="margin-top:.6rem;" placeholder="管理者回答を入力..."></textarea>
+          <button class="btn-submit" style="margin-top:.45rem;" onclick="submitAdminAnswer(${JSON.stringify(p.id)})">管理者より回答する</button>
+        </div>`;
+      }).join('');
+    } catch (e) {
+      console.error(e);
+      list.innerHTML = '<div style="color:#e53935;">Q&A一覧の取得に失敗しました</div>';
+    }
+  }
+
+  async function submitAdminAnswer(postId) {
+    const input = document.getElementById(`adminAnswerInput-${postId}`);
+    const text = (input?.value || '').trim();
+    if (!text) { alert('回答を入力してください'); return; }
+    if (!(await ensureIpNotBannedOrAlert())) return;
+    try {
+      let payload = { post_id: postId, author: '管理者より', text, device_id: getDeviceId(), owner_key: getOwnerKey() };
+      let { error } = await db.from('answers').insert([payload]);
+      if (error && isOwnerKeyColumnError(error)) {
+        delete payload.owner_key;
+        ({ error } = await db.from('answers').insert([payload]));
+      }
+      if (error) throw error;
+      if (input) input.value = '';
+      alert('管理者回答を投稿しました');
+      loadAdminQaList();
+      if (currentTab === 'qa') loadPosts();
+    } catch (e) {
+      console.error(e);
+      alert('管理者回答の投稿に失敗しました: ' + (e?.message || 'unknown'));
+    }
+  }
+
+  async function addBannedIp() {
+    const input = document.getElementById('banIpInput');
+    const ip = normalizeIp(input?.value || '');
+    if (!ip) { alert('IPアドレスを入力してください'); return; }
+    try {
+      if (db) {
+        const { error } = await db.from('banned_ips').upsert([{ ip, active: true, created_by: currentUser }], { onConflict: 'ip' });
+        if (error) throw error;
+      }
+    } catch {
+      const set = new Set(readLocalBannedIps());
+      set.add(ip);
+      writeLocalBannedIps([...set]);
+    }
+    if (input) input.value = '';
+    bannedIpCache = null;
+    renderAdminBanList();
+  }
+
+  async function removeBannedIp(ip) {
+    const normalized = normalizeIp(ip);
+    if (!normalized) return;
+    try {
+      if (db) {
+        const { error } = await db.from('banned_ips').update({ active: false }).eq('ip', normalized);
+        if (error) throw error;
+      }
+    } catch {}
+    const set = new Set(readLocalBannedIps());
+    set.delete(normalized);
+    writeLocalBannedIps([...set]);
+    bannedIpCache = null;
+    renderAdminBanList();
+  }
+
+  async function renderAdminBanList() {
+    const list = document.getElementById('adminBanList');
+    if (!list) return;
+    const bannedSet = await loadBannedIpSet(true);
+    const rows = [...bannedSet].filter(Boolean);
+    if (!rows.length) {
+      list.innerHTML = '<div style="color:#999;text-align:center;padding:1rem;">BAN中のIPはありません</div>';
+      return;
+    }
+    list.innerHTML = rows.map(ip => `<div style="display:flex;justify-content:space-between;align-items:center;gap:.6rem;padding:.55rem .6rem;background:#fff;border:1px solid var(--border);border-radius:8px;margin-bottom:.45rem;"><span style="font-size:.84rem;">${escHtml(ip)}</span><button style="padding:4px 8px;background:#e53935;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.75rem;" onclick="removeBannedIp(${JSON.stringify(ip)})">解除</button></div>`).join('');
+  }
+
+  async function submitContactMessage() {
+    if (!(await ensureIpNotBannedOrAlert())) return;
+    const email = (document.getElementById('contactEmail')?.value || '').trim();
+    const subject = (document.getElementById('contactSubject')?.value || '').trim();
+    const body = (document.getElementById('contactBody')?.value || '').trim();
+    if (!subject || !body) { alert('件名と内容を入力してください'); return; }
+    const payload = {
+      email: email || null,
+      subject,
+      body,
+      nickname: currentUser || '匿名',
+      ip: await getClientIpAddress(),
+      status: 'unread',
+      created_at: new Date().toISOString()
+    };
+    let stored = false;
+    try {
+      if (db) {
+        const { error } = await db.from('contact_messages').insert([payload]);
+        if (error) throw error;
+        stored = true;
+      }
+    } catch {}
+    if (!stored) {
+      try {
+        const raw = localStorage.getItem(LOCAL_CONTACT_MESSAGES_KEY) || '[]';
+        const arr = JSON.parse(raw);
+        const next = Array.isArray(arr) ? arr : [];
+        next.unshift({ ...payload, id: `local_${Date.now()}` });
+        localStorage.setItem(LOCAL_CONTACT_MESSAGES_KEY, JSON.stringify(next.slice(0, 500)));
+      } catch {}
+    }
+    const emailEl = document.getElementById('contactEmail');
+    const subjectEl = document.getElementById('contactSubject');
+    const bodyEl = document.getElementById('contactBody');
+    if (emailEl) emailEl.value = '';
+    if (subjectEl) subjectEl.value = '';
+    if (bodyEl) bodyEl.value = '';
+    alert('お問い合わせを送信しました。');
+  }
+
+  async function loadAdminContacts() {
+    const list = document.getElementById('adminContactList');
+    if (!list) return;
+    list.innerHTML = '<div style="color:#999;">読み込み中...</div>';
+    let rows = [];
+    try {
+      if (db) {
+        const { data, error } = await db.from('contact_messages').select('*').order('created_at', { ascending: false }).limit(500);
+        if (!error && Array.isArray(data)) rows = data;
+      }
+    } catch {}
+    if (!rows.length) {
+      try {
+        const raw = localStorage.getItem(LOCAL_CONTACT_MESSAGES_KEY) || '[]';
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) rows = arr;
+      } catch {}
+    }
+    if (!rows.length) {
+      list.innerHTML = '<div style="color:#999;text-align:center;padding:1rem;">お問い合わせはありません</div>';
+      return;
+    }
+    list.innerHTML = rows.map(r => {
+      const status = String(r.status || 'unread');
+      const isRead = status === 'read';
+      const idStr = String(r.id || '');
+      return `<div style="padding:.75rem;background:${isRead ? '#f7f7f7' : '#fff8e8'};border:1px solid var(--border);border-radius:8px;margin-bottom:.55rem;">
+        <div style="display:flex;justify-content:space-between;gap:.6rem;align-items:flex-start;">
+          <div style="min-width:0;">
+            <div style="font-weight:700;font-size:.86rem;color:var(--dark);">${escHtml(r.subject || '(件名なし)')}</div>
+            <div style="font-size:.74rem;color:var(--gray);margin-top:.2rem;">@${escHtml(r.nickname || '匿名')} ${r.email ? ' · ' + escHtml(r.email) : ''} · ${formatTime(r.created_at)}</div>
+          </div>
+          ${idStr.startsWith('local_') ? '' : `<button style="padding:4px 8px;background:${isRead ? '#9e9e9e' : '#4caf50'};color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.74rem;" onclick="markContactRead(${JSON.stringify(r.id)})">${isRead ? '既読' : '既読にする'}</button>`}
+        </div>
+        <div style="margin-top:.45rem;font-size:.82rem;color:var(--dark);white-space:pre-wrap;line-height:1.6;">${escHtml(r.body || '')}</div>
+      </div>`;
+    }).join('');
+  }
+
+  async function markContactRead(id) {
+    try {
+      if (!db) return;
+      const { error } = await db.from('contact_messages').update({ status: 'read' }).eq('id', id);
+      if (error) throw error;
+      loadAdminContacts();
+    } catch (e) {
+      console.error(e);
+      alert('更新に失敗しました');
+    }
   }
 
   // ===== REPORT SYSTEM =====
@@ -3233,6 +3637,7 @@
   function openAdminModal() {
     if (!isAdmin) { console.warn('[Admin] Not admin'); return; }
     document.getElementById('adminModal').classList.add('open');
+    switchAdminTab('announcements');
     renderAdminAnnouncementList();
   }
 
@@ -3548,6 +3953,7 @@
 
   // 投稿送信
   async function submitPost() {
+    if (!(await ensureIpNotBannedOrAlert())) return;
     const resolvedUser = await getResolvedAuthUser();
     const authMode = resolvedUser?.id ? 'login' : getPostAuthMode();
     const nickname = (document.getElementById('postNickname')?.value || '').trim();
@@ -3735,7 +4141,8 @@
             const time = a.created_at ? formatTime(a.created_at) : (a.time || '');
             const likedCls = likedAnswerSet.has(String(a.id)) ? ' liked' : '';
             const likeCount = getAnswerLikeCount(a);
-            return `<div class="answer-item"><div class="answer-meta"><span class="answer-author">@${escHtml(a.author)}</span>${a.best?'<span class="best-badge">✅ ベストアンサー</span>':''}<span class="answer-time">${time}</span><span class="answer-like${likedCls}" onclick="likeAnswer(${JSON.stringify(a.id)}, this)">❤️ <span class="like-count">${likeCount}</span></span></div><div class="answer-text">${escHtml(a.text)}</div></div>`;
+            const adminBadge = String(a.author || '') === '管理者より' ? '<span class="best-badge" style="background:#fff3e0;color:#8a5d00;">🛡️ 管理者より</span>' : '';
+            return `<div class="answer-item"><div class="answer-meta"><span class="answer-author">@${escHtml(a.author)}</span>${adminBadge}${a.best?'<span class="best-badge">✅ ベストアンサー</span>':''}<span class="answer-time">${time}</span><span class="answer-like${likedCls}" onclick="likeAnswer(${JSON.stringify(a.id)}, this)">❤️ <span class="like-count">${likeCount}</span></span></div><div class="answer-text">${escHtml(a.text)}</div></div>`;
           }).join('');
 
       document.getElementById('qa-detail-content').innerHTML = `
@@ -3886,6 +4293,7 @@
   }
 
   async function submitComment(postId) {
+    if (!(await ensureIpNotBannedOrAlert())) return;
     const auth = await resolveCommentAuthMode(postId);
     if (!auth) return;
     const input = document.getElementById(`commentInput-${postId}`);
@@ -3926,6 +4334,7 @@
   }
 
   async function submitAnswer(postId) {
+    if (!(await ensureIpNotBannedOrAlert())) return;
     const resolvedUser = await getResolvedAuthUser();
     let authMode = resolvedUser?.id ? 'login' : getQaAnswerAuthMode(postId);
     if (!resolvedUser?.id && authMode === 'login') {
