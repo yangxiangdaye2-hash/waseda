@@ -3806,6 +3806,26 @@
     }
   }
 
+  function applyJukenDeepLinkFromUrl() {
+    let params;
+    try {
+      params = new URLSearchParams(window.location.search || '');
+    } catch {
+      return;
+    }
+    const raw = (params.get('jukenTab') || '').trim();
+    if (!raw) return;
+    const target = raw === 'qa-life' ? 'qa-life' : 'qa-study';
+
+    const jukenTabEl = document.querySelector('.tab[data-label="juken"]');
+    if (!jukenTabEl) return;
+    switchTab('juken', jukenTabEl);
+
+    const cards = Array.from(document.querySelectorAll('.juken-menu-card'));
+    const targetCard = cards.find(btn => (btn.getAttribute('onclick') || '').includes(`'${target}'`)) || cards[0] || null;
+    switchJukenSubTab(target, targetCard);
+  }
+
   // 受験生質問一覧（勉強 / 大学生活）
   async function loadJukenQa(kind = 'study') {
     const isLife = kind === 'life';
@@ -3941,6 +3961,7 @@
   checkAdmin();
   setupTrendTabs();
   loadPosts();
+  applyJukenDeepLinkFromUrl();
   refreshAnnouncements();
   updateScrollBtn();
   </script>

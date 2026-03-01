@@ -365,6 +365,13 @@
     <h2 class="sec-title">勉強・受験アドバイス Q&A</h2>
     <div class="sec-div"></div>
     <p class="sec-sub">在学生に受験のことを直接質問できます。早稲田生が経験をもとに回答します。</p>
+    <div class="auth-hint" style="margin-top:-.15rem;margin-bottom:.85rem;">
+      在学生からの回答は在学生ページの「受験生サポート」タブから投稿してください。
+      <div style="margin-top:.45rem;display:flex;gap:.5rem;flex-wrap:wrap;">
+        <a href="https://waseda-ten.vercel.app/?jukenTab=qa-study" class="post-auth-login-btn" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">在学生ページで勉強Q&Aに回答する</a>
+        <a href="https://waseda-ten.vercel.app/?jukenTab=qa-life" class="post-auth-login-btn" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">在学生ページで大学生活Q&Aに回答する</a>
+      </div>
+    </div>
     <div class="qa-layout">
       <!-- 投稿フォーム -->
       <div class="post-form-box qa-post-box" id="qaFormBoxStudy">
@@ -431,6 +438,13 @@
     <h2 class="sec-title">大学生活 Q&A</h2>
     <div class="sec-div"></div>
     <p class="sec-sub">キャンパスの雰囲気、時間割、通学、一人暮らし、サークル参加など大学生活について質問できます。</p>
+    <div class="auth-hint" style="margin-top:-.15rem;margin-bottom:.85rem;">
+      在学生からの回答は在学生ページの「受験生サポート」タブから投稿してください。
+      <div style="margin-top:.45rem;display:flex;gap:.5rem;flex-wrap:wrap;">
+        <a href="https://waseda-ten.vercel.app/?jukenTab=qa-study" class="post-auth-login-btn" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">在学生ページで勉強Q&Aに回答する</a>
+        <a href="https://waseda-ten.vercel.app/?jukenTab=qa-life" class="post-auth-login-btn" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">在学生ページで大学生活Q&Aに回答する</a>
+      </div>
+    </div>
     <div class="qa-layout">
       <div class="post-form-box qa-post-box" id="qaFormBoxLife">
         <div class="post-form-title">
@@ -2107,61 +2121,38 @@ async function openQaDetail(id) {
         <div style="font-size:.72rem;color:#aaa;margin-top:.4rem">@${escHtml(post.author)} · ${formatTime(post.created_at)}${post.faculty?' · '+FACULTIES[post.faculty]:''}</div>
       </div>
       <div class="answers-section"><h4>💬 回答 ${ans.length}件</h4>${ansHtml}</div>
-      <div class="answer-input-area">
-        <h4>✏️ 回答する</h4>
-        <div class="form-label" id="qaAnswerAuthLabel-${id}" style="margin-bottom:.3rem;">投稿方法</div>
-        <div class="post-auth-options" id="qaAnswerAuthOptions-${id}" style="margin-bottom:.55rem;">
-          <label class="post-auth-option"><input type="radio" name="qaAnswerAuthMode-${id}" id="qaAnswerAuthLogin-${id}" value="login" onchange="updateQaAnswerAuthModeUI(${JSON.stringify(id)})"> ログインして投稿（確認・マイページ対応）</label>
-          <label class="post-auth-option"><input type="radio" name="qaAnswerAuthMode-${id}" id="qaAnswerAuthGuest-${id}" value="guest" checked onchange="updateQaAnswerAuthModeUI(${JSON.stringify(id)})"> ログインせず投稿（管理対象外）</label>
-        </div>
-        <div class="post-auth-login-actions" id="qaAnswerAuthLoginActions-${id}" style="display:none;margin:-.15rem 0 .6rem;">
-          <button type="button" class="post-auth-login-btn" onclick="handleQaAnswerLoginClick(${JSON.stringify(id)})">この画面のままGoogleでログイン</button>
-        </div>
-        <textarea class="form-textarea" id="ans-input-${id}" placeholder="あなたの経験や知識をシェアしてください..."></textarea>
-        <button class="btn-submit" style="margin-top:.6rem" onclick="submitJukenAnswer(${JSON.stringify(id)})">回答を投稿</button>
-      </div>`;
+      ${renderQaAnswerGuide(post.category)}`;
     document.getElementById('qaModal').classList.add('open');
-    updateQaAnswerAuthModeUI(id);
   } catch(e) { console.error(e); }
 }
 
+function getStudentQaSupportLink(category) {
+  const target = category === 'juken_life_qa' ? 'qa-life' : 'qa-study';
+  return `https://waseda-ten.vercel.app/?jukenTab=${encodeURIComponent(target)}`;
+}
+
+function renderQaAnswerGuide(category) {
+  const studyLink = getStudentQaSupportLink('juken_qa');
+  const lifeLink = getStudentQaSupportLink('juken_life_qa');
+  const activeLabel = category === 'juken_life_qa' ? '大学生活Q&A' : '勉強Q&A';
+  return `
+      <div class="answer-input-area">
+        <h4>✏️ 回答について</h4>
+        <div style="font-size:.86rem;color:var(--gray);line-height:1.7;">
+          在学生からの回答は、在学生ページの「受験生サポート」タブから投稿してください。<br>
+          この質問は「${activeLabel}」カテゴリです。
+        </div>
+        <div style="display:flex;gap:.55rem;flex-wrap:wrap;margin-top:.75rem;">
+          <a href="${studyLink}" class="post-auth-login-btn" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">在学生ページで勉強Q&Aに回答する</a>
+          <a href="${lifeLink}" class="post-auth-login-btn" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">在学生ページで大学生活Q&Aに回答する</a>
+        </div>
+      </div>`;
+}
+
 async function submitJukenAnswer(postId) {
-  const resolvedUser = await getResolvedAuthUser();
-  let auth = resolvedUser?.id ? { mode: 'login', user: resolvedUser } : null;
-  if (!auth) {
-    const selectedMode = getQaAnswerAuthMode(postId);
-    if (selectedMode === 'login') {
-      alert('「この画面のままGoogleでログイン」ボタンでログイン後、もう一度投稿してください。');
-      return;
-    }
-    auth = { mode: 'guest', user: null };
-  }
-  const input = document.getElementById(`ans-input-${postId}`);
-  const text = input ? input.value.trim() : '';
-  if (!text) { alert('回答を入力してください'); return; }
-  const nick = getPreferredNickname() || '匿名';
-  localStorage.setItem('waseda_nickname', nick);
-  currentUser = nick;
-  updateNicknameBadge();
-  const btn = event.target; btn.disabled=true; btn.textContent='投稿中...';
-  try {
-    let payload = auth.mode === 'login'
-      ? { post_id:postId, author:nick, text, device_id:getDeviceId(), owner_key:`auth:${auth.user.id}` }
-      : { post_id:postId, author:nick, text, device_id:getDeviceId(), owner_key:null };
-    let insertRes = await db.from('answers').insert([payload]);
-    if (insertRes.error && isOwnerKeyColumnError(insertRes.error)) {
-      delete payload.owner_key;
-      insertRes = await db.from('answers').insert([payload]);
-    }
-    const { error } = insertRes;
-    if (error) throw error;
-    const cur = qaAllPosts.find(p=>p.id===postId) || qaLifeAllPosts.find(p=>p.id===postId);
-    if (cur) await db.from('posts').update({comments:(cur.comments||0)+1}).eq('id',postId);
-    if (cur && cur.category === 'juken_life_qa') await loadQaList('life');
-    else await loadQaList('study');
-    await openQaDetail(postId);
-  } catch(e) { console.error(e); alert('投稿に失敗しました'); }
-  finally { btn.disabled=false; btn.textContent='回答を投稿'; }
+  const studyLink = getStudentQaSupportLink('juken_qa');
+  const lifeLink = getStudentQaSupportLink('juken_life_qa');
+  alert('在学生からの回答は在学生ページの受験生サポートタブで投稿してください。\n\n勉強Q&A: ' + studyLink + '\n大学生活Q&A: ' + lifeLink);
 }
 
 function closeQaModal() { document.getElementById('qaModal').classList.remove('open'); }
