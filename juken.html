@@ -691,6 +691,9 @@ const TRUSTED_AUTH_HOSTS = ['waseda-ten.vercel.app'];
 const JUKEN_AUTH_RETURN_KEY = 'waseda_juken_auth_return';
 const JUKEN_AUTH_DRAFT_KEY = 'waseda_juken_auth_draft';
 const JUKEN_AUTH_DRAFT_TS_KEY = 'waseda_juken_auth_draft_ts';
+const BOARD_COMMENT_AUTH_RETURN_KEY = 'waseda_board_comment_auth_return';
+const BOARD_COMMENT_AUTH_DRAFT_KEY = 'waseda_board_comment_auth_draft';
+const BOARD_COMMENT_AUTH_DRAFT_TS_KEY = 'waseda_board_comment_auth_draft_ts';
 let db;
 try {
   if (typeof createClient === 'function') db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -923,6 +926,97 @@ function restoreJukenDraftAfterAuthIfNeeded() {
   }
 
   updateAuthModeSelectors();
+}
+
+function saveBoardCommentDraftBeforeAuth(postId) {
+  const input = document.getElementById(`board-comment-input-${postId}`);
+  const modeNode = document.querySelector(`input[name="boardCommentAuthMode-${postId}"]:checked`);
+  const draft = {
+    postId,
+    authMode: modeNode?.value || 'guest',
+    text: input?.value || ''
+  };
+  const draftStr = JSON.stringify(draft);
+  const nowTs = String(Date.now());
+  sessionStorage.setItem(BOARD_COMMENT_AUTH_DRAFT_KEY, draftStr);
+  sessionStorage.setItem(BOARD_COMMENT_AUTH_RETURN_KEY, '1');
+  sessionStorage.setItem(BOARD_COMMENT_AUTH_DRAFT_TS_KEY, nowTs);
+  localStorage.setItem(BOARD_COMMENT_AUTH_DRAFT_KEY, draftStr);
+  localStorage.setItem(BOARD_COMMENT_AUTH_RETURN_KEY, '1');
+  localStorage.setItem(BOARD_COMMENT_AUTH_DRAFT_TS_KEY, nowTs);
+}
+
+async function restoreBoardCommentDraftAfterAuthIfNeeded() {
+  const shouldReturn = sessionStorage.getItem(BOARD_COMMENT_AUTH_RETURN_KEY) === '1' || localStorage.getItem(BOARD_COMMENT_AUTH_RETURN_KEY) === '1';
+  if (!shouldReturn) return;
+  if (!googleAuthUser?.id) return;
+
+  const tsRaw = sessionStorage.getItem(BOARD_COMMENT_AUTH_DRAFT_TS_KEY) || localStorage.getItem(BOARD_COMMENT_AUTH_DRAFT_TS_KEY) || '0';
+  const ageMs = Date.now() - Number(tsRaw || 0);
+  if (Number.isFinite(ageMs) && ageMs > 10 * 60 * 1000) {
+    sessionStorage.removeItem(BOARD_COMMENT_AUTH_RETURN_KEY);
+    sessionStorage.removeItem(BOARD_COMMENT_AUTH_DRAFT_KEY);
+    sessionStorage.removeItem(BOARD_COMMENT_AUTH_DRAFT_TS_KEY);
+    localStorage.removeItem(BOARD_COMMENT_AUTH_RETURN_KEY);
+    localStorage.removeItem(BOARD_COMMENT_AUTH_DRAFT_KEY);
+    localStorage.removeItem(BOARD_COMMENT_AUTH_DRAFT_TS_KEY);
+    return;
+  }
+
+  let draft = null;
+  try {
+    const draftStr = sessionStorage.getItem(BOARD_COMMENT_AUTH_DRAFT_KEY) || localStorage.getItem(BOARD_COMMENT_AUTH_DRAFT_KEY) || '{}';
+    draft = JSON.parse(draftStr);
+  } catch {
+    draft = null;
+  }
+
+  sessionStorage.removeItem(BOARD_COMMENT_AUTH_RETURN_KEY);
+  sessionStorage.removeItem(BOARD_COMMENT_AUTH_DRAFT_KEY);
+  sessionStorage.removeItem(BOARD_COMMENT_AUTH_DRAFT_TS_KEY);
+  localStorage.removeItem(BOARD_COMMENT_AUTH_RETURN_KEY);
+  localStorage.removeItem(BOARD_COMMENT_AUTH_DRAFT_KEY);
+  localStorage.removeItem(BOARD_COMMENT_AUTH_DRAFT_TS_KEY);
+
+  if (!draft?.postId) return;
+  await openBoardDetail(draft.postId);
+  const loginRadio = document.getElementById(`boardCommentAuthLogin-${draft.postId}`);
+  const guestRadio = document.getElementById(`boardCommentAuthGuest-${draft.postId}`);
+  if (loginRadio) loginRadio.checked = true;
+  if (guestRadio) guestRadio.checked = false;
+  const input = document.getElementById(`board-comment-input-${draft.postId}`);
+  if (input && typeof draft.text === 'string') input.value = draft.text;
+  updateBoardCommentAuthModeUI(draft.postId);
+}
+
+function getBoardCommentAuthMode(postId) {
+  const checked = document.querySelector(`input[name="boardCommentAuthMode-${postId}"]:checked`);
+  return checked?.value || 'guest';
+}
+
+function updateBoardCommentAuthModeUI(postId) {
+  const optionsWrap = document.getElementById(`boardCommentAuthOptions-${postId}`);
+  const loginWrap = document.getElementById(`boardCommentAuthLoginActions-${postId}`);
+  const loginRadio = document.getElementById(`boardCommentAuthLogin-${postId}`);
+  const guestRadio = document.getElementById(`boardCommentAuthGuest-${postId}`);
+  if (!optionsWrap || !loginWrap || !loginRadio || !guestRadio) return;
+
+  if (googleAuthUser?.id) {
+    loginRadio.checked = true;
+    guestRadio.checked = false;
+    optionsWrap.style.display = 'none';
+    loginWrap.style.display = 'none';
+    return;
+  }
+
+  if (!loginRadio.checked && !guestRadio.checked) guestRadio.checked = true;
+  optionsWrap.style.display = 'flex';
+  loginWrap.style.display = loginRadio.checked ? 'block' : 'none';
+}
+
+async function handleBoardCommentLoginClick(postId) {
+  saveBoardCommentDraftBeforeAuth(postId);
+  await handleGoogleAuthClick('comment');
 }
 function syncNicknameFromGoogle() {
   if (!googleAuthUser) return;
@@ -1331,6 +1425,7 @@ async function initGoogleAuth() {
   syncNicknameFromGoogle();
   renderGoogleAuthButton();
   restoreJukenDraftAfterAuthIfNeeded();
+  restoreBoardCommentDraftAfterAuthIfNeeded();
   refreshMyPageNotificationCount();
   startMyPageNotificationPolling();
 
@@ -1340,6 +1435,7 @@ async function initGoogleAuth() {
     syncNicknameFromGoogle();
     renderGoogleAuthButton();
     restoreJukenDraftAfterAuthIfNeeded();
+    restoreBoardCommentDraftAfterAuthIfNeeded();
     refreshMyPageNotificationCount();
   });
 }
@@ -2051,19 +2147,39 @@ async function openBoardDetail(postId) {
       </div>
       <div class="answer-input-area" style="margin-top:1rem;">
         <h4>✏️ コメントする</h4>
+        <div class="post-auth-options" id="boardCommentAuthOptions-${postId}" style="margin-bottom:.55rem;">
+          <label class="post-auth-option"><input type="radio" name="boardCommentAuthMode-${postId}" id="boardCommentAuthLogin-${postId}" value="login" onchange="updateBoardCommentAuthModeUI(${JSON.stringify(postId)})"> ログインして投稿（確認・マイページ対応）</label>
+          <label class="post-auth-option"><input type="radio" name="boardCommentAuthMode-${postId}" id="boardCommentAuthGuest-${postId}" value="guest" checked onchange="updateBoardCommentAuthModeUI(${JSON.stringify(postId)})"> ログインせず投稿（管理対象外）</label>
+        </div>
+        <div class="post-auth-login-actions" id="boardCommentAuthLoginActions-${postId}" style="display:none;margin:-.15rem 0 .6rem;">
+          <button type="button" class="post-auth-login-btn" onclick="handleBoardCommentLoginClick(${JSON.stringify(postId)})">この画面のままGoogleでログイン</button>
+        </div>
         <textarea class="form-textarea" id="board-comment-input-${postId}" placeholder="コメントを入力してください..."></textarea>
         <button class="btn-submit" style="margin-top:.6rem" onclick="submitBoardComment(${JSON.stringify(postId)}, this)">コメントを投稿</button>
       </div>`;
 
     const modal = document.getElementById('boardDetailModal');
     if (modal) modal.classList.add('open');
+    updateBoardCommentAuthModeUI(postId);
   } catch (e) {
     console.error(e);
   }
 }
 
+async function resolveBoardCommentAuthMode(postId) {
+  const resolvedUser = await getResolvedAuthUser();
+  if (resolvedUser?.id) return { mode: 'login', user: resolvedUser };
+
+  const selectedMode = getBoardCommentAuthMode(postId);
+  if (selectedMode === 'login') {
+    alert('「この画面のままGoogleでログイン」ボタンでログイン後、もう一度投稿してください。');
+    return null;
+  }
+  return { mode: 'guest', user: null };
+}
+
 async function submitBoardComment(postId, btn) {
-  const auth = await resolvePostAuthMode();
+  const auth = await resolveBoardCommentAuthMode(postId);
   if (!auth) return;
   const input = document.getElementById(`board-comment-input-${postId}`);
   const text = (input?.value || '').trim();

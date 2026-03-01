@@ -1258,6 +1258,9 @@
   const POST_AUTH_RETURN_KEY = 'waseda_post_auth_return';
   const POST_AUTH_DRAFT_KEY = 'waseda_post_auth_draft';
   const POST_AUTH_DRAFT_TS_KEY = 'waseda_post_auth_draft_ts';
+  const COMMENT_AUTH_RETURN_KEY = 'waseda_comment_auth_return';
+  const COMMENT_AUTH_DRAFT_KEY = 'waseda_comment_auth_draft';
+  const COMMENT_AUTH_DRAFT_TS_KEY = 'waseda_comment_auth_draft_ts';
   const MY_PAGE_NOTIFY_PREFIX = 'waseda_mypage_notify_state_';
   const MY_PAGE_NOTIFY_INTERVAL_MS = 60000;
   let myPageNotifyCount = 0;
@@ -1630,6 +1633,97 @@
     onPostAuthModeChange();
   }
 
+  function saveCommentDraftBeforeAuth(postId) {
+    const input = document.getElementById(`commentInput-${postId}`);
+    const modeNode = document.querySelector(`input[name="commentAuthMode-${postId}"]:checked`);
+    const draft = {
+      postId,
+      authMode: modeNode?.value || 'guest',
+      text: input?.value || ''
+    };
+    const nowTs = String(Date.now());
+    const draftStr = JSON.stringify(draft);
+    sessionStorage.setItem(COMMENT_AUTH_DRAFT_KEY, draftStr);
+    sessionStorage.setItem(COMMENT_AUTH_RETURN_KEY, '1');
+    sessionStorage.setItem(COMMENT_AUTH_DRAFT_TS_KEY, nowTs);
+    localStorage.setItem(COMMENT_AUTH_DRAFT_KEY, draftStr);
+    localStorage.setItem(COMMENT_AUTH_RETURN_KEY, '1');
+    localStorage.setItem(COMMENT_AUTH_DRAFT_TS_KEY, nowTs);
+  }
+
+  async function restoreCommentDraftAfterAuthIfNeeded() {
+    const sessionReturn = sessionStorage.getItem(COMMENT_AUTH_RETURN_KEY) === '1';
+    const localReturn = localStorage.getItem(COMMENT_AUTH_RETURN_KEY) === '1';
+    if (!(sessionReturn || localReturn)) return;
+    if (!googleAuthUser?.id) return;
+
+    const tsRaw = sessionStorage.getItem(COMMENT_AUTH_DRAFT_TS_KEY) || localStorage.getItem(COMMENT_AUTH_DRAFT_TS_KEY) || '0';
+    const ageMs = Date.now() - Number(tsRaw || 0);
+    if (Number.isFinite(ageMs) && ageMs > 10 * 60 * 1000) {
+      sessionStorage.removeItem(COMMENT_AUTH_RETURN_KEY);
+      sessionStorage.removeItem(COMMENT_AUTH_DRAFT_KEY);
+      sessionStorage.removeItem(COMMENT_AUTH_DRAFT_TS_KEY);
+      localStorage.removeItem(COMMENT_AUTH_RETURN_KEY);
+      localStorage.removeItem(COMMENT_AUTH_DRAFT_KEY);
+      localStorage.removeItem(COMMENT_AUTH_DRAFT_TS_KEY);
+      return;
+    }
+
+    sessionStorage.removeItem(COMMENT_AUTH_RETURN_KEY);
+    localStorage.removeItem(COMMENT_AUTH_RETURN_KEY);
+    let draft = null;
+    try {
+      const draftStr = sessionStorage.getItem(COMMENT_AUTH_DRAFT_KEY) || localStorage.getItem(COMMENT_AUTH_DRAFT_KEY) || '{}';
+      draft = JSON.parse(draftStr);
+    } catch {
+      draft = null;
+    }
+    sessionStorage.removeItem(COMMENT_AUTH_DRAFT_KEY);
+    sessionStorage.removeItem(COMMENT_AUTH_DRAFT_TS_KEY);
+    localStorage.removeItem(COMMENT_AUTH_DRAFT_KEY);
+    localStorage.removeItem(COMMENT_AUTH_DRAFT_TS_KEY);
+
+    if (!draft?.postId) return;
+    await openPostDetail(draft.postId);
+    const loginRadio = document.getElementById(`commentAuthLogin-${draft.postId}`);
+    const guestRadio = document.getElementById(`commentAuthGuest-${draft.postId}`);
+    if (loginRadio) loginRadio.checked = true;
+    if (guestRadio) guestRadio.checked = false;
+    const input = document.getElementById(`commentInput-${draft.postId}`);
+    if (input && typeof draft.text === 'string') input.value = draft.text;
+    updateCommentAuthModeUI(draft.postId);
+  }
+
+  function getCommentAuthMode(postId) {
+    const checked = document.querySelector(`input[name="commentAuthMode-${postId}"]:checked`);
+    return checked?.value || 'guest';
+  }
+
+  function updateCommentAuthModeUI(postId) {
+    const optionsWrap = document.getElementById(`commentAuthOptions-${postId}`);
+    const loginWrap = document.getElementById(`commentAuthLoginActions-${postId}`);
+    const loginRadio = document.getElementById(`commentAuthLogin-${postId}`);
+    const guestRadio = document.getElementById(`commentAuthGuest-${postId}`);
+    if (!optionsWrap || !loginWrap || !loginRadio || !guestRadio) return;
+
+    if (googleAuthUser?.id) {
+      loginRadio.checked = true;
+      guestRadio.checked = false;
+      optionsWrap.style.display = 'none';
+      loginWrap.style.display = 'none';
+      return;
+    }
+
+    if (!loginRadio.checked && !guestRadio.checked) guestRadio.checked = true;
+    optionsWrap.style.display = 'flex';
+    loginWrap.style.display = loginRadio.checked ? 'block' : 'none';
+  }
+
+  async function handleCommentLoginClick(postId) {
+    saveCommentDraftBeforeAuth(postId);
+    await handleGoogleAuthClick('comment');
+  }
+
   async function handleGoogleAuthClick(source = 'header') {
     if (!db?.auth) { alert('ログイン機能を初期化できませんでした'); return; }
     if (googleAuthUser) {
@@ -1684,6 +1778,7 @@
     syncNicknameFromGoogle();
     renderGoogleAuthButton();
     restorePostDraftAfterAuthIfNeeded();
+    restoreCommentDraftAfterAuthIfNeeded();
     refreshMyPageNotificationCount();
     startMyPageNotificationPolling();
 
@@ -1693,6 +1788,7 @@
       syncNicknameFromGoogle();
       renderGoogleAuthButton();
       restorePostDraftAfterAuthIfNeeded();
+      restoreCommentDraftAfterAuthIfNeeded();
       refreshMyPageNotificationCount();
     });
   }
@@ -3411,6 +3507,13 @@
             ${cmtHtml}
             <div class="comment-input-area">
               <h5>コメントを追加</h5>
+              <div class="post-auth-options" id="commentAuthOptions-${postId}" style="margin:0 0 0.55rem;">
+                <label class="post-auth-option"><input type="radio" name="commentAuthMode-${postId}" id="commentAuthLogin-${postId}" value="login" onchange="updateCommentAuthModeUI(${JSON.stringify(postId)})"> ログインして投稿（確認・マイページ対応）</label>
+                <label class="post-auth-option"><input type="radio" name="commentAuthMode-${postId}" id="commentAuthGuest-${postId}" value="guest" checked onchange="updateCommentAuthModeUI(${JSON.stringify(postId)})"> ログインせず投稿（管理対象外）</label>
+              </div>
+              <div class="post-auth-login-actions" id="commentAuthLoginActions-${postId}" style="display:none;margin:0 0 0.55rem;">
+                <button type="button" class="btn-login-inline" onclick="handleCommentLoginClick(${JSON.stringify(postId)})">この画面のままGoogleでログイン</button>
+              </div>
               <textarea class="form-textarea" id="commentInput-${postId}" placeholder="あなたの意見や感想をシェアしてください..." style="margin-bottom:0.7rem"></textarea>
               <button class="btn-submit" style="margin-top:0" onclick="submitComment(${JSON.stringify(postId)})">コメントを投稿</button>
             </div>
@@ -3418,6 +3521,7 @@
         </div>
       `;
       document.getElementById('postDetailModal').classList.add('open');
+      updateCommentAuthModeUI(postId);
     } catch (e) { console.error(e); }
   }
 
@@ -3432,21 +3536,20 @@
     } catch (e) { console.error(e); return []; }
   }
 
-  async function resolveCommentAuthMode() {
+  async function resolveCommentAuthMode(postId) {
     const resolvedUser = await getResolvedAuthUser();
     if (resolvedUser?.id) return { mode: 'login', user: resolvedUser };
 
-    const useLogin = confirm('コメント投稿方法を選択してください。\nOK: ログインしてコメント（確認・マイページ表示対応）\nキャンセル: ログインせずコメント（ニックネーム投稿のみ・追跡/マイページ保存なし）');
-    if (useLogin) {
-      alert('Googleログイン後に、もう一度コメント投稿してください。');
-      await handleGoogleAuthClick('header');
+    const selectedMode = getCommentAuthMode(postId);
+    if (selectedMode === 'login') {
+      alert('「この画面のままGoogleでログイン」ボタンでログイン後、もう一度投稿してください。');
       return null;
     }
     return { mode: 'guest', user: null };
   }
 
   async function submitComment(postId) {
-    const auth = await resolveCommentAuthMode();
+    const auth = await resolveCommentAuthMode(postId);
     if (!auth) return;
     const input = document.getElementById(`commentInput-${postId}`);
     const text = input?.value?.trim();
