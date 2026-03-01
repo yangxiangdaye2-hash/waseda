@@ -161,8 +161,8 @@
   .board-layout { display: grid; grid-template-columns: 300px 1fr; gap: 1.4rem; align-items: start; }
   .post-form-box { background: #fff; border: 1.5px solid var(--border); border-radius: 14px; padding: 1.3rem; position: sticky; top: 112px; }
   .post-form-title { font-size: .95rem; font-weight: 700; color: var(--dark); display: flex; align-items: center; justify-content: space-between; }
-  .post-open-btn { background: var(--gold); color: var(--crimson-dark); border: none; padding: 8px 18px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; transition: all 0.2s; white-space: nowrap; }
-  .post-open-btn:hover { background: var(--gold-light); transform: translateY(-1px); }
+  .btn-post { background: var(--gold); color: var(--crimson-dark); border: none; padding: 8px 18px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; transition: all 0.2s; white-space: nowrap; }
+  .btn-post:hover { background: var(--gold-light); transform: translateY(-1px); }
   .post-form-toggle-icon { font-size: .75rem; color: var(--gray-light); transition: transform .2s; }
   .post-form-box.open .post-form-toggle-icon { transform: rotate(180deg); }
   .post-form-body { margin-top: 1rem; }
@@ -259,6 +259,7 @@
     .tabs-inner { padding: .45rem .4rem; gap: .35rem; }
     .tab { font-size: .75rem; padding: 5px 10px; }
     .qa-layout { grid-template-columns: 1fr; }
+    .btn-post { padding: 7px 14px; font-size: 0.8rem; }
   }
   @media (max-width: 860px) {
     .board-layout { grid-template-columns: 1fr; }
@@ -282,6 +283,7 @@
     .sec-title { font-size: 1.2rem; }
     .faculty-detail-grid { grid-template-columns: 1fr; }
     .after-grid { grid-template-columns: 1fr 1fr; }
+    .btn-post { padding: 6px 12px; font-size: 0.78rem; }
   }
 </style>
 </head>
@@ -352,7 +354,7 @@
       <!-- 投稿フォーム -->
       <div class="post-form-box qa-post-box" id="qaFormBoxStudy">
         <div class="post-form-title" onclick="toggleQaForm('study')">
-          <span class="post-open-btn">📝 投稿する</span>
+          <button type="button" class="btn-post">＋ 投稿する</button>
           <span class="post-form-toggle-icon">▼</span>
         </div>
         <div class="post-form-body">
@@ -413,7 +415,7 @@
     <div class="qa-layout">
       <div class="post-form-box qa-post-box" id="qaFormBoxLife">
         <div class="post-form-title" onclick="toggleQaForm('life')">
-          <span class="post-open-btn">📝 投稿する</span>
+          <button type="button" class="btn-post">＋ 投稿する</button>
           <span class="post-form-toggle-icon">▼</span>
         </div>
         <div class="post-form-body">
@@ -481,7 +483,7 @@
     <div class="board-layout">
       <div class="post-form-box" id="boardFormBox">
         <div class="post-form-title" onclick="toggleBoardForm()">
-          <span class="post-open-btn">📝 投稿する</span>
+          <button type="button" class="btn-post">＋ 投稿する</button>
           <span class="post-form-toggle-icon">▼</span>
         </div>
         <div class="post-form-body">
