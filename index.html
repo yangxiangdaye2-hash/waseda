@@ -222,6 +222,7 @@
     .qa-status { font-size: 0.75rem; font-weight: 700; padding: 6px 12px; border-radius: 20px; letter-spacing: 0.05em; }
     .qa-status.answered { background: #e8f5e9; color: #2e7d32; }
     .qa-status.open { background: #fff3e0; color: #e65100; }
+    .qa-topic-tag { font-size: 0.72rem; padding: 5px 12px; border-radius: 18px; background: #eef4ff; color: #244b8a; font-weight: 700; }
     .qa-urgent-badge { font-size: 0.72rem; background: #fff3e0; color: #e65100; padding: 6px 12px; border-radius: 20px; font-weight: 700; letter-spacing: 0.02em; }
 
     .loading { text-align: center; padding: 4rem 2rem; color: var(--gray); font-size: 0.95rem; }
@@ -608,10 +609,10 @@
   <div class="tabs">
     <div class="tabs-inner" id="tabsInner">
       <div class="tab active" onclick="switchTab('all',this)" data-label="all">📋 すべて</div>
+      <div class="tab" onclick="switchTab('qa',this)" data-label="qa">❓ Q&amp;A</div>
       <div class="tab" onclick="switchTab('lecture',this)" data-label="lecture">📚 授業</div>
       <div class="tab" onclick="switchTab('circle',this)" data-label="circle">🎯 サークル</div>
       <div class="tab" onclick="switchTab('campus',this)" data-label="campus">🏫 キャンパス</div>
-      <div class="tab" onclick="switchTab('qa',this)" data-label="qa">❓ Q&amp;A</div>
       <div class="tab" onclick="switchTab('juken',this)" data-label="juken">🎓 受験生サポート</div>
     </div>
     <button class="tabs-scroll-btn" id="tabsScrollBtn" onclick="scrollTabsRight()" aria-label="もっと見る">›</button>
@@ -1050,6 +1051,16 @@
             <input class="form-input" type="text" id="qaTitle" placeholder="例：どの学部の授業を取るのがおすすめ？">
           </div>
           <div class="form-group">
+            <label class="form-label">質問カテゴリ <span style="color:#e74c3c;">*</span></label>
+            <select class="form-select" id="qaTopic">
+              <option value="">カテゴリを選択</option>
+              <option value="lecture">授業</option>
+              <option value="campus">大学生活</option>
+              <option value="circle">サークル</option>
+              <option value="other">その他</option>
+            </select>
+          </div>
+          <div class="form-group">
             <label class="form-label">学部 <span style="color:#e74c3c;">*</span></label>
             <select class="form-select" id="qaFaculty">
               <option value="">学部を選択</option>
@@ -1256,6 +1267,12 @@
     bun:'文学部', bunkagaku:'文化構想学部', kiso:'基幹理工学部', sozo:'創造理工学部',
     sentan:'先進理工学部', ningen:'人間科学部', sports:'スポーツ科学部',
     kokusai:'国際教養学部', shakou:'社会科学部'
+  };
+  const QA_TOPICS = {
+    lecture: '授業',
+    campus: '大学生活',
+    circle: 'サークル',
+    other: 'その他'
   };
 
   let currentTab = 'all';
@@ -1575,7 +1592,7 @@
       'lectureName', 'lectureBody', 'lectureFaculty', 'lectureTeacher', 'lectureSemester', 'lectureDay', 'lecturePeriod', 'lectureExamType', 'lectureAttendance', 'lectureCredits',
       'circleName', 'circleType', 'circleBody',
       'campusTitle', 'campusLocation', 'campusDateTime', 'campusFaculty', 'campusBody',
-      'qaTitle', 'qaFaculty', 'qaBody'
+      'qaTitle', 'qaTopic', 'qaFaculty', 'qaBody'
     ];
     fieldIds.forEach(id => {
       const el = document.getElementById(id);
@@ -2122,6 +2139,11 @@
     return labels[category] || category;
   }
 
+  function getQaTopicLabel(topic) {
+    const key = String(topic || '').trim();
+    return QA_TOPICS[key] || 'その他';
+  }
+
   function parseExtraFields(raw) {
     if (!raw) return {};
     try {
@@ -2491,11 +2513,15 @@
         const ansCount = answersCountMap[p.id] || 0;
         const sc = p.solved ? 'answered' : 'open';
         const sl = p.solved ? '✅ 解決済み' : '🔓 回答募集中';
+        const ef = parseExtraFields(p.extra_fields);
+        const qaTopicTag = ef.qa_topic
+          ? `<span class="qa-topic-tag">${escHtml(getQaTopicLabel(ef.qa_topic))}</span>`
+          : '';
         const urgentBadge = mainQaSortMode === 'unanswered' && isQaOldUnanswered(p, ansCount)
           ? '<span class="qa-urgent-badge">📣 72時間以上・未回答</span>'
           : '';
         return `<div class="qa-card ${pinnedClass}" id="post-${p.id}" onclick='openQaDetail(${JSON.stringify(p.id)})'>
-          <div class="post-meta"><span class="category-tag cat-qa">❓ Q&amp;A</span><span class="qa-status ${sc}">${sl}</span>${urgentBadge}${fTag}<span class="post-time">${timeStr}</span></div>
+          <div class="post-meta"><span class="category-tag cat-qa">❓ Q&amp;A</span><span class="qa-status ${sc}">${sl}</span>${qaTopicTag}${urgentBadge}${fTag}<span class="post-time">${timeStr}</span></div>
           <div class="post-title">${escHtml(p.title)}</div>
           <div class="post-body">${escHtml(p.body)}</div>
           <div class="post-footer">
@@ -3406,6 +3432,7 @@
     document.getElementById('campusFaculty').value = '';
     document.getElementById('campusBody').value = '';
     document.getElementById('qaTitle').value = '';
+    document.getElementById('qaTopic').value = '';
     document.getElementById('qaFaculty').value = '';
     document.getElementById('qaBody').value = '';
     onCategoryChange('lecture');
@@ -3579,18 +3606,21 @@
     } else if (category === 'qa') {
       // Q&Aの場合
       const qaTitle = document.getElementById('qaTitle').value.trim();
+      const qaTopic = document.getElementById('qaTopic').value;
       const qaFaculty = document.getElementById('qaFaculty').value;
       const qaBody = document.getElementById('qaBody').value.trim();
       
-      if (!qaTitle || !qaBody || !qaFaculty) {
-        alert('質問タイトル、学部、詳細は必須です');
+      if (!qaTitle || !qaBody || !qaFaculty || !qaTopic) {
+        alert('質問タイトル、質問カテゴリ、学部、詳細は必須です');
         return;
       }
       
       title = qaTitle;
       body = qaBody;
       faculty = qaFaculty;
-      extraData = {};
+      extraData = {
+        extra_fields: JSON.stringify({ qa_topic: qaTopic })
+      };
     }
 
     const btn = document.getElementById('submitBtn');
@@ -3645,6 +3675,8 @@
       if (!db) throw new Error('Supabase client not initialized');
       const { data: post, error } = await db.from('posts').select('*').eq('id', id).single();
       if (error || !post) return;
+      const qaExtra = parseExtraFields(post.extra_fields);
+      const qaTopicText = qaExtra?.qa_topic ? getQaTopicLabel(qaExtra.qa_topic) : null;
 
       const answers = await loadAnswers(id);
       const deleteQaIcon = canManagePost(post) ? `<span class="delete-btn" style="cursor:pointer;margin-left:10px;" onclick="deletePost(${JSON.stringify(post.id)})">🗑️</span>` : '';
@@ -3664,7 +3696,7 @@
             <div class="q-label">❓ 質問</div>
             <div class="q-text">${escHtml(post.title)}</div>
             <div style="font-size:0.85rem;color:var(--gray);margin-top:0.6rem;line-height:1.7">${escHtml(post.body)}</div>
-            <div style="font-size:0.75rem;color:#aaa;margin-top:0.5rem">@${escHtml(post.author)} · ${formatTime(post.created_at)}${post.faculty?' · '+FACULTIES[post.faculty]:''}${deleteQaIcon}</div>
+            <div style="font-size:0.75rem;color:#aaa;margin-top:0.5rem">@${escHtml(post.author)} · ${formatTime(post.created_at)}${post.faculty?' · '+FACULTIES[post.faculty]:''}${qaTopicText ? ' · ' + escHtml(qaTopicText) : ''}${deleteQaIcon}</div>
           </div>
           <div class="answers-section"><h4>💬 回答 ${answers.length}件</h4>${ansHtml}</div>
           <div class="answer-input-area">
