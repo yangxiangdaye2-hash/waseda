@@ -628,6 +628,7 @@ try {
 } catch(e) { console.error('Supabase init:', e); }
 let googleAuthUser = null;
 let currentUser = localStorage.getItem('waseda_nickname') || 'ゲスト';
+const LAST_AUTH_USER_KEY = 'waseda_last_auth_user_id';
 
 // ── 定数 ──
 const FACULTIES = {
@@ -668,6 +669,19 @@ function getDeviceId() {
 function getOwnerKey() {
   return googleAuthUser?.id ? `auth:${googleAuthUser.id}` : null;
 }
+function rememberLastAuthUserId(userOrId) {
+  const userId = typeof userOrId === 'string' ? userOrId : userOrId?.id;
+  if (!userId) return;
+  try { localStorage.setItem(LAST_AUTH_USER_KEY, userId); } catch {}
+}
+function getLastAuthUserId() {
+  try {
+    const userId = (localStorage.getItem(LAST_AUTH_USER_KEY) || '').trim();
+    return userId || null;
+  } catch {
+    return null;
+  }
+}
 function isOwnerKeyColumnError(error) {
   const msg = `${error?.message || ''} ${error?.details || ''}`;
   return /owner_key/i.test(msg) && /(column|schema|does not exist|unknown)/i.test(msg);
@@ -692,6 +706,7 @@ function getOwnedPostIds(userId) {
 }
 function rememberOwnedPostId(postId, userId) {
   if (!postId || !userId) return;
+  rememberLastAuthUserId(userId);
   const set = new Set(getOwnedPostIds(userId).map(String));
   set.add(String(postId));
   const arr = [...set];
@@ -710,6 +725,7 @@ function getOwnedNicknames(userId) {
 function rememberOwnedNickname(nickname, userId) {
   const nick = (nickname || '').trim();
   if (!nick || !userId) return;
+  rememberLastAuthUserId(userId);
   const set = new Set(getOwnedNicknames(userId).map(v => String(v).trim()).filter(Boolean));
   set.add(nick);
   const arr = [...set];
@@ -729,6 +745,7 @@ function getAccountNicknameCandidates(user) {
 }
 function removeOwnedPostId(postId, userId) {
   if (!postId || !userId) return;
+  rememberLastAuthUserId(userId);
   const set = new Set(getOwnedPostIds(userId).map(String));
   set.delete(String(postId));
   localStorage.setItem(getOwnedPostIdsKey(userId), JSON.stringify([...set]));
@@ -840,7 +857,10 @@ async function getResolvedAuthUser() {
         if (!userError && userData?.user?.id) user = userData.user;
       } catch {}
     }
-    if (user?.id) googleAuthUser = user;
+    if (user?.id) {
+      googleAuthUser = user;
+      rememberLastAuthUserId(user);
+    }
     return user;
   } catch {
     return null;
@@ -898,10 +918,14 @@ async function resolvePostAuthMode(formKey = null) {
 }
 function isMyContent(item, myIds) {
   if (!item) return false;
-  if (googleAuthUser?.id && item.owner_key && item.owner_key === getOwnerKey()) return true;
+  const userId = googleAuthUser?.id || getLastAuthUserId();
+  const owner = String(item.owner_key || '').trim();
+  if (userId && (owner === `auth:${userId}` || owner === userId)) return true;
   if (myIds && myIds.has(String(item.id))) return true;
   const nick = getPreferredNickname();
-  return !!(nick && item.author === nick);
+  if (nick && item.author === nick) return true;
+  if (!owner && item.device_id && item.device_id === getDeviceId()) return true;
+  return false;
 }
 function getGoogleDisplayName(user) {
   return user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'ログイン中ユーザー';
@@ -965,25 +989,54 @@ async function handleGoogleAuthClick(source = 'header') {
   }
   if (source === 'post-form') saveJukenDraftBeforeAuth();
   const redirectTo = getAuthRedirectUrl();
-  const { error } = await db.auth.signInWithOAuth({
+  const { data, error } = await db.auth.signInWithOAuth({
     provider: 'google',
     options: { redirectTo }
   });
+  try {
+    localStorage.setItem('waseda_last_oauth_result', JSON.stringify({
+      at: new Date().toISOString(),
+      href: window.location.href,
+      redirectTo,
+      data: data || null,
+      error: error ? {
+        name: error.name || null,
+        message: error.message || null,
+        status: error.status || null,
+        code: error.code || null,
+        details: error.details || null,
+        hint: error.hint || null
+      } : null
+    }, null, 2));
+  } catch {}
   if (error) {
-    alert('Googleログインに失敗しました: ' + error.message + '\n\n確認事項:\n1) SupabaseでGoogleプロバイダ有効化\n2) Redirect URLに ' + redirectTo + ' を登録\n3) ネット接続とブラウザ拡張のブロック確認\n4) VS Codeプレビューではなく通常ブラウザで開いて実行');
+    const errorDump = JSON.stringify({
+      name: error.name || null,
+      message: error.message || null,
+      status: error.status || null,
+      code: error.code || null,
+      details: error.details || null,
+      hint: error.hint || null
+    }, null, 2);
+    console.error('signInWithOAuth failed', { redirectTo, error, data });
+    alert('Googleログインに失敗しました。\n\n[返却エラー詳細]\n' + errorDump + '\n\n[redirectTo]\n' + redirectTo);
+    return;
   }
+  console.info('signInWithOAuth succeeded', { redirectTo, data });
 }
 async function initGoogleAuth() {
   if (!db?.auth) return;
 
   const { data } = await db.auth.getSession();
   googleAuthUser = data?.session?.user || null;
+  if (googleAuthUser?.id) rememberLastAuthUserId(googleAuthUser);
   syncNicknameFromGoogle();
   renderGoogleAuthButton();
   restoreJukenDraftAfterAuthIfNeeded();
 
   db.auth.onAuthStateChange((_event, session) => {
     googleAuthUser = session?.user || null;
+    if (googleAuthUser?.id) rememberLastAuthUserId(googleAuthUser);
     syncNicknameFromGoogle();
     renderGoogleAuthButton();
     restoreJukenDraftAfterAuthIfNeeded();
@@ -1018,19 +1071,24 @@ async function loadMyPagePosts() {
   if (!summaryEl || !listEl) return;
   if (!db) { summaryEl.textContent = 'DB未接続'; listEl.innerHTML = ''; return; }
   const resolvedUser = await getResolvedAuthUser();
-  if (!resolvedUser?.id) {
+  const trackingUserId = resolvedUser?.id || getLastAuthUserId();
+  if (!trackingUserId) {
     summaryEl.textContent = 'マイページはログインユーザー向け機能です';
     listEl.innerHTML = '<div style="text-align:center;color:var(--gray);padding:1rem 0;">ログイン投稿のみ追跡・削除できます。</div>';
     return;
   }
   try {
     summaryEl.textContent = '読み込み中...';
-    const ownerKey = `auth:${resolvedUser.id}`;
+    const ownerKey = `auth:${trackingUserId}`;
     let rows = [];
     const { data, error } = await db.from('posts').select('*').eq('owner_key', ownerKey).order('created_at',{ascending:false}).limit(120);
     if (error && !isOwnerKeyColumnError(error)) throw error;
     rows = data || [];
-    const localIds = getOwnedPostIds(resolvedUser.id);
+    if (!rows.length) {
+      const { data: legacyRows, error: legacyErr } = await db.from('posts').select('*').eq('owner_key', trackingUserId).order('created_at',{ascending:false}).limit(120);
+      if (!legacyErr && Array.isArray(legacyRows) && legacyRows.length) rows = legacyRows;
+    }
+    const localIds = getOwnedPostIds(trackingUserId);
     if (localIds.length) {
       const { data: localRows, error: localErr } = await db.from('posts').select('*').in('id', localIds).limit(200);
       if (!localErr && Array.isArray(localRows)) {
@@ -1041,7 +1099,7 @@ async function loadMyPagePosts() {
       }
     }
 
-    const nicknameCandidates = getAccountNicknameCandidates(resolvedUser).map(v => String(v).trim().toLowerCase()).filter(Boolean);
+    const nicknameCandidates = getAccountNicknameCandidates(resolvedUser || { id: trackingUserId }).map(v => String(v).trim().toLowerCase()).filter(Boolean);
     const nicknameSet = new Set(nicknameCandidates);
     const { data: deviceRows, error: deviceErr } = await db.from('posts').select('*').eq('device_id', getDeviceId()).order('created_at',{ascending:false}).limit(200);
     if (deviceErr) throw deviceErr;
@@ -1070,14 +1128,15 @@ async function loadMyPagePosts() {
       legacyRows.forEach(p => {
         if (!p.owner_key) p.owner_key = ownerKey;
         merged.set(String(p.id), p);
-        rememberOwnedPostId(p.id, resolvedUser.id);
-        if (p.author) rememberOwnedNickname(p.author, resolvedUser.id);
+        rememberOwnedPostId(p.id, trackingUserId);
+        if (p.author) rememberOwnedNickname(p.author, trackingUserId);
       });
       rows = [...merged.values()];
     }
 
     rows.sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
-    summaryEl.textContent = `Google連携追跡 | ニックネーム: @${localStorage.getItem('waseda_nickname') || '未設定'} | 投稿数: ${rows.length}`;
+    const trackingMode = resolvedUser?.id ? 'Google連携追跡' : 'ローカル追跡（再ログイン推奨）';
+    summaryEl.textContent = `${trackingMode} | ニックネーム: @${localStorage.getItem('waseda_nickname') || '未設定'} | 投稿数: ${rows.length}`;
     if (!rows.length) { listEl.innerHTML = '<div style="text-align:center;color:var(--gray);padding:1rem 0;">まだあなたの投稿がありません</div>'; return; }
     listEl.innerHTML = rows.map(p => {
       const isQa = p.category === 'juken_qa' || p.category === 'juken_life_qa';
@@ -1104,12 +1163,13 @@ async function loadMyPagePosts() {
 async function deleteMyPagePost(postId) {
   if (!confirm('この投稿を削除してもよろしいですか？')) return;
   const resolvedUser = await getResolvedAuthUser();
-  if (!resolvedUser?.id) { alert('ログインが必要です'); return; }
+  const trackingUserId = resolvedUser?.id || getLastAuthUserId();
+  if (!trackingUserId) { alert('ログインが必要です'); return; }
   try {
     const { data: target, error: getErr } = await db.from('posts').select('id,owner_key,device_id,category,author').eq('id', postId).single();
     if (getErr) throw getErr;
-    const ownerKey = `auth:${resolvedUser.id}`;
-    const isLegacyOwner = target?.owner_key === resolvedUser.id;
+    const ownerKey = `auth:${trackingUserId}`;
+    const isLegacyOwner = target?.owner_key === trackingUserId;
     const isDeviceLegacy = !target?.owner_key && target?.device_id && target.device_id === getDeviceId();
     if (!(target?.owner_key === ownerKey || isLegacyOwner || isDeviceLegacy)) { alert('この投稿は削除できません'); return; }
 
@@ -1121,8 +1181,8 @@ async function deleteMyPagePost(postId) {
 
     const { error } = await db.from('posts').delete().eq('id', postId);
     if (error) throw error;
-    removeOwnedPostId(postId, resolvedUser.id);
-    if (target?.author) rememberOwnedNickname(target.author, resolvedUser.id);
+    removeOwnedPostId(postId, trackingUserId);
+    if (target?.author) rememberOwnedNickname(target.author, trackingUserId);
     await loadMyPagePosts();
     if (target?.category === 'juken_life_qa') await loadQaList('life');
     else if (target?.category === 'juken_qa') await loadQaList('study');
