@@ -569,6 +569,7 @@
       <div class="header-right">
         <button class="btn-google-auth" id="googleAuthBtn" onclick="handleGoogleAuthClick()">Googleでログイン</button>
         <button class="btn-mypage" id="myPageBtn" onclick="openMyPageModal()">📌 マイページ</button>
+        <button class="btn-mypage" id="contactBtn" onclick="openContactModal()">📩 お問い合わせ</button>
         <div class="nickname-badge" id="nicknameBadge" onclick="openNicknameModal()">👤 設定中...</div>
         <button class="btn-admin" id="adminBtn" style="display:none;margin-right:0.5rem;" onclick="openAdminModal()">⚙️ 管理</button>
         <button class="btn-post" onclick="openPostModal()">＋ 投稿する</button>
@@ -1286,25 +1287,30 @@
     </div>
   </div>
 
-  <section style="max-width:1200px;margin:0 auto 2rem;padding:0 2rem;">
-    <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.2rem 1.2rem 1rem;">
-      <h3 style="font-size:1rem;margin-bottom:.7rem;">📩 お問い合わせ</h3>
-      <p style="font-size:.84rem;color:var(--gray);margin-bottom:1rem;">不具合報告・要望はこちらから送信できます。</p>
-      <div class="form-group">
-        <label class="form-label">メール（任意）</label>
-        <input class="form-input" id="contactEmail" type="email" placeholder="you@example.com">
+  <div class="modal-overlay" id="contactModal">
+    <div class="modal" style="max-width:520px;">
+      <div class="modal-header">
+        <h3>📩 お問い合わせ</h3>
+        <button class="modal-close" onclick="closeContactModal()">×</button>
       </div>
-      <div class="form-group">
-        <label class="form-label">件名</label>
-        <input class="form-input" id="contactSubject" type="text" placeholder="お問い合わせ件名">
+      <div class="modal-body">
+        <p style="font-size:.84rem;color:var(--gray);margin-bottom:1rem;">不具合報告・要望はこちらから送信できます。</p>
+        <div class="form-group">
+          <label class="form-label">メール（任意）</label>
+          <input class="form-input" id="contactEmail" type="email" placeholder="you@example.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">件名</label>
+          <input class="form-input" id="contactSubject" type="text" placeholder="お問い合わせ件名">
+        </div>
+        <div class="form-group">
+          <label class="form-label">内容</label>
+          <textarea class="form-textarea" id="contactBody" placeholder="お問い合わせ内容"></textarea>
+        </div>
+        <button class="btn-submit" onclick="submitContactMessage()">送信する</button>
       </div>
-      <div class="form-group">
-        <label class="form-label">内容</label>
-        <textarea class="form-textarea" id="contactBody" placeholder="お問い合わせ内容"></textarea>
-      </div>
-      <button class="btn-submit" onclick="submitContactMessage()">送信する</button>
     </div>
-  </section>
+  </div>
 
   <!-- 投稿詳細モーダル（コメント表示用） -->
   <div class="modal-overlay" id="postDetailModal">
@@ -2379,6 +2385,14 @@
     document.getElementById('myPageModal').classList.remove('open');
   }
 
+  function openContactModal() {
+    document.getElementById('contactModal')?.classList.add('open');
+  }
+
+  function closeContactModal() {
+    document.getElementById('contactModal')?.classList.remove('open');
+  }
+
   async function loadMyPagePosts() {
     const summaryEl = document.getElementById('myPageSummary');
     const listEl = document.getElementById('myPageList');
@@ -3345,6 +3359,7 @@
     if (emailEl) emailEl.value = '';
     if (subjectEl) subjectEl.value = '';
     if (bodyEl) bodyEl.value = '';
+    closeContactModal();
     alert('お問い合わせを送信しました。');
   }
 

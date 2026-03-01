@@ -324,6 +324,7 @@
     <div class="header-actions">
       <button class="btn-google-auth" id="googleAuthBtn" onclick="handleGoogleAuthClick()">Googleでログイン</button>
       <button class="btn-mypage" id="myPageBtn" onclick="openMyPageModal()">📌 マイページ</button>
+      <button class="btn-mypage" id="contactBtn" onclick="openContactModal()">📩 お問い合わせ</button>
       <div class="nickname-badge" id="nicknameBadge" onclick="openNicknameModal()">👤 ニックネームを設定</div>
       <a href="https://waseda-ten.vercel.app/" class="header-back">← 在学生掲示板へ</a>
     </div>
@@ -734,6 +735,31 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="contactModal">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <h3>📩 お問い合わせ</h3>
+      <button class="modal-close" onclick="closeContactModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.84rem;color:var(--gray);margin-bottom:1rem;">不具合報告・要望はこちらから送信できます。</p>
+      <div class="form-group">
+        <label class="form-label">メール（任意）</label>
+        <input class="form-input" id="contactEmail" type="email" placeholder="you@example.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">件名</label>
+        <input class="form-input" id="contactSubject" type="text" placeholder="お問い合わせ件名">
+      </div>
+      <div class="form-group">
+        <label class="form-label">内容</label>
+        <textarea class="form-textarea" id="contactBody" placeholder="お問い合わせ内容"></textarea>
+      </div>
+      <button class="btn-submit" onclick="submitContactMessage()">送信する</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="boardDetailModal">
   <div class="modal" style="max-width:680px;">
     <div class="modal-header">
@@ -771,6 +797,7 @@ const BOARD_COMMENT_AUTH_DRAFT_TS_KEY = 'waseda_board_comment_auth_draft_ts';
 const QA_ANSWER_AUTH_RETURN_KEY = 'waseda_qa_answer_auth_return';
 const QA_ANSWER_AUTH_DRAFT_KEY = 'waseda_qa_answer_auth_draft';
 const QA_ANSWER_AUTH_DRAFT_TS_KEY = 'waseda_qa_answer_auth_draft_ts';
+const LOCAL_CONTACT_MESSAGES_KEY = 'waseda_local_contact_messages';
 let db;
 try {
   if (typeof createClient === 'function') db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -1663,6 +1690,58 @@ async function openMyPageModal() {
   loadMyPagePosts();
 }
 function closeMyPageModal() { document.getElementById('myPageModal').classList.remove('open'); }
+function openContactModal() {
+  document.getElementById('contactModal')?.classList.add('open');
+}
+function closeContactModal() {
+  document.getElementById('contactModal')?.classList.remove('open');
+}
+
+async function submitContactMessage() {
+  const email = (document.getElementById('contactEmail')?.value || '').trim();
+  const subject = (document.getElementById('contactSubject')?.value || '').trim();
+  const body = (document.getElementById('contactBody')?.value || '').trim();
+  if (!subject || !body) { alert('件名と内容を入力してください'); return; }
+
+  const payload = {
+    email: email || null,
+    subject,
+    body,
+    nickname: currentUser || '匿名',
+    ip: null,
+    status: 'unread',
+    created_at: new Date().toISOString()
+  };
+
+  let stored = false;
+  try {
+    if (db) {
+      const { error } = await db.from('contact_messages').insert([payload]);
+      if (error) throw error;
+      stored = true;
+    }
+  } catch {}
+
+  if (!stored) {
+    try {
+      const raw = localStorage.getItem(LOCAL_CONTACT_MESSAGES_KEY) || '[]';
+      const arr = JSON.parse(raw);
+      const next = Array.isArray(arr) ? arr : [];
+      next.unshift({ ...payload, id: `local_${Date.now()}` });
+      localStorage.setItem(LOCAL_CONTACT_MESSAGES_KEY, JSON.stringify(next.slice(0, 500)));
+    } catch {}
+  }
+
+  const emailEl = document.getElementById('contactEmail');
+  const subjectEl = document.getElementById('contactSubject');
+  const bodyEl = document.getElementById('contactBody');
+  if (emailEl) emailEl.value = '';
+  if (subjectEl) subjectEl.value = '';
+  if (bodyEl) bodyEl.value = '';
+  closeContactModal();
+  alert('お問い合わせを送信しました。');
+}
+
 async function loadMyPagePosts() {
   const summaryEl = document.getElementById('myPageSummary');
   const listEl = document.getElementById('myPageList');
