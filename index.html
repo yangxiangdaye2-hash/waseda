@@ -2063,25 +2063,51 @@
     if (!confirm('この投稿を削除してもよろしいですか？')) return;
     try {
       if (!db) throw new Error('Supabase client not initialized');
+      const resolvedUser = await getResolvedAuthUser();
+      const trackingUserId = resolvedUser?.id || getLastAuthUserId();
       if (!isAdmin) {
+        if (!resolvedUser?.id) {
+          alert('削除にはGoogleログインが必要です。再ログイン後にもう一度お試しください。');
+          return;
+        }
         const { data: targetPost, error: getError } = await db
           .from('posts')
           .select('id, device_id, owner_key, author')
           .eq('id', postId)
           .single();
         if (getError) throw getError;
-        if (!canManagePost(targetPost)) throw new Error('削除権限がありません');
+
+        const ownerKey = `auth:${resolvedUser.id}`;
+        const owner = String(targetPost?.owner_key || '').trim();
+        const localOwnedSet = new Set(getOwnedPostIds(trackingUserId).map(String));
+        const isLegacyOwner = owner === resolvedUser.id;
+        const isDeviceLegacy = !owner && targetPost?.device_id && targetPost.device_id === getDeviceId();
+        const isOwnedByLocalRecord = localOwnedSet.has(String(postId));
+        const isCurrentOwner = owner === ownerKey;
+
+        if (!(isCurrentOwner || isLegacyOwner || isDeviceLegacy || isOwnedByLocalRecord)) {
+          throw new Error('削除権限がありません');
+        }
+
+        if (!isCurrentOwner && (isLegacyOwner || isDeviceLegacy || isOwnedByLocalRecord)) {
+          const { error: adoptErr } = await db.from('posts').update({ owner_key: ownerKey }).eq('id', postId);
+          if (adoptErr && !isOwnerKeyColumnError(adoptErr)) throw adoptErr;
+        }
       }
       const { error } = await db.from('posts').delete().eq('id', postId);
       if (error) throw error;
-      const trackingUserId = googleAuthUser?.id || getLastAuthUserId();
-      if (trackingUserId) removeOwnedPostId(postId, trackingUserId);
+      const removeUserId = (await getResolvedAuthUser())?.id || getLastAuthUserId();
+      const trackingUserIdFinal = removeUserId || trackingUserId;
+      if (trackingUserIdFinal) removeOwnedPostId(postId, trackingUserIdFinal);
       // update local cache and UI
       allPosts = allPosts.filter(p => p.id !== postId);
       loadPosts();
       closePostDetailModal();
       closeQaModal();
-    } catch (e) { console.error(e); alert('投稿の削除に失敗しました'); }
+    } catch (e) {
+      console.error(e);
+      alert('投稿の削除に失敗しました: ' + (e?.message || e?.code || 'unknown error'));
+    }
   }
 
   async function deleteMyPagePost(postId) {

@@ -1172,7 +1172,10 @@ async function deleteMyPagePost(postId) {
   if (!confirm('この投稿を削除してもよろしいですか？')) return;
   const resolvedUser = await getResolvedAuthUser();
   const trackingUserId = resolvedUser?.id || getLastAuthUserId();
-  if (!trackingUserId) { alert('ログインが必要です'); return; }
+  if (!trackingUserId || !resolvedUser?.id) {
+    alert('削除にはGoogleログインが必要です。再ログイン後にもう一度お試しください。');
+    return;
+  }
   try {
     const { data: target, error: getErr } = await db.from('posts').select('id,owner_key,device_id,category,author').eq('id', postId).single();
     if (getErr) throw getErr;
@@ -1183,10 +1186,13 @@ async function deleteMyPagePost(postId) {
     const isOwnedByLocalRecord = localOwnedSet.has(String(postId));
     if (!(target?.owner_key === ownerKey || isLegacyOwner || isDeviceLegacy || isOwnedByLocalRecord)) { alert('この投稿は削除できません'); return; }
 
-    if (isDeviceLegacy || isLegacyOwner) {
+    if ((isDeviceLegacy || isLegacyOwner || isOwnedByLocalRecord) && target?.owner_key !== ownerKey) {
       try {
-        await db.from('posts').update({ owner_key: ownerKey }).eq('id', postId);
-      } catch {}
+        const { error: adoptErr } = await db.from('posts').update({ owner_key: ownerKey }).eq('id', postId);
+        if (adoptErr && !isOwnerKeyColumnError(adoptErr)) throw adoptErr;
+      } catch (e) {
+        throw e;
+      }
     }
 
     const { error } = await db.from('posts').delete().eq('id', postId);
@@ -1199,7 +1205,7 @@ async function deleteMyPagePost(postId) {
     else if (target?.category === 'juken') await loadBoardPosts();
   } catch (e) {
     console.error(e);
-    alert('削除に失敗しました');
+    alert('削除に失敗しました: ' + (e?.message || e?.code || 'unknown error'));
   }
 }
 function getMyQuestionIds() {
