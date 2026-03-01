@@ -2763,14 +2763,26 @@
       const resolvedUser = await getResolvedAuthUser();
       const trackingUserId = resolvedUser?.id || getLastAuthUserId();
       let targetComment = null;
+      let hasOwnerKeyColumn = true;
       if (!isAdmin) {
         const { data, error: getError } = await db
           .from('comments')
           .select('id, device_id, owner_key, author')
           .eq('id', commentId)
           .single();
-        if (getError) throw getError;
-        targetComment = data;
+        if (getError) {
+          if (!isOwnerKeyColumnError(getError)) throw getError;
+          hasOwnerKeyColumn = false;
+          const { data: fallbackData, error: fallbackErr } = await db
+            .from('comments')
+            .select('id, device_id, author')
+            .eq('id', commentId)
+            .single();
+          if (fallbackErr) throw fallbackErr;
+          targetComment = { ...(fallbackData || {}), owner_key: null };
+        } else {
+          targetComment = data;
+        }
         const owner = String(targetComment?.owner_key || '').trim();
         const ownerByAuth = trackingUserId && (owner === `auth:${trackingUserId}` || owner === trackingUserId);
         const ownerByDevice = !owner && targetComment?.device_id && targetComment.device_id === getDeviceId();
@@ -2783,7 +2795,7 @@
       let deleted = false;
       let lastError = null;
 
-      if (!isAdmin && trackingUserId) {
+      if (!isAdmin && trackingUserId && hasOwnerKeyColumn) {
         for (const ownerKey of [`auth:${trackingUserId}`, trackingUserId]) {
           const { error } = await db.from('comments').delete().eq('id', commentId).eq('owner_key', ownerKey);
           if (!error) { deleted = true; break; }

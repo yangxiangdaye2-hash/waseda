@@ -2351,8 +2351,18 @@ async function deleteBoardComment(commentId, postId) {
     if (!db) throw new Error('DB未接続');
     const resolvedUser = await getResolvedAuthUser();
     const trackingUserId = resolvedUser?.id || getLastAuthUserId();
-    const { data: targetComment, error: getError } = await db.from('comments').select('id,device_id,owner_key,author').eq('id', commentId).single();
-    if (getError) throw getError;
+    let hasOwnerKeyColumn = true;
+    let targetComment = null;
+    const { data: targetWithOwner, error: getError } = await db.from('comments').select('id,device_id,owner_key,author').eq('id', commentId).single();
+    if (getError) {
+      if (!isOwnerKeyColumnError(getError)) throw getError;
+      hasOwnerKeyColumn = false;
+      const { data: fallbackData, error: fallbackErr } = await db.from('comments').select('id,device_id,author').eq('id', commentId).single();
+      if (fallbackErr) throw fallbackErr;
+      targetComment = { ...(fallbackData || {}), owner_key: null };
+    } else {
+      targetComment = targetWithOwner;
+    }
     const owner = String(targetComment?.owner_key || '').trim();
     const ownerByAuth = trackingUserId && (owner === `auth:${trackingUserId}` || owner === trackingUserId);
     const ownerByDevice = !owner && targetComment?.device_id && targetComment.device_id === getDeviceId();
@@ -2364,7 +2374,7 @@ async function deleteBoardComment(commentId, postId) {
     let deleted = false;
     let lastError = null;
 
-    if (trackingUserId) {
+    if (trackingUserId && hasOwnerKeyColumn) {
       for (const ownerKey of [`auth:${trackingUserId}`, trackingUserId]) {
         const { error } = await db.from('comments').delete().eq('id', commentId).eq('owner_key', ownerKey);
         if (!error) { deleted = true; break; }
