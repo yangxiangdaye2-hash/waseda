@@ -376,6 +376,39 @@
     .post-form-box { position: static; }
     .faculty-grid { grid-template-columns: 1fr; }
   }
+
+  @media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+    header { padding: 6px .9rem; }
+    .header-inner { min-height: auto; height: auto; display: block; }
+    .logo { justify-content: center; margin-bottom: .45rem; }
+    .logo-jp { font-size: 1.2rem; }
+    .header-actions { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .35rem; overflow: visible; }
+    .header-row { display: contents; }
+    .header-actions > .header-row > * {
+      width: 100%;
+      max-width: none;
+      min-width: 0;
+      justify-content: center;
+      text-align: center;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .header-back {
+      background: rgba(255,255,255,.14);
+      color: #fff;
+      border: 1.5px solid rgba(255,255,255,.35);
+      border-radius: 18px;
+      padding: 6px 8px;
+      font-weight: 700;
+    }
+    .btn-google-auth,
+    .btn-mypage,
+    .nickname-badge,
+    .header-back { font-size: .72rem; padding: 6px 8px; }
+    .tabs { top: 104px; padding-top: 6px; }
+    .tabs-inner { padding-top: .5rem; padding-bottom: .46rem; }
+  }
+
   @media (max-width: 767px) {
     header { padding: 6px .8rem; }
     .header-inner { min-height: auto; height: auto; display: block; }

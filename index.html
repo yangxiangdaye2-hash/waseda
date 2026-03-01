@@ -496,6 +496,32 @@
       .sidebar-card-header { padding: 10px 12px; font-size: 0.85rem; }
     }
 
+    @media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+      header { padding: 6px 0.9rem; }
+      .header-inner { min-height: auto; height: auto; display: block; }
+      .logo { justify-content: center; margin-bottom: 0.45rem; }
+      .logo-en { display: none; }
+      .logo-jp { font-size: 1.2rem; }
+      .header-right { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.35rem; overflow: visible; padding-bottom: 0; }
+      .header-row { display: contents; }
+      .header-right > .header-row > * {
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+        justify-content: center;
+        text-align: center;
+      }
+      .btn-google-auth,
+      .btn-mypage,
+      .nickname-badge,
+      .btn-admin,
+      .btn-post { font-size: 0.72rem; padding: 6px 8px; }
+      .nickname-badge { max-width: none; }
+      .btn-admin { margin-right: 0 !important; }
+      .tabs { top: 104px; padding-top: 6px; }
+      .tabs-inner { padding-top: 0.5rem; padding-bottom: 0.46rem; }
+    }
+
     @media (max-width: 767px) {
       .main { grid-template-columns: 1fr; padding: 1rem 0.9rem; gap: 1rem; }
       .sidebar { order: -1; }
