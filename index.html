@@ -2070,12 +2070,26 @@
           alert('削除にはGoogleログインが必要です。再ログイン後にもう一度お試しください。');
           return;
         }
-        const { data: targetPost, error: getError } = await db
+        let targetPost = null;
+        let hasOwnerKeyColumn = true;
+        const { data: targetWithOwner, error: getError } = await db
           .from('posts')
           .select('id, device_id, owner_key, author')
           .eq('id', postId)
           .single();
-        if (getError) throw getError;
+        if (getError) {
+          if (!isOwnerKeyColumnError(getError)) throw getError;
+          hasOwnerKeyColumn = false;
+          const { data: targetFallback, error: fallbackErr } = await db
+            .from('posts')
+            .select('id, device_id, author')
+            .eq('id', postId)
+            .single();
+          if (fallbackErr) throw fallbackErr;
+          targetPost = { ...(targetFallback || {}), owner_key: null };
+        } else {
+          targetPost = targetWithOwner;
+        }
 
         const ownerKey = `auth:${resolvedUser.id}`;
         const owner = String(targetPost?.owner_key || '').trim();
@@ -2089,7 +2103,7 @@
           throw new Error('削除権限がありません');
         }
 
-        if (!isCurrentOwner && (isLegacyOwner || isDeviceLegacy || isOwnedByLocalRecord)) {
+        if (hasOwnerKeyColumn && !isCurrentOwner && (isLegacyOwner || isDeviceLegacy || isOwnedByLocalRecord)) {
           const { error: adoptErr } = await db.from('posts').update({ owner_key: ownerKey }).eq('id', postId);
           if (adoptErr && !isOwnerKeyColumnError(adoptErr)) throw adoptErr;
         }

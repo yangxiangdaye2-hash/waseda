@@ -1177,8 +1177,18 @@ async function deleteMyPagePost(postId) {
     return;
   }
   try {
-    const { data: target, error: getErr } = await db.from('posts').select('id,owner_key,device_id,category,author').eq('id', postId).single();
-    if (getErr) throw getErr;
+    let target = null;
+    let hasOwnerKeyColumn = true;
+    const { data: targetWithOwner, error: getErr } = await db.from('posts').select('id,owner_key,device_id,category,author').eq('id', postId).single();
+    if (getErr) {
+      if (!isOwnerKeyColumnError(getErr)) throw getErr;
+      hasOwnerKeyColumn = false;
+      const { data: targetFallback, error: fallbackErr } = await db.from('posts').select('id,device_id,category,author').eq('id', postId).single();
+      if (fallbackErr) throw fallbackErr;
+      target = { ...(targetFallback || {}), owner_key: null };
+    } else {
+      target = targetWithOwner;
+    }
     const ownerKey = `auth:${trackingUserId}`;
     const isLegacyOwner = target?.owner_key === trackingUserId;
     const isDeviceLegacy = !target?.owner_key && target?.device_id && target.device_id === getDeviceId();
@@ -1186,7 +1196,7 @@ async function deleteMyPagePost(postId) {
     const isOwnedByLocalRecord = localOwnedSet.has(String(postId));
     if (!(target?.owner_key === ownerKey || isLegacyOwner || isDeviceLegacy || isOwnedByLocalRecord)) { alert('この投稿は削除できません'); return; }
 
-    if ((isDeviceLegacy || isLegacyOwner || isOwnedByLocalRecord) && target?.owner_key !== ownerKey) {
+    if (hasOwnerKeyColumn && (isDeviceLegacy || isLegacyOwner || isOwnedByLocalRecord) && target?.owner_key !== ownerKey) {
       try {
         const { error: adoptErr } = await db.from('posts').update({ owner_key: ownerKey }).eq('id', postId);
         if (adoptErr && !isOwnerKeyColumnError(adoptErr)) throw adoptErr;
