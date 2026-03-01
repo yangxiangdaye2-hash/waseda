@@ -569,6 +569,7 @@
       <div class="header-right">
         <button class="btn-google-auth" id="googleAuthBtn" onclick="handleGoogleAuthClick()">Googleでログイン</button>
         <button class="btn-mypage" id="myPageBtn" onclick="openMyPageModal()">📌 マイページ</button>
+        <button class="btn-mypage" id="noticeBtn" onclick="openNoticeModal()">📣 お知らせ</button>
         <button class="btn-mypage" id="contactBtn" onclick="openContactModal()">📩 お問い合わせ</button>
         <div class="nickname-badge" id="nicknameBadge" onclick="openNicknameModal()">👤 設定中...</div>
         <button class="btn-admin" id="adminBtn" style="display:none;margin-right:0.5rem;" onclick="openAdminModal()">⚙️ 管理</button>
@@ -1198,6 +1199,17 @@
         <div id="tab-announcements" class="admin-tab-content active">
           <h4>📢 お知らせを作成</h4>
           <div class="form-group">
+            <label class="form-label">配信先</label>
+            <select class="form-select" id="announceAudience" onchange="onAnnouncementAudienceChange()">
+              <option value="all">全体</option>
+              <option value="nickname">個別（ニックネーム）</option>
+            </select>
+          </div>
+          <div class="form-group" id="announceTargetWrap" style="display:none;">
+            <label class="form-label">対象ニックネーム</label>
+            <input class="form-input" type="text" id="announceTargetNickname" placeholder="例：waseda_taro">
+          </div>
+          <div class="form-group">
             <label class="form-label">タイトル</label>
             <input class="form-input" type="text" id="announceTitle" placeholder="お知らせタイトル">
           </div>
@@ -1364,6 +1376,19 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="noticeModal">
+    <div class="modal modal-wide" style="max-width:760px;">
+      <div class="modal-header">
+        <h3>📣 お知らせ</h3>
+        <button class="modal-close" onclick="closeNoticeModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="noticeSummary" style="font-size:0.86rem;color:var(--gray);margin-bottom:1rem;">読み込み中...</div>
+        <div id="noticeList"></div>
+      </div>
+    </div>
+  </div>
+
   <script>
   // Supabase初期化（CDNのエクスポートの違いに対応する）
   const SUPABASE_URL = 'https://hazntivymzywhowtdtcc.supabase.co';
@@ -1428,9 +1453,12 @@
   const QA_ANSWER_AUTH_DRAFT_TS_KEY = 'waseda_qa_answer_auth_draft_ts';
   const MY_PAGE_NOTIFY_PREFIX = 'waseda_mypage_notify_state_';
   const MY_PAGE_NOTIFY_INTERVAL_MS = 60000;
+  const NOTICE_SEEN_AT_PREFIX = 'waseda_notice_seen_at_';
+  const LOCAL_NOTICE_MESSAGES_KEY = 'waseda_local_notice_messages';
   const LOCAL_BANNED_IPS_KEY = 'waseda_local_banned_ips';
   const LOCAL_CONTACT_MESSAGES_KEY = 'waseda_local_contact_messages';
   let myPageNotifyCount = 0;
+  let noticeNotifyCount = 0;
   let myPageNotifyTimer = null;
   let myPageNotifyInFlight = false;
   let clientIpAddress = null;
@@ -1543,6 +1571,7 @@
       myPageBtn.title = googleAuthUser ? 'あなたの投稿を確認・削除できます' : 'ログインするとあなたの投稿を確認・削除できます';
     }
     renderMyPageNotificationBadge();
+    renderNoticeNotificationBadge();
   }
 
   function getMyPageNotifyStateKey(userId) {
@@ -1586,6 +1615,40 @@
     } else {
       delete myPageBtn.dataset.notifyCount;
       myPageBtn.classList.remove('has-notification');
+    }
+  }
+
+  function getNoticeUserKey() {
+    const nick = String(currentUser || '').trim();
+    return nick && nick !== 'ゲスト' ? nick.toLowerCase() : 'guest';
+  }
+
+  function getNoticeSeenAtKey() {
+    return `${NOTICE_SEEN_AT_PREFIX}${getNoticeUserKey()}`;
+  }
+
+  function readNoticeSeenAt() {
+    try {
+      return Number(localStorage.getItem(getNoticeSeenAtKey()) || '0') || 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  function writeNoticeSeenAt(ts = Date.now()) {
+    try { localStorage.setItem(getNoticeSeenAtKey(), String(ts)); } catch {}
+  }
+
+  function renderNoticeNotificationBadge() {
+    const noticeBtn = document.getElementById('noticeBtn');
+    if (!noticeBtn) return;
+    const count = Number(noticeNotifyCount) || 0;
+    if (count > 0) {
+      noticeBtn.dataset.notifyCount = count > 99 ? '99+' : String(count);
+      noticeBtn.classList.add('has-notification');
+    } else {
+      delete noticeBtn.dataset.notifyCount;
+      noticeBtn.classList.remove('has-notification');
     }
   }
 
@@ -1749,9 +1812,13 @@
     if (myPageNotifyTimer) return;
     myPageNotifyTimer = setInterval(() => {
       refreshMyPageNotificationCount();
+      refreshNoticeNotificationCount();
     }, MY_PAGE_NOTIFY_INTERVAL_MS);
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') refreshMyPageNotificationCount();
+      if (document.visibilityState === 'visible') {
+        refreshMyPageNotificationCount();
+        refreshNoticeNotificationCount();
+      }
     });
   }
 
@@ -2103,6 +2170,7 @@
     restoreCommentDraftAfterAuthIfNeeded();
     restoreQaAnswerDraftAfterAuthIfNeeded();
     refreshMyPageNotificationCount();
+    refreshNoticeNotificationCount();
     startMyPageNotificationPolling();
 
     db.auth.onAuthStateChange((_event, session) => {
@@ -2114,6 +2182,7 @@
       restoreCommentDraftAfterAuthIfNeeded();
       restoreQaAnswerDraftAfterAuthIfNeeded();
       refreshMyPageNotificationCount();
+      refreshNoticeNotificationCount();
     });
   }
 
@@ -2314,7 +2383,7 @@
   function updateNicknameBadge() { renderAccountSummary(); }
   function openNicknameModal() { document.getElementById('nicknameInput').value = currentUser === 'ゲスト' && googleAuthUser ? getGoogleDisplayName(googleAuthUser).slice(0, 20) : currentUser; document.getElementById('nicknameModal').classList.add('open'); }
   function closeNicknameModal() { document.getElementById('nicknameModal').classList.remove('open'); }
-  function saveNickname() { const val = document.getElementById('nicknameInput').value.trim(); if (!val) { alert('ニックネームを入力してください'); return; } currentUser = val; localStorage.setItem('waseda_nickname', val); if (googleAuthUser?.id) rememberOwnedNickname(val, googleAuthUser.id); updateNicknameBadge(); checkAdmin(); closeNicknameModal(); }
+  function saveNickname() { const val = document.getElementById('nicknameInput').value.trim(); if (!val) { alert('ニックネームを入力してください'); return; } currentUser = val; localStorage.setItem('waseda_nickname', val); if (googleAuthUser?.id) rememberOwnedNickname(val, googleAuthUser.id); updateNicknameBadge(); refreshNoticeNotificationCount(); checkAdmin(); closeNicknameModal(); }
 
   function getCategoryLabel(category) {
     const labels = {
@@ -2383,6 +2452,96 @@
 
   function closeMyPageModal() {
     document.getElementById('myPageModal').classList.remove('open');
+  }
+
+  function isNoticeForCurrentUser(notice) {
+    const audience = String(notice?.audience || '').trim();
+    const targetNick = String(notice?.target_nickname || '').trim().toLowerCase();
+    const currentNick = String(currentUser || '').trim().toLowerCase();
+    if (!audience || audience === 'all') return true;
+    if (audience === 'nickname') return !!currentNick && !!targetNick && targetNick === currentNick;
+    return true;
+  }
+
+  function readLocalNoticeMessages() {
+    try {
+      const raw = localStorage.getItem(LOCAL_NOTICE_MESSAGES_KEY) || '[]';
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function writeLocalNoticeMessages(rows) {
+    try { localStorage.setItem(LOCAL_NOTICE_MESSAGES_KEY, JSON.stringify([...(rows || [])].slice(0, 500))); } catch {}
+  }
+
+  async function loadUserNotices() {
+    const merged = [];
+    try {
+      if (db) {
+        const { data, error } = await db.from('announcements').select('*').eq('active', true).order('created_at', { ascending: false }).limit(200);
+        if (!error && Array.isArray(data)) merged.push(...data);
+      }
+    } catch {}
+    merged.push(...readLocalNoticeMessages().filter(v => v && v.active !== false));
+    const filtered = merged.filter(isNoticeForCurrentUser);
+    filtered.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    return filtered;
+  }
+
+  async function refreshNoticeNotificationCount() {
+    try {
+      const rows = await loadUserNotices();
+      const seenAt = readNoticeSeenAt();
+      noticeNotifyCount = rows.filter(r => new Date(r.created_at || 0).getTime() > seenAt).length;
+      renderNoticeNotificationBadge();
+    } catch {
+      noticeNotifyCount = 0;
+      renderNoticeNotificationBadge();
+    }
+  }
+
+  async function openNoticeModal() {
+    const modal = document.getElementById('noticeModal');
+    const summary = document.getElementById('noticeSummary');
+    const list = document.getElementById('noticeList');
+    if (!modal || !summary || !list) return;
+    modal.classList.add('open');
+    summary.textContent = '読み込み中...';
+    list.innerHTML = '';
+    const rows = await loadUserNotices();
+    if (!rows.length) {
+      summary.textContent = '受信したお知らせはありません';
+      list.innerHTML = '<div style="text-align:center;color:var(--gray);padding:1rem 0;">新しいお知らせはまだありません。</div>';
+      writeNoticeSeenAt();
+      noticeNotifyCount = 0;
+      renderNoticeNotificationBadge();
+      return;
+    }
+    const latestTs = Math.max(...rows.map(r => new Date(r.created_at || 0).getTime()).filter(Number.isFinite));
+    if (Number.isFinite(latestTs) && latestTs > 0) writeNoticeSeenAt(latestTs);
+    noticeNotifyCount = 0;
+    renderNoticeNotificationBadge();
+    summary.textContent = `${rows.length}件のお知らせ`;
+    list.innerHTML = rows.map(r => {
+      const audience = String(r.audience || '').trim() === 'nickname'
+        ? `個別: @${escHtml(r.target_nickname || '')}`
+        : '全体';
+      return `<div style="padding:.8rem .9rem;background:#fff;border:1px solid var(--border);border-radius:10px;margin-bottom:.7rem;">
+        <div style="display:flex;justify-content:space-between;gap:.6rem;align-items:flex-start;flex-wrap:wrap;">
+          <strong style="font-size:.92rem;">${escHtml(r.title || '')}</strong>
+          <span style="font-size:.72rem;color:var(--gray);">${escHtml(audience)}</span>
+        </div>
+        <div style="font-size:.84rem;color:var(--dark);margin-top:.35rem;line-height:1.65;">${escHtml(r.body || '')}</div>
+        <div style="font-size:.74rem;color:var(--gray-light);margin-top:.45rem;">${new Date(r.created_at || Date.now()).toLocaleString('ja-JP')}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function closeNoticeModal() {
+    document.getElementById('noticeModal')?.classList.remove('open');
   }
 
   function openContactModal() {
@@ -3524,6 +3683,12 @@
   }
 
   // ANNOUNCEMENTS
+  function onAnnouncementAudienceChange() {
+    const audience = document.getElementById('announceAudience')?.value || 'all';
+    const wrap = document.getElementById('announceTargetWrap');
+    if (wrap) wrap.style.display = audience === 'nickname' ? 'block' : 'none';
+  }
+
   async function loadAnnouncements() {
     try {
       if (!db) { console.warn('[Announcements] DB not initialized'); return []; }
@@ -3535,15 +3700,22 @@
 
   async function loadAllAnnouncements() {
     try {
-      if (!db) { console.warn('[Announcements] DB not initialized'); return []; }
-      const { data, error } = await db.from('announcements').select('*').order('created_at', { ascending: false });
-      if (error) { console.error('[Announcements] loadAllAnnouncements error:', error); return []; }
-      return Array.isArray(data) ? data : [];
+      let dbRows = [];
+      if (db) {
+        const { data, error } = await db.from('announcements').select('*').order('created_at', { ascending: false });
+        if (!error && Array.isArray(data)) dbRows = data;
+      } else {
+        console.warn('[Announcements] DB not initialized');
+      }
+      const localRows = readLocalNoticeMessages();
+      const rows = [...dbRows, ...localRows];
+      rows.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      return rows;
     } catch (e) { console.error('[Announcements] loadAllAnnouncements exception:', e); return []; }
   }
 
   async function refreshAnnouncements() {
-    const ann = await loadAnnouncements();
+    const ann = await loadUserNotices();
     const banner = document.getElementById('announcementBanner');
     if (banner) {
       if (ann && ann.length) {
@@ -3571,43 +3743,88 @@
     const title = document.getElementById('announceTitle')?.value?.trim();
     const body = document.getElementById('announceBody')?.value?.trim();
     const active = document.getElementById('announceActive')?.checked ?? true;
+    const audience = document.getElementById('announceAudience')?.value || 'all';
+    const targetNickname = (document.getElementById('announceTargetNickname')?.value || '').trim();
     if (!title || !body) { alert('タイトルと内容を入力してください'); return; }
+    if (audience === 'nickname' && !targetNickname) { alert('個別配信では対象ニックネームを入力してください'); return; }
+
+    const payload = {
+      title,
+      body,
+      active,
+      author: currentUser,
+      audience,
+      target_nickname: audience === 'nickname' ? targetNickname : null,
+      created_at: new Date().toISOString()
+    };
+
+    let stored = false;
     try {
       if (!db) throw new Error('Supabase not initialized');
-      const { error } = await db.from('announcements').insert([{ title, body, active, author: currentUser }]);
-      if (error) {
-        console.error('[Announcements] submitAnnouncement DB error:', error);
-        alert('お知らせ投稿 失敗: ' + error.message);
-        return;
-      }
-      console.log('[Announcements] Posted successfully');
-      document.getElementById('announceTitle').value = '';
-      document.getElementById('announceBody').value = '';
-      document.getElementById('announceActive').checked = true;
-      await refreshAnnouncements();
-      renderAdminAnnouncementList();
-    } catch (e) { console.error('[Announcements] submitAnnouncement exception:', e); alert('お知らせ投稿 失敗: ' + e.message); }
+      const { error } = await db.from('announcements').insert([payload]);
+      if (!error) stored = true;
+      else throw error;
+    } catch (e) {
+      console.warn('[Announcements] submitAnnouncement DB fallback:', e);
+    }
+
+    if (!stored) {
+      const localRows = readLocalNoticeMessages();
+      localRows.unshift({ ...payload, id: `local_notice_${Date.now()}` });
+      writeLocalNoticeMessages(localRows);
+    }
+
+    console.log('[Announcements] Posted successfully');
+    document.getElementById('announceTitle').value = '';
+    document.getElementById('announceBody').value = '';
+    document.getElementById('announceActive').checked = true;
+    const audienceEl = document.getElementById('announceAudience');
+    if (audienceEl) audienceEl.value = 'all';
+    const targetEl = document.getElementById('announceTargetNickname');
+    if (targetEl) targetEl.value = '';
+    onAnnouncementAudienceChange();
+    await refreshAnnouncements();
+    await refreshNoticeNotificationCount();
+    renderAdminAnnouncementList();
   }
 
   async function deleteAnnouncement(id) {
     if (!confirm('このお知らせを削除しますか？')) return;
     try {
+      if (String(id).startsWith('local_notice_')) {
+        const rows = readLocalNoticeMessages().filter(r => String(r.id) !== String(id));
+        writeLocalNoticeMessages(rows);
+        await refreshAnnouncements();
+        await refreshNoticeNotificationCount();
+        renderAdminAnnouncementList();
+        return;
+      }
       if (!db) throw new Error('Supabase not initialized');
       const { error } = await db.from('announcements').delete().eq('id', id);
       if (error) { console.error('[Announcements] deleteAnnouncement error:', error); throw error; }
       console.log('[Announcements] Deleted announcement id:', id);
       await refreshAnnouncements();
+      await refreshNoticeNotificationCount();
       renderAdminAnnouncementList();
     } catch (e) { console.error('[Announcements] deleteAnnouncement exception:', e); alert('削除失敗: ' + e.message); }
   }
 
   async function toggleAnnouncementActive(id, currentActive) {
     try {
+      if (String(id).startsWith('local_notice_')) {
+        const rows = readLocalNoticeMessages().map(r => String(r.id) === String(id) ? { ...r, active: !currentActive } : r);
+        writeLocalNoticeMessages(rows);
+        await refreshAnnouncements();
+        await refreshNoticeNotificationCount();
+        renderAdminAnnouncementList();
+        return;
+      }
       if (!db) throw new Error('Supabase not initialized');
       const { error } = await db.from('announcements').update({ active: !currentActive }).eq('id', id);
       if (error) { console.error('[Announcements] toggleAnnouncementActive error:', error); throw error; }
       console.log('[Announcements] Toggled announcement id:', id);
       await refreshAnnouncements();
+      await refreshNoticeNotificationCount();
       renderAdminAnnouncementList();
     } catch (e) { console.error('[Announcements] toggleAnnouncementActive exception:', e); alert('変更失敗: ' + e.message); }
   }
@@ -3625,7 +3842,8 @@
         <div style="flex:1;">
           <strong>${escHtml(a.title)}</strong>
           <div style="color:#666;font-size:0.85rem;margin-top:4px;">${escHtml(a.body)}</div>
-          <div style="color:#999;font-size:0.8rem;margin-top:4px;">閉📋 ${new Date(a.created_at).toLocaleString('ja-JP')}</div>
+          <div style="color:#999;font-size:0.8rem;margin-top:4px;">配信先: ${String(a.audience || '').trim() === 'nickname' ? '@' + escHtml(a.target_nickname || '') : '全体'}</div>
+          <div style="color:#999;font-size:0.8rem;margin-top:2px;">閉📋 ${new Date(a.created_at).toLocaleString('ja-JP')}</div>
         </div>
         <div style="display:flex;gap:6px;">
           <button style="padding:4px 8px;background:${a.active?'#4caf50':'#ccc'};color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.8rem;" onclick="toggleAnnouncementActive(${JSON.stringify(a.id)}, ${a.active})">${a.active?'⚠':'OFF'}</button>
@@ -4676,6 +4894,8 @@
   // 初期化
   initGoogleAuth();
   updateNicknameBadge();
+  onAnnouncementAudienceChange();
+  refreshNoticeNotificationCount();
   checkAdmin();
   setupTrendTabs();
   loadPosts();
