@@ -2159,7 +2159,12 @@ async function submitContactMessage() {
   try {
     if (db) {
       const contactTable = await resolveContactTableName();
-      if (!contactTable) throw new Error('お問い合わせテーブルが見つかりません（contact_messages / contacts など）');
+      if (!contactTable) {
+        await storeContactViaReportFallback(payload);
+        stored = true;
+        storedInDb = true;
+        return;
+      }
 
       let { error } = await db.from(contactTable).insert([payload]);
       if (error && isMissingColumnError(error)) {
