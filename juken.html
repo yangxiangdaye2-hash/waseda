@@ -660,6 +660,16 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="boardDetailModal">
+  <div class="modal" style="max-width:680px;">
+    <div class="modal-header">
+      <h3>💬 掲示板詳細</h3>
+      <button class="modal-close" onclick="closeBoardDetailModal()">×</button>
+    </div>
+    <div class="modal-body" id="board-detail-content"></div>
+  </div>
+</div>
+
 <!-- FOOTER -->
 <footer>
   <div class="footer-inner">
@@ -1936,11 +1946,11 @@ function renderBoardPosts() {
     const typeTag = p.circle_type ? `<span class="board-type-tag ${typeClass}">${escHtml(p.circle_type)}</span>` : '';
     const facTag  = p.faculty ? `<span class="board-faculty-tag">${escHtml(FACULTIES[p.faculty]||p.faculty)}</span>` : '';
     const likedCls = likedSet.has(String(p.id))?' liked':'';
-    return `<div class="board-card">
+    return `<div class="board-card" onclick="openBoardDetail(${JSON.stringify(p.id)})">
       <div class="board-card-meta">${typeTag}${facTag}<span class="board-card-author">@${escHtml(p.author)}</span><span class="board-card-time">${formatTime(p.created_at)}</span></div>
       <div class="board-card-body">${escHtml(p.body)}</div>
       <div class="board-card-footer">
-        <span class="board-like${likedCls}" onclick="likeBoardPost(${JSON.stringify(p.id)},this)">❤️ <span class="like-num">${p.likes||0}</span></span>
+        <span class="board-like${likedCls}" onclick="event.stopPropagation();likeBoardPost(${JSON.stringify(p.id)},this)">❤️ <span class="like-num">${p.likes||0}</span></span>
         <span>💬 ${p.comments||0}</span>
       </div>
     </div>`;
@@ -1957,6 +1967,98 @@ async function likeBoardPost(id, el) {
   el.classList.toggle('liked', !already); setPostLiked(id, !already);
   const { error } = await db.from('posts').update({likes:next}).eq('id',id);
   if (error) { if(numEl) numEl.textContent=cur; el.classList.toggle('liked',already); setPostLiked(id,already); }
+}
+
+function closeBoardDetailModal() {
+  const modal = document.getElementById('boardDetailModal');
+  if (modal) modal.classList.remove('open');
+}
+
+async function loadBoardComments(postId) {
+  if (!db) return [];
+  try {
+    const { data, error } = await db.from('comments').select('*').eq('post_id', postId).order('created_at', { ascending: false });
+    if (error) throw error;
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.error(e);
+    return [];
+  }
+}
+
+async function openBoardDetail(postId) {
+  if (!db) return;
+  try {
+    const { data: post, error } = await db.from('posts').select('*').eq('id', postId).single();
+    if (error || !post) return;
+    const comments = await loadBoardComments(postId);
+    const commentHtml = comments.length
+      ? comments.map(c => `<div style="border:1px solid var(--border);border-radius:8px;padding:.65rem .75rem;margin-bottom:.5rem;background:var(--bg);"><div style="font-size:.8rem;color:var(--dark);line-height:1.6;">${escHtml(c.text || '')}</div><div style="font-size:.7rem;color:var(--gray-light);margin-top:.25rem;">@${escHtml(c.author || '匿名')} · ${formatTime(c.created_at)}</div></div>`).join('')
+      : '<div style="text-align:center;color:var(--gray-light);font-size:.82rem;padding:.6rem 0;">まだコメントはありません</div>';
+
+    document.getElementById('board-detail-content').innerHTML = `
+      <div style="border:1.5px solid var(--border);border-radius:10px;padding:.95rem 1rem;background:#fff;">
+        <div style="display:flex;gap:.45rem;align-items:center;flex-wrap:wrap;margin-bottom:.45rem;">
+          ${post.circle_type ? `<span class="board-type-tag ${TYPE_CLASSES[post.circle_type] || 'type-zatsudan'}">${escHtml(post.circle_type)}</span>` : ''}
+          ${post.faculty ? `<span class="board-faculty-tag">${escHtml(FACULTIES[post.faculty] || post.faculty)}</span>` : ''}
+          <span style="font-size:.72rem;color:var(--gray-light);">@${escHtml(post.author || '匿名')} · ${formatTime(post.created_at)}</span>
+        </div>
+        <div style="font-size:.9rem;color:var(--dark);line-height:1.7;white-space:pre-wrap;">${escHtml(post.body || '')}</div>
+      </div>
+      <div style="margin-top:1rem;">
+        <div style="font-size:.86rem;font-weight:700;color:var(--dark);margin-bottom:.55rem;">💬 コメント ${comments.length}件</div>
+        ${commentHtml}
+      </div>
+      <div class="answer-input-area" style="margin-top:1rem;">
+        <h4>✏️ コメントする</h4>
+        <textarea class="form-textarea" id="board-comment-input-${postId}" placeholder="コメントを入力してください..."></textarea>
+        <button class="btn-submit" style="margin-top:.6rem" onclick="submitBoardComment(${JSON.stringify(postId)}, this)">コメントを投稿</button>
+      </div>`;
+
+    const modal = document.getElementById('boardDetailModal');
+    if (modal) modal.classList.add('open');
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function submitBoardComment(postId, btn) {
+  const auth = await resolvePostAuthMode();
+  if (!auth) return;
+  const input = document.getElementById(`board-comment-input-${postId}`);
+  const text = (input?.value || '').trim();
+  if (!text) { alert('コメントを入力してください'); return; }
+  if (!db) { alert('DB未接続'); return; }
+  const author = getPreferredNickname() || '匿名';
+  localStorage.setItem('waseda_nickname', author);
+  currentUser = author;
+  updateNicknameBadge();
+
+  const targetBtn = btn || event?.target;
+  if (targetBtn) { targetBtn.disabled = true; targetBtn.textContent = '投稿中...'; }
+  try {
+    let payload = auth.mode === 'login'
+      ? { post_id: postId, author, text, device_id: getDeviceId(), owner_key: `auth:${auth.user.id}` }
+      : { post_id: postId, author, text, device_id: getDeviceId(), owner_key: null };
+    let insertRes = await db.from('comments').insert([payload]);
+    if (insertRes.error && isOwnerKeyColumnError(insertRes.error)) {
+      delete payload.owner_key;
+      insertRes = await db.from('comments').insert([payload]);
+    }
+    if (insertRes.error) throw insertRes.error;
+
+    const currentCount = Number(boardAllPosts.find(p => p.id === postId)?.comments || 0);
+    await db.from('posts').update({ comments: currentCount + 1 }).eq('id', postId);
+
+    if (input) input.value = '';
+    await loadBoardPosts();
+    await openBoardDetail(postId);
+  } catch (e) {
+    console.error(e);
+    alert('コメント投稿に失敗しました: ' + (e?.message || e?.code || 'unknown error'));
+  } finally {
+    if (targetBtn) { targetBtn.disabled = false; targetBtn.textContent = 'コメントを投稿'; }
+  }
 }
 
 function setComposerBodyLock() {
@@ -2120,6 +2222,7 @@ document.getElementById('qaModal').addEventListener('click', e => { if(e.target=
 document.getElementById('tkModal').addEventListener('click', e => { if(e.target===document.getElementById('tkModal')) closeTkModal(); });
 document.getElementById('nicknameModal').addEventListener('click', e => { if(e.target===document.getElementById('nicknameModal')) closeNicknameModal(); });
 document.getElementById('myPageModal').addEventListener('click', e => { if(e.target===document.getElementById('myPageModal')) closeMyPageModal(); });
+document.getElementById('boardDetailModal').addEventListener('click', e => { if(e.target===document.getElementById('boardDetailModal')) closeBoardDetailModal(); });
 
 // ── 初期ロード ──
 document.addEventListener('DOMContentLoaded', () => {
