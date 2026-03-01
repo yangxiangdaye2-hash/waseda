@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="google-site-verification" content="9OxFQQHfJelUvYSKyGNO0LYCFwb_LICV6b3N2-Go5fU" />
-<meta name="description" content="早稲田大学生の情報共有掲示板。授業口コミ、サークル情報、キャンパスライフ、Q&Aを学生同士でシェア。受験生にも役立つ早稲田の最新情報。">
+<meta name="description" content="早稲田大学生の情報共有掲示板。授業、サークル情報、キャンパスライフ、Q&Aを学生同士でシェア。受験生にも役立つ早稲田の最新情報。">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ワセダノート - 早稲田大学生の情報共有掲示板</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
@@ -677,7 +677,7 @@
         <div class="sidebar-card-header">🔥 トレンド</div>
         <div class="sidebar-card-body">
           <div class="trend-tabs">
-            <button class="trend-tab active" data-cat="lecture">授業口コミ</button>
+            <button class="trend-tab active" data-cat="lecture">授業</button>
             <button class="trend-tab" data-cat="circle">サークル</button>
             <button class="trend-tab" data-cat="campus">キャンパスライフ</button>
             <button class="trend-tab" data-cat="qa">Q&amp;A</button>
@@ -884,7 +884,7 @@
           <div class="form-group">
             <label class="form-label">カテゴリ</label>
             <select class="form-select" id="postCategory" onchange="onCategoryChange(this.value)">
-              <option value="lecture">📚 授業口コミ</option>
+              <option value="lecture">📚 授業</option>
               <option value="circle">🎯 サークル情報</option>
               <option value="campus">🏫 キャンパスライフ</option>
               <option value="qa">❓ Q&amp;A（質問）</option>
@@ -892,7 +892,7 @@
           </div>
         </div>
 
-        <!-- 授業口コミ専用フィールド -->
+        <!-- 授業専用フィールド -->
         <div id="lecture-fields" class="category-fields">
           <!-- 必須フィールド -->
           <div class="form-group">
@@ -2312,7 +2312,7 @@
 
   function getCategoryLabel(category) {
     const labels = {
-      lecture: '授業口コミ',
+      lecture: '授業',
       circle: 'サークル情報',
       campus: 'キャンパスライフ',
       qa: 'Q&A',
@@ -2681,7 +2681,7 @@
     const container = document.getElementById('posts-container');
     if (!posts.length) { container.innerHTML = '<div class="empty-tab"><div class="empty-icon">📭</div><div class="empty-title">まだ投稿がありません</div><div class="empty-text">このカテゴリで最初の投稿者になりませんか？<br/>あなたの経験やエピソードをシェアしてください。</div><button class="empty-action" onclick="openPostModalWithCategory()">+ 投稿を作成</button></div>'; return; }
     const catMap = {
-      lecture:['cat-lecture','📚 授業口コミ'],
+      lecture:['cat-lecture','📚 授業'],
       circle:['cat-circle','🎯 サークル'],
       campus:['cat-campus','🏫 キャンパスライフ'],
       qa:['cat-qa','❓ Q&A'],
@@ -2702,7 +2702,8 @@
 
     const likedSet = getLikedPosts();
     container.innerHTML = sorted.map(p => {
-      const [cls, label] = catMap[p.category] || ['cat-campus','その他'];
+      const [cls, defaultLabel] = catMap[p.category] || ['cat-campus','その他'];
+      let label = defaultLabel;
       const fTag = p.faculty ? `<span class="faculty-tag">${FACULTIES[p.faculty]||p.faculty}</span>` : '';
       const gradeLabel = getPostGrade(p);
       const authorWithGrade = formatAuthorWithGrade(p.author, gradeLabel);
@@ -2741,6 +2742,9 @@
       if (p.category === 'lecture') {
         const lectureKind = getLecturePostKind(p);
         const kindLabel = getLectureKindLabel(lectureKind);
+        if (currentTab === 'all') {
+          label = lectureKind === 'memo' ? '📝 授業メモ' : '⭐ 授業レビュー';
+        }
         const kindTag = `<span class="lecture-kind-badge">${kindLabel}</span>`;
         const stars = p.stars ? '⭐'.repeat(p.stars) : '';
         const teacher = p.lecture_teacher ? `<span style="font-size:0.8rem;color:var(--gray);">👨‍🏫 ${escHtml(p.lecture_teacher)}</span>` : '';
@@ -4048,7 +4052,7 @@
     let title, body, faculty, extraData = {};
     
     if (category === 'lecture') {
-      // 授業口コミの場合
+      // 授業の場合
       const lectureName = document.getElementById('lectureName').value.trim();
       const lectureKind = document.getElementById('lecturePostKind').value;
       const starsEl = document.querySelector('input[name="lectureStars"]:checked');
@@ -4073,7 +4077,7 @@
       const credits = document.getElementById('lectureCredits').value;
 
       if (!lectureFaculty) {
-        alert('授業口コミでは学部が必須です');
+        alert('授業では学部が必須です');
         return;
       }
 
@@ -4279,7 +4283,7 @@
 
       const comments = await loadComments(postId);
       const catMap = {
-        lecture: ['📚 授業口コミ', 'cat-lecture'],
+        lecture: ['📚 授業', 'cat-lecture'],
         circle: ['🎯 サークル情報', 'cat-circle'],
         campus: ['🏫 キャンパスライフ', 'cat-campus'],
         job:['💼 求人', 'cat-job'],
