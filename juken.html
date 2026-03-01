@@ -124,6 +124,11 @@
   .qa-sort-tab { border: 1.5px solid #cfd6df; background: #f3f5f8; color: #3f4854; border-radius: 999px; padding: 4px 10px; font-size: .75rem; font-weight: 700; cursor: pointer; transition: all .2s; }
   .qa-sort-tab:hover { border-color: var(--crimson); color: var(--crimson); background: #fff; }
   .qa-sort-tab.active { background: var(--crimson); color: #fff; border-color: var(--crimson); box-shadow: 0 2px 8px rgba(139,0,0,.18); }
+  .filter-group-label { font-size: .74rem; font-weight: 700; color: var(--gray); }
+  .qa-topic-tabs { display: flex; gap: .45rem; flex-wrap: wrap; padding: .35rem .45rem; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); margin: .55rem 0 .65rem; }
+  .qa-topic-tab { border: 1.5px solid var(--gold-dark); background: #fff; color: var(--dark); border-radius: 999px; padding: 5px 11px; font-size: .77rem; font-weight: 700; cursor: pointer; transition: all .2s; }
+  .qa-topic-tab:hover { border-color: var(--gold-dark); background: var(--gold-light); }
+  .qa-topic-tab.active { background: var(--gold); border-color: var(--gold-dark); color: #1a1000; box-shadow: 0 2px 8px rgba(200,169,81,.25); }
   .qa-urgent-badge { font-size: .68rem; background: #fff3e0; color: #e65100; padding: 2px 8px; border-radius: 4px; font-weight: 700; }
 
   /* Q&A post form */
@@ -546,12 +551,15 @@
     <h2 class="sec-title">受験生掲示板</h2>
     <div class="sec-div"></div>
     <p class="sec-sub">同じ目標を持つ仲間と情報交換・進捗報告ができる場所です。</p>
-    <div class="qa-sort-tabs" id="board-type-tabs">
-      <button type="button" class="qa-sort-tab active" data-type="all" onclick="filterBoard('all',this)">すべて</button>
-      <button type="button" class="qa-sort-tab" data-type="相談" onclick="filterBoard('相談',this)">相談</button>
-      <button type="button" class="qa-sort-tab" data-type="進捗報告" onclick="filterBoard('進捗報告',this)">進捗報告</button>
-      <button type="button" class="qa-sort-tab" data-type="質問" onclick="filterBoard('質問',this)">質問</button>
-      <button type="button" class="qa-sort-tab" data-type="雑談" onclick="filterBoard('雑談',this)">雑談</button>
+    <div>
+      <span class="filter-group-label">カテゴリ絞り込み</span>
+      <div class="qa-topic-tabs" id="board-type-tabs">
+        <button type="button" class="qa-topic-tab active" data-type="all" onclick="filterBoard('all',this)">すべて</button>
+        <button type="button" class="qa-topic-tab" data-type="相談" onclick="filterBoard('相談',this)">相談</button>
+        <button type="button" class="qa-topic-tab" data-type="進捗報告" onclick="filterBoard('進捗報告',this)">進捗報告</button>
+        <button type="button" class="qa-topic-tab" data-type="質問" onclick="filterBoard('質問',this)">質問</button>
+        <button type="button" class="qa-topic-tab" data-type="雑談" onclick="filterBoard('雑談',this)">雑談</button>
+      </div>
     </div>
     <div class="filter-bar" id="board-faculty-filter"><!-- JS --></div>
     <div class="qa-sort-tabs" id="board-sort-tabs">
@@ -651,25 +659,25 @@
         <div class="after-card-icon">📋</div>
         <div class="after-card-title">入学手続き</div>
         <div class="after-card-desc">入学金・授業料の支払いや書類提出の締切など、手続きの流れを先輩に確認しよう。</div>
-        <a href="https://waseda-ten.vercel.app/" class="after-card-link">在学生に聞く →</a>
+        <a href="https://waseda-ten.vercel.app/?tab=qa" class="after-card-link">在学生に聞く →</a>
       </div>
       <div class="after-card">
         <div class="after-card-icon">🏠</div>
         <div class="after-card-title">一人暮らし準備</div>
         <div class="after-card-desc">早稲田周辺の家賃相場・おすすめエリア・引越し時期の注意点など。</div>
-        <a href="https://waseda-ten.vercel.app/" class="after-card-link">在学生に聞く →</a>
+        <a href="https://waseda-ten.vercel.app/?tab=qa" class="after-card-link">在学生に聞く →</a>
       </div>
       <div class="after-card">
         <div class="after-card-icon">🎯</div>
         <div class="after-card-title">サークル情報</div>
         <div class="after-card-desc">新歓の時期、人気サークル、兼サーの実態まで先輩から教えてもらおう。</div>
-        <a href="https://waseda-ten.vercel.app/" class="after-card-link">サークル情報を見る →</a>
+        <a href="https://waseda-ten.vercel.app/?tab=circle" class="after-card-link">サークル情報を見る →</a>
       </div>
       <div class="after-card">
         <div class="after-card-icon">📚</div>
         <div class="after-card-title">履修登録</div>
         <div class="after-card-desc">初めての履修登録は戸惑うことも。単位の取り方を先輩の授業口コミで確認しよう。</div>
-        <a href="https://waseda-ten.vercel.app/" class="after-card-link">授業口コミを見る →</a>
+        <a href="https://waseda-ten.vercel.app/?tab=lecture" class="after-card-link">授業口コミを見る →</a>
       </div>
     </div>
   </div>
@@ -2338,7 +2346,7 @@ async function loadBoardPosts() {
 }
 
 function filterBoard(type, el) {
-  const tabs = document.querySelectorAll('#board-type-tabs .qa-sort-tab');
+  const tabs = document.querySelectorAll('#board-type-tabs .qa-topic-tab');
   tabs.forEach(tab => tab.classList.remove('active'));
   if (el) el.classList.add('active');
   boardTypeFilter = type;
