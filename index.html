@@ -505,7 +505,6 @@
       .nickname-badge { padding: 6px 8px; font-size: 0.69rem; max-width: none; }
       .btn-admin { margin-right: 0 !important; padding: 6px 8px; font-size: 0.69rem; }
       .btn-post { padding: 6px 8px; font-size: 0.72rem; }
-      .btn-admin { display: none !important; }
       .tabs { top: 132px; }
     }
 
@@ -521,7 +520,6 @@
       .nickname-badge,
       .btn-post { font-size: 0.66rem; padding: 6px 6px; }
       .btn-admin { margin-right: 0 !important; }
-      .btn-admin { display: none !important; }
 
       /* Hero */
       .hero { padding: 1.3rem 1rem 1.2rem; }
@@ -599,7 +597,7 @@
         <div class="header-row header-row-bottom">
           <div class="nickname-badge" id="nicknameBadge" onclick="openNicknameModal()">👤 設定中...</div>
           <button class="btn-admin" id="adminBtn" style="display:none;margin-right:0.5rem;" onclick="openAdminModal()">⚙️ 管理</button>
-          <button class="btn-post" onclick="openPostModal()">＋ 投稿する</button>
+          <button class="btn-post" id="headerPostBtn" onclick="openPostModal()">＋ 投稿する</button>
         </div>
       </div>
     </div>
@@ -3299,15 +3297,18 @@
   async function checkAdmin() {
     try {
       if (!db) { console.warn('[Admin] DB not initialized'); return; }
+      isAdmin = false;
+      const adminBtn = document.getElementById('adminBtn');
+      const headerPostBtn = document.getElementById('headerPostBtn');
+      if (adminBtn) adminBtn.style.display = 'none';
+      if (headerPostBtn) headerPostBtn.style.display = 'inline-block';
       const { data, error } = await db.from('admins').select('nickname').eq('nickname', currentUser).limit(1);
       if (error) { console.error('[Admin] checkAdmin error:', error); return; }
       if (data && data.length) {
         isAdmin = true;
-        const btn = document.getElementById('adminBtn');
-        if (btn) {
-          btn.style.display = 'inline-block';
-          console.log('[Admin] Admin privileges granted for:', currentUser);
-        }
+        if (adminBtn) adminBtn.style.display = 'inline-block';
+        if (headerPostBtn) headerPostBtn.style.display = 'none';
+        console.log('[Admin] Admin privileges granted for:', currentUser);
       }
     } catch (e) { console.error('[Admin] checkAdmin exception:', e); }
   }
