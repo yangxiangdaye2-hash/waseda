@@ -672,7 +672,7 @@
     <h1>早稲田生のための、早稲田生による情報共有</h1>
     <p>授業の口コミ・サークル・キャンパスライフをみんなでシェアしよう</p>
     <div class="search-bar">
-      <input class="search-input" type="text" id="searchInput" placeholder="🔍 授業名・キーワードで検索..." onkeydown="if(event.key==='Enter')doSearch()">
+      <input class="search-input" type="text" id="searchInput" placeholder="🔍 授業名・先生名・詳細項目で検索..." onkeydown="if(event.key==='Enter')doSearch()">
       <button class="search-btn" onclick="doSearch()">検索</button>
     </div>
   </div>
@@ -2667,6 +2667,38 @@
     return (posts || []).filter(p => getLecturePostKind(p) === currentLectureMode);
   }
 
+  function getSearchablePostText(post) {
+    const ef = parseExtraFields(post?.extra_fields);
+    const extraValues = Object.values(ef || {}).flatMap(v => {
+      if (v === null || v === undefined) return [];
+      if (Array.isArray(v)) return v.map(item => String(item));
+      if (typeof v === 'object') return Object.values(v).map(item => String(item));
+      return [String(v)];
+    });
+
+    return [
+      post?.title,
+      post?.body,
+      post?.author,
+      post?.faculty,
+      post?.category,
+      post?.lecture_teacher,
+      post?.circle_type,
+      post?.campus_location,
+      post?.campus_datetime,
+      ...extraValues
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+  }
+
+  function applyDetailedSearchFilter(posts) {
+    const q = String(searchQuery || '').trim().toLowerCase();
+    if (!q) return posts;
+    return (posts || []).filter(post => getSearchablePostText(post).includes(q));
+  }
+
   async function openMyPageModal() {
     document.getElementById('myPageModal').classList.add('open');
     loadMyPagePosts();
@@ -3116,19 +3148,18 @@
       let query = db.from('posts').select('*');
       if (currentTab !== 'all') query = query.eq('category', currentTab);
       if (currentFaculty !== 'all') query = query.eq('faculty', currentFaculty);
-      if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,body.ilike.%${searchQuery}%`);
 
       // ソート処理
       if (currentTab === 'qa') {
         query = query.order('created_at', { ascending: false });
         const { data, error } = await query;
         if (error) throw error;
-        allPosts = applyLectureModeFilter(data || []);
+        allPosts = applyDetailedSearchFilter(applyLectureModeFilter(data || []));
       } else {
         query = query.order('created_at', { ascending: false });
         const { data, error } = await query;
         if (error) throw error;
-        allPosts = applyLectureModeFilter(data || []);
+        allPosts = applyDetailedSearchFilter(applyLectureModeFilter(data || []));
       }
 
       // answers 件数を別テーブルから取得
