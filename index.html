@@ -1201,7 +1201,7 @@
           <div class="form-group">
             <label class="form-label" id="qaFacultyLabel">学部</label>
             <select class="form-select" id="qaFaculty">
-              <option value="">学部を選択（授業カテゴリでは必須）</option>
+              <option value="">学部を選択（任意）</option>
               <option value="seikei">政治経済学部</option>
               <option value="ho">法学部</option>
               <option value="shogaku">商学部</option>
@@ -4910,10 +4910,16 @@
   function onQaTopicChange() {
     const topic = document.getElementById('qaTopic')?.value || '';
     const label = document.getElementById('qaFacultyLabel');
+    const select = document.getElementById('qaFaculty');
     if (!label) return;
     label.innerHTML = topic === 'lecture'
       ? '学部 <span style="color:#e74c3c;">*</span>'
       : '学部';
+    if (select && select.options && select.options.length > 0) {
+      select.options[0].text = topic === 'lecture'
+        ? '学部を選択（授業カテゴリでは必須）'
+        : '学部を選択（任意）';
+    }
   }
 
   function onLecturePostKindChange() {
