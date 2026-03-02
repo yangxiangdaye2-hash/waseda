@@ -976,7 +976,11 @@
           <!-- 必須フィールド -->
           <div class="form-group">
             <label class="form-label">授業名 <span style="color:#e74c3c;">*</span></label>
-            <input class="form-input" type="text" id="lectureName" placeholder="例：政治経済学入門">
+            <input class="form-input" type="text" id="lectureName" placeholder="例：政治経済学入門（数字・アルファベットも入力）">
+          </div>
+          <div class="form-group">
+            <label class="form-label">担当教員名（任意）</label>
+            <input class="form-input" type="text" id="lectureTeacher" placeholder="例：田中 太郎">
           </div>
           <div class="form-group">
             <label class="form-label">学部 <span style="color:#e74c3c;">*</span></label>
@@ -1024,10 +1028,6 @@
           <button type="button" class="btn-toggle-optional" id="lectureOptionalToggle" onclick="toggleLectureOptional()">詳細を追加する</button>
           <div class="lecture-optional" id="lectureOptional">
             <div class="lecture-optional-inner">
-              <div class="form-group">
-                <label class="form-label">担当教員名</label>
-                <input class="form-input" type="text" id="lectureTeacher" placeholder="例：田中 太郎（任意）">
-              </div>
               <div class="form-group">
                 <label class="form-label">学期</label>
                 <select class="form-select" id="lectureSemester">
