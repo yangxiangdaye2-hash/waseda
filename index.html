@@ -4877,6 +4877,12 @@
     setTimeout(() => {
       document.getElementById('postCategory').value = category;
       onCategoryChange(category);
+      if (category === 'qa') {
+        const qaTopicSelect = document.getElementById('qaTopic');
+        const activeTopic = String(mainQaTopicFilter || 'all');
+        if (qaTopicSelect && activeTopic !== 'all') qaTopicSelect.value = activeTopic;
+        onQaTopicChange();
+      }
       if (category === 'lecture') {
         const kindSelect = document.getElementById('lecturePostKind');
         if (kindSelect) kindSelect.value = currentLectureMode;
