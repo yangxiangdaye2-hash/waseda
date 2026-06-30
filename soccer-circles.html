@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>早稲田大学 サッカー・フットサルサークルまとめ【2026年版】 - ワセダノート</title>
+<meta name="description" content="早稲田大学のサッカー・フットサルサークルを徹底まとめ。稲穂キッカーズ・りこさ・HUMAN F.C.などサッカーサークル6団体、フットサルサークル5団体を種別・特徴つきで紹介。早稲田でサッカーやフットサルを続けたい新入生・在学生必見。">
+<link rel="canonical" href="https://waseda-ten.vercel.app/soccer-circles.html">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --crimson: #8B0000; --crimson-light: #A50000; --crimson-dark: #700000; --crimson-pale: #f9f0f0;
+    --gold: #C8A951; --gold-light: #e8c96a; --gold-dark: #b8941f;
+    --dark: #1a1a1a; --gray: #6b6b6b; --gray-light: #9a9a9a; --gray-lighter: #d5d5d5;
+    --white: #fff; --border: #e8e0e0; --bg: #faf8f8;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--dark); line-height: 1.6; }
+
+  /* ── HEADER ── */
+  header { background: linear-gradient(135deg, var(--crimson) 0%, var(--crimson-dark) 100%); padding: 0 1.2rem; position: sticky; top: 0; z-index: 100; box-shadow: 0 3px 16px rgba(139,0,0,.3); }
+  .header-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 58px; gap: .7rem; min-width: 0; }
+  .logo { display: flex; align-items: center; gap: 8px; text-decoration: none; flex-shrink: 0; }
+  .logo-jp { font-size: 1.44rem; font-weight: 900; color: #fff; white-space: nowrap; }
+  .logo-badge { font-size: .84rem; background: var(--gold); color: #1a1000; padding: 3px 10px; border-radius: 20px; font-weight: 700; white-space: nowrap; }
+  .header-back { color: rgba(255,255,255,.75); font-size: .82rem; text-decoration: none; display: flex; align-items: center; gap: 4px; white-space: nowrap; transition: color .2s; flex-shrink: 0; }
+  .header-back:hover { color: #fff; }
+
+  /* ── HERO ── */
+  .hero { background: linear-gradient(160deg, var(--crimson-dark) 0%, var(--crimson) 60%, #a52020 100%); padding: 48px 1.2rem 40px; }
+  .hero-inner { max-width: 800px; margin: 0 auto; text-align: center; }
+  .hero-label { display: inline-block; background: var(--gold); color: #1a1000; font-size: .72rem; font-weight: 700; padding: 4px 14px; border-radius: 20px; margin-bottom: 1rem; letter-spacing: .05em; }
+  .hero-title { font-size: 1.65rem; font-weight: 900; color: #fff; line-height: 1.45; margin-bottom: .7rem; }
+  .hero-sub { font-size: .9rem; color: rgba(255,255,255,.82); line-height: 1.75; }
+  @media (max-width: 600px) { .hero-title { font-size: 1.3rem; } .hero { padding: 36px 1rem 30px; } }
+
+  /* ── ARTICLE BODY ── */
+  .article-body { max-width: 800px; margin: 0 auto; padding: 2.5rem 1.2rem 4rem; }
+
+  /* Lead */
+  .lead {
+    font-size: .95rem; color: var(--gray); line-height: 1.85; margin-bottom: 2.5rem;
+    background: #fffdf5; border-radius: 0 8px 8px 0; padding: .9rem 1.1rem;
+    border-left: 4px solid var(--gold);
+  }
+
+  /* ── NEXT TOKYO FC BLOCK ── */
+  .ntfc-block {
+    background: linear-gradient(135deg, var(--crimson-dark) 0%, #3d0000 100%);
+    border-radius: 16px; padding: 1.8rem 2rem; margin-bottom: 3rem;
+    color: #fff; position: relative; overflow: hidden;
+    box-shadow: 0 8px 36px rgba(139,0,0,.35);
+    border: 1.5px solid rgba(200,169,81,.3);
+    display: flex; gap: 2rem; align-items: flex-start;
+  }
+  .ntfc-logo-wrap { flex-shrink: 0; display: flex; align-items: flex-start; justify-content: center; }
+  .ntfc-logo { width: 110px; height: 110px; object-fit: contain; border-radius: 12px; background: rgba(255,255,255,.08); padding: 6px; }
+  .ntfc-content { flex: 1; min-width: 0; }
+  .ntfc-block::before {
+    content: ''; position: absolute; top: -50px; right: -50px;
+    width: 180px; height: 180px; background: rgba(200,169,81,.1);
+    border-radius: 50%; pointer-events: none;
+  }
+  .ntfc-block::after {
+    content: ''; position: absolute; bottom: -30px; left: -30px;
+    width: 120px; height: 120px; background: rgba(200,169,81,.06);
+    border-radius: 50%; pointer-events: none;
+  }
+  .ntfc-badge {
+    display: inline-block; background: var(--gold); color: #1a1000;
+    font-size: .72rem; font-weight: 700; padding: 4px 12px;
+    border-radius: 20px; letter-spacing: .05em; margin-bottom: .85rem;
+  }
+  .ntfc-title { font-size: 1.35rem; font-weight: 900; color: #fff; margin-bottom: 1rem; line-height: 1.4; }
+  .ntfc-body { font-size: .9rem; color: rgba(255,255,255,.88); line-height: 1.85; margin-bottom: 1.5rem; }
+  .ntfc-body p { margin-bottom: .7rem; }
+  .ntfc-body p:last-child { margin-bottom: 0; }
+  .ntfc-cta {
+    display: inline-block; background: #06C755; color: #fff;
+    font-weight: 700; font-size: .96rem; padding: 12px 30px;
+    border-radius: 10px; text-decoration: none; transition: all .2s;
+    letter-spacing: .03em; position: relative; z-index: 1;
+  }
+  .ntfc-cta:hover { background: #05a847; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(6,199,85,.4); }
+  @media (max-width: 600px) {
+    .ntfc-block { padding: 1.4rem 1.2rem; flex-direction: column; gap: 1rem; }
+    .ntfc-title { font-size: 1.1rem; }
+    .ntfc-cta { font-size: .88rem; padding: 11px 24px; }
+    .ntfc-logo { width: 80px; height: 80px; }
+  }
+
+  /* ── SECTIONS ── */
+  .section { margin-bottom: 2.8rem; }
+  .section-head { margin-bottom: 1.2rem; }
+  .section-eyebrow { font-size: .72rem; font-weight: 700; color: var(--crimson); letter-spacing: .08em; text-transform: uppercase; margin-bottom: .2rem; }
+  .section-title { font-size: 1.25rem; font-weight: 900; color: var(--dark); }
+  .section-divider { width: 32px; height: 3px; background: var(--crimson); border-radius: 2px; margin: .4rem 0 .6rem; }
+  .section-lead { font-size: .85rem; color: var(--gray); line-height: 1.65; }
+
+  /* ── CIRCLE CARDS ── */
+  .circle-list { display: flex; flex-direction: column; gap: .85rem; }
+  .circle-card { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 1.1rem 1.3rem; transition: box-shadow .2s, border-color .2s; }
+  .circle-card:hover { border-color: var(--crimson); box-shadow: 0 4px 16px rgba(139,0,0,.1); }
+  .circle-card-head { display: flex; align-items: center; gap: .55rem; margin-bottom: .5rem; flex-wrap: wrap; }
+  .circle-name { font-size: 1rem; font-weight: 700; color: var(--dark); }
+  .badge { font-size: .67rem; font-weight: 700; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
+  .badge-soccer { background: #fff0f0; color: #b91c1c; }
+  .badge-futsal { background: #e8f4ff; color: #1a5cb8; }
+  .badge-comp   { background: #ffeee8; color: #c2410c; }
+  .badge-enjoy  { background: #e8f5e9; color: #2e7d32; }
+  .circle-desc { font-size: .86rem; color: var(--gray); line-height: 1.68; }
+
+  /* ── ARTICLE FOOTER ── */
+  .article-footer { border-top: 1px solid var(--border); padding-top: 1.4rem; margin-top: 3rem; font-size: .78rem; color: var(--gray-light); line-height: 2; }
+  .article-footer a { color: var(--crimson); text-decoration: none; }
+  .article-footer a:hover { text-decoration: underline; }
+
+  /* ── SITE FOOTER ── */
+  footer { background: var(--dark); color: rgba(255,255,255,.55); padding: 2rem 1.2rem; }
+  .footer-inner { max-width: 700px; margin: 0 auto; text-align: center; }
+  .footer-logo { font-size: 1rem; font-weight: 900; color: #fff; margin-bottom: .4rem; }
+  .footer-link { color: var(--gold-light); text-decoration: none; }
+  .footer-link:hover { text-decoration: underline; }
+  .footer-disclaimer { font-size: .7rem; line-height: 1.8; margin-top: .9rem; color: rgba(255,255,255,.3); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="header-inner">
+    <a href="https://waseda-ten.vercel.app/" class="logo">
+      <span class="logo-jp">ワセダノート</span>
+      <span class="logo-badge">サークル情報</span>
+    </a>
+    <a href="https://waseda-ten.vercel.app/" class="header-back">← トップへ戻る</a>
+  </div>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-inner">
+    <span class="hero-label">サークル情報まとめ</span>
+    <h1 class="hero-title">早稲田大学<br>サッカー・フットサルサークルまとめ</h1>
+    <p class="hero-sub">早稲田でサッカー・フットサルができる団体を、<br>サークルか社会人チームかを問わず一挙紹介します。</p>
+  </div>
+</div>
+
+<!-- ARTICLE -->
+<div class="article-body">
+
+  <!-- リード文 -->
+  <p class="lead">このページでは、早稲田大学でサッカーやフットサルができる団体をまとめています。競技志向からエンジョイ系まで、公認・非公認を問わず幅広く掲載。新入生のサークル選びや、在学生の移籍先探しにぜひご活用ください。</p>
+
+  <!-- NEXT TOKYO FC ブロック -->
+  <div class="ntfc-block">
+    <div class="ntfc-logo-wrap">
+      <img src="ロゴ.jpg" alt="NEXT TOKYO FC ロゴ" class="ntfc-logo">
+    </div>
+    <div class="ntfc-content">
+      <span class="ntfc-badge">注目 ― 新チーム立ち上げメンバー募集中</span>
+      <h2 class="ntfc-title">NEXT TOKYO FC — 早稲田発の社会人チーム</h2>
+      <div class="ntfc-body">
+        <p>2026年発足。現在、早稲田生で立ち上げ・運営メンバーを探しています。</p>
+        <p>サークル選びに乗り遅れた人、一度入ったサークルを辞めてしまった人、今のサークルでは物足りないと感じている人、体育会をやめてしまった人へ。組織をゼロから一緒に立ち上げて、本気でサッカーに打ち込みたい仲間を募集中です。</p>
+        <p>選手としても、運営・広報としても、関わり方は自由です。少しでも気になったら、お気軽に下記のLINEからご連絡ください。</p>
+      </div>
+      <a href="https://lin.ee/wlmf6H4" class="ntfc-cta" target="_blank" rel="noopener">LINEで話を聞いてみる</a>
+    </div>
+  </div>
+
+  <!-- サッカーサークル -->
+  <section class="section">
+    <div class="section-head">
+      <p class="section-eyebrow">Soccer</p>
+      <h2 class="section-title">サッカーサークル一覧</h2>
+      <div class="section-divider"></div>
+      <p class="section-lead">早稲田大学を拠点とするサッカーサークル・同好会の紹介です（全6団体）。</p>
+    </div>
+    <div class="circle-list">
+
+      <div class="circle-card">
+        <div class="circle-card-head">
+          <span class="circle-name">早稲田大学稲穂キッカーズ</span>
+          <span class="badge badge-soccer">サッカー</span>
+          <span class="badge badge-comp">競技志向</span>
+        </div>
+        <p class="circle-desc">1961年創立、早稲田最大にして最強のサッカー同好会。新関東フットボールリーグ1部に所属し、幾度となく日本一に輝いている、早稲田のサッカーサークルの代表格。</p>
+      </div>
+
+      <div class="circle-card">
+        <div class="circle-card-head">
+          <span class="circle-name">早稲田大学理工サッカー部（通称：りこさ）</span>
+          <span class="badge badge-soccer">サッカー</span>
+          <span class="badge badge-comp">競技志向</span>
+        </div>
+        <p class="circle-desc">通称「りこさ」「早理」と呼ばれる、50年以上の歴史を持つ早稲田で最も古いサッカーサークルの一つ。理工学生中心だが他学部からの入部も多い。</p>
+      </div>
+
+      <div class="circle-card">
+        <div class="circle-card-head">
+          <span class="circle-name">人間科学部サッカー部 HUMAN F.C.</span>
+          <span class="badge badge-soccer">サッカー</span>
+          <span class="badge badge-comp">競技志向</span>
+        </div>
+        <p class="circle-desc">所沢キャンパス最大のサッカーサークルで、新関東フットボール1部リーグに所属。「最高の青春を最高の仲間と共に」をモットーに掲げる。</p>
+      </div>
+
+      <div class="circle-card">
+        <div class="circle-card-head">
+          <span class="circle-name">早稲田大学FC GUSTA</span>
+          <span class="badge badge-soccer">サッカー</span>
+          <span class="badge badge-comp">競技志向</span>
+        </div>
+        <p class="circle-desc">2009年創立。新関東リーグ1部優勝の実績を持つ、早稲田公認のサッカーサークル。</p>
+      </div>
+
+      <div class="circle-card">
+        <div class="circle-card-head">
+          <span class="circle-name">早稲田大学 水曜サッカー会</span>
+          <span class="badge badge-soccer">サッカー</span>
+        </div>
+        <p class="circle-desc">男子は早稲田、女子はインカレで構成。ユニオンリーグ1部に所属する。</p>
+      </div>
+
+      <div class="circle-card">
+        <div class="circle-card-head">
+          <span class="circle-name">Sunday S.C.</span>
+          <span class="badge badge-soccer">サッカー</span>
+        </div>
+        <p class="circle-desc">1978年創立。新関東リーグ3部に所属するサッカーサークル。</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- フットサルサークル -->
+  <section class="section">
+    <div class="section-head">
+      <p class="section-eyebrow">Futsal</p>
+      <h2 class="section-title">フットサルサークル一覧</h2>
+      <div class="section-divider"></div>
+      <p class="section-lead">早稲田大学を拠点とするフットサルサークル・団体の紹介です（全5団体）。</p>
+    </div>
+    <div class="circle-list">
+
+      <div class="circle-card">
+        <div class="circle-card-head">
+          <span class="circle-name">早稲田大学フットサル部</span>
+          <span class="badge badge-futsal">フットサル</span>
+          <span class="badge badge-comp">競技志向</span>
+        </div>
+        <p class="circle-desc">2019年創設。早稲田大学で唯一公式戦への出場が認められているフットサル団体で、体育会昇格を目指して活動している。</p>
+      </div>
+
+      <div class="circle-card">
+        <div class="circle-card-head">
+          <span class="circle-name">メインストリートF.C.</span>
+          <span class="badge badge-futsal">フットサル</span>
+        </div>
+        <p class="circle-desc">早稲田公認、アットホームでエンジョイ志向のフットサルサークル。</p>
+      </div>
+
+      <div class="circle-card">
+        <div class="circle-card-head">
+          <span class="circle-name">Espiga</span>
+          <span class="badge badge-futsal">フットサル</span>
+        </div>
+        <p class="circle-desc">男子は早稲田、女子はインカレで構成。吉祥寺を拠点に活動する公認フットサルサークル。</p>
+      </div>
+
+      <div class="circle-card">
+        <div class="circle-card-head">
+          <span class="circle-name">蹴球同好会</span>
+          <span class="badge badge-futsal">フットサル</span>
+          <span class="badge badge-enjoy">エンジョイ志向</span>
+        </div>
+        <p class="circle-desc">1996年創立。試合に勝つことより楽しむことを重視するエンジョイ志向のチームで、初心者や女子も気軽に参加できる雰囲気。</p>
+      </div>
+
+      <div class="circle-card">
+        <div class="circle-card-head">
+          <span class="circle-name">Tonsoku</span>
+          <span class="badge badge-futsal">フットサル</span>
+        </div>
+        <p class="circle-desc">オール早稲田のフットサルサークルで、「見た目から入れ。」をコンセプトに掲げる。</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ページフッター -->
+  <div class="article-footer">
+    <p>最終更新日：2026年7月1日</p>
+    <p>情報の修正・追加依頼は <a href="https://waseda-ten.vercel.app/">ワセダノート掲示板</a> よりお問い合わせください。</p>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-logo">ワセダノート</div>
+    <p style="font-size:.82rem;margin-bottom:.3rem;"><a href="https://waseda-ten.vercel.app/" class="footer-link">トップへ戻る</a></p>
+    <div class="footer-disclaimer">
+      本サイトは早稲田大学の公式サイトではありません。掲載情報は執筆時点の調査に基づくものであり、内容の正確性を保証するものではありません。<br>
+      最新情報は各サークルの公式SNS等でご確認ください。
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
